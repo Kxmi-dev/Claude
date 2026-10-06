@@ -65,9 +65,25 @@ public partial class MainWindow : Window
         var result = await Task.Run(() => DomainJoiner.Join(_config.Domain, location.Dn, user, password, name));
         PasswordBox.Clear();
 
+        var message = result.Message;
+        var details = result.Details;
+        if (result.Success)
+        {
+            var firewallError = await Task.Run(Firewall.OpenPort445);
+            if (firewallError is null)
+            {
+                details = "Firewall: Port 445 (eingehend, Domänenprofil) geöffnet.";
+            }
+            else
+            {
+                message += " Port 445 konnte nicht geöffnet werden.";
+                details = $"Firewall-Fehler: {firewallError}";
+            }
+        }
+
         JoinLog.Write(name, user, location.Name, location.Dn,
-            result.Success ? "Erfolg" : "Fehler", result.Details);
-        ShowStatus(result.Message, result.Details);
+            result.Success ? "Erfolg" : "Fehler", details);
+        ShowStatus(message, details);
 
         if (result.Success)
         {
