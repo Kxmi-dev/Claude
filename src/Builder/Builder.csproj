@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <AssemblyName>LKDS-AD-Join-Builder</AssemblyName>
     <RootNamespace>Lkds.Builder</RootNamespace>
@@ -16,7 +16,7 @@
     <ProjectReference Include="..\Shared\Shared.csproj" />
     <Page Include="..\Shared\Theme.xaml" Link="Theme.xaml" />
     <!-- Einzige zusätzliche Bibliothek: LDAP-Zugriff auf das Active Directory (offizielles Microsoft-Paket). -->
-    <PackageReference Include="System.DirectoryServices" Version="10.0.0" />
+    <PackageReference Include="System.DirectoryServices" Version="9.0.0" />
   </ItemGroup>
   <!-- Die fertig gebaute Join-EXE (Vorlage) wird in den Builder eingebettet. Siehe build.ps1. -->
   <ItemGroup Condition="'$(JoinTemplatePath)' != ''">
