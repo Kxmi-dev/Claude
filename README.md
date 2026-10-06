@@ -37,6 +37,8 @@ Ergebnis: `artifacts\LKDS-AD-Join-Builder.exe` (eine einzelne Datei, enthält di
 2. AD-Benutzer und Standort wählen, Computername prüfen (vorausgefüllt, änderbar), Passwort eingeben. Ein geänderter Name wird beim Join lokal gesetzt und das Computerkonto direkt unter diesem Namen in der Ziel-OU angelegt. Dafür ist nur ein Neustart nötig. Schlägt der Join fehl, wird der alte Name wiederhergestellt. Erlaubt sind höchstens 15 Zeichen: Buchstaben (ohne Umlaute), Ziffern und Bindestriche, nicht nur Ziffern.
 3. „COMPUTER JOINEN“ klicken. Bei Erfolg öffnet die EXE außerdem eingehend TCP-Port 445 (SMB) über die Firewall-Regel „LKDS SMB eingehend (TCP 445)“, **nur im Domänenprofil**, nicht in öffentlichen oder privaten Netzen. Danach wird ein Neustart angeboten.
 
+**Optionales Skript nach dem Neustart:** Im Builder (Schritt 4) lässt sich eine `.bat` auswählen. Sie wird in die Join-EXE eingebettet, beim Join in `C:\ProgramData\LKDS-Join` abgelegt (nur Administratoren und SYSTEM dürfen dort schreiben) und per einmaliger geplanter Aufgabe „LKDS-Nachlauf“ beim nächsten Windows-Start ausgeführt. Sie läuft **als SYSTEM mit höchsten Rechten, nicht als angemeldeter Benutzer**, Netzlaufwerke oder Einstellungen eines Benutzers gibt es dort also nicht. Danach entfernen sich Aufgabe und Dateien selbst, die Ausgabe der `.bat` steht im `join.log`. Keine Passwörter in die `.bat` schreiben, sie ist in der EXE lesbar.
+
 Das Log liegt unter `C:\ProgramData\LKDS-Join\join.log` (Zeit, Computer, Benutzer, Standort, OU, Ergebnis, kein Passwort).
 
 ## Benötigte AD-Berechtigungen

@@ -29,6 +29,23 @@ public class SharedTests
     }
 
     [Fact]
+    public void Skript_wird_mit_eingebettet_und_alte_Konfiguration_bleibt_lesbar()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(path, [0x4D, 0x5A]);
+            ConfigPayload.AppendTo(path, Config with { PostScript = "@echo hallo"u8.ToArray() });
+            Assert.Equal("@echo hallo"u8.ToArray(), ConfigPayload.ReadFrom(path)!.PostScript);
+
+            var alt = System.Text.Json.JsonSerializer.Deserialize<JoinConfig>(
+                "{\"Domain\":\"d\",\"BaseOu\":\"o\",\"Users\":[],\"Locations\":[]}");
+            Assert.Null(alt!.PostScript);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
     public void EXE_ohne_Konfiguration_ergibt_null()
     {
         var path = Path.GetTempFileName();

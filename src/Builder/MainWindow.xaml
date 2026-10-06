@@ -116,6 +116,19 @@
                             <TextBox x:Name="OutputBox" TextChanged="Summary_Changed"/>
                             <Button Grid.Column="1" Content="Auswählen …" Margin="8,0,0,0" Click="BrowseFolder_Click"/>
                         </Grid>
+                        <TextBlock Text="Skript nach dem Neustart (optional, .bat)" Style="{StaticResource Label}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="BatBox" IsReadOnly="True"/>
+                            <Button Grid.Column="1" Content="Auswählen …" Margin="8,0,0,0" Click="BrowseBat_Click"/>
+                            <Button Grid.Column="2" Content="Entfernen" Margin="8,0,0,0" Click="ClearBat_Click"/>
+                        </Grid>
+                        <TextBlock Text="Läuft einmalig beim nächsten Start als SYSTEM, nicht als angemeldeter Benutzer. Keine Passwörter in die .bat schreiben, sie steht lesbar in der EXE."
+                                   Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"/>
                         <TextBlock Text="Zusammenfassung" Style="{StaticResource Label}" Margin="0,20,0,4"/>
                         <Border BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="4" Padding="12">
                             <TextBlock x:Name="SummaryText" TextWrapping="Wrap" LineHeight="22"/>

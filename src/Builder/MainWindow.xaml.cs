@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private readonly List<CheckItem> _locations = [];
     private readonly List<CheckItem> _users = [];
     private readonly UIElement[] _pages;
+    private const int MaxBatBytes = 1024 * 1024;
     private int _step;
     private bool _connected;
     private List<string> _wantedLocations = [];
@@ -224,6 +225,25 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) OutputBox.Text = dialog.FolderName;
     }
 
+    private void BrowseBat_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "Batch-Datei (*.bat;*.cmd)|*.bat;*.cmd" };
+        if (dialog.ShowDialog(this) != true) return;
+        if (new FileInfo(dialog.FileName).Length > MaxBatBytes)
+        {
+            BuildStatus.Text = "Die .bat-Datei ist zu groß (maximal 1 MB).";
+            return;
+        }
+        BatBox.Text = dialog.FileName;
+        UpdateSummary();
+    }
+
+    private void ClearBat_Click(object sender, RoutedEventArgs e)
+    {
+        BatBox.Clear();
+        UpdateSummary();
+    }
+
     private void Summary_Changed(object sender, TextChangedEventArgs e)
     {
         if (IsLoaded) UpdateSummary();
@@ -235,7 +255,8 @@ public partial class MainWindow : Window
             $"EXE:\n{ExeNameBox.Text}\n\n" +
             $"Domäne:\n{DomainBox.Text}\n\n" +
             $"Benutzer:\n{string.Join("\n", _users.Where(u => u.Selected).Select(u => u.Name))}\n\n" +
-            $"Standorte:\n{string.Join("\n", _locations.Where(l => l.Selected).Select(l => l.Name))}";
+            $"Standorte:\n{string.Join("\n", _locations.Where(l => l.Selected).Select(l => l.Name))}\n\n" +
+            $"Skript nach Neustart:\n{(BatBox.Text.Length == 0 ? "keines" : Path.GetFileName(BatBox.Text))}";
     }
 
     private void Build_Click(object sender, RoutedEventArgs e)
@@ -254,11 +275,19 @@ public partial class MainWindow : Window
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
 
+        byte[]? script = null;
+        if (BatBox.Text.Length > 0)
+        {
+            try { script = File.ReadAllBytes(BatBox.Text); }
+            catch (Exception ex) { BuildStatus.Text = $"Die .bat-Datei konnte nicht gelesen werden.\n\nDetails: {ex.Message}"; return; }
+        }
+
         var config = new JoinConfig(
             DomainBox.Text.Trim(),
             BaseOuBox.Text.Trim(),
             _users.Where(u => u.Selected).Select(u => u.Name).ToArray(),
-            _locations.Where(l => l.Selected).Select(l => new LocationEntry(l.Name, l.Dn)).ToArray());
+            _locations.Where(l => l.Selected).Select(l => new LocationEntry(l.Name, l.Dn)).ToArray(),
+            script);
 
         try
         {

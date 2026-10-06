@@ -79,6 +79,20 @@ public partial class MainWindow : Window
                 message += " Port 445 konnte nicht geöffnet werden.";
                 details = $"Firewall-Fehler: {firewallError}";
             }
+
+            if (_config.PostScript is { Length: > 0 } script)
+            {
+                var scriptError = await Task.Run(() => PostScript.Schedule(script));
+                if (scriptError is null)
+                {
+                    details += " | Skript: wird beim nächsten Start als SYSTEM ausgeführt.";
+                }
+                else
+                {
+                    message += " Das Skript für den Neustart konnte nicht eingerichtet werden.";
+                    details += $" | Skript-Fehler: {scriptError}";
+                }
+            }
         }
 
         JoinLog.Write(name, user, location.Name, location.Dn,
