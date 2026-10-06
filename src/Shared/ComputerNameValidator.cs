@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace Lkds.Shared;
 
 public static class ComputerNameValidator
@@ -7,11 +9,11 @@ public static class ComputerNameValidator
     /// <summary>Gibt eine verständliche Fehlermeldung zurück oder null, wenn der Name gültig ist.</summary>
     public static string? Validate(string? name)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        if (name is null || name.Trim().Length == 0)
             return "Bitte einen Computernamen eingeben.";
         if (name.Length > MaxLength)
             return $"Der Computername darf höchstens {MaxLength} Zeichen lang sein.";
-        if (name.StartsWith('-') || name.EndsWith('-'))
+        if (name.StartsWith("-") || name.EndsWith("-"))
             return "Der Computername darf nicht mit einem Bindestrich beginnen oder enden.";
         if (!name.All(c => c is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '-'))
             return "Erlaubt sind nur Buchstaben (ohne Umlaute), Ziffern und Bindestriche.";

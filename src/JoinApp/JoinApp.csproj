@@ -1,20 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Bewusst .NET Framework 4.7.2 mit Windows Forms: ist in Windows 10/11 bereits eingebaut,
+    die fertige EXE ist dadurch nur wenige zehn KB groß und braucht keine Installation.
+  -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
+    <TargetFramework>net472</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>LKDS-Join-Vorlage</AssemblyName>
     <RootNamespace>Lkds.JoinApp</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <DebugType>none</DebugType>
+    <Optimize>true</Optimize>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Shared\Shared.csproj" />
-    <Page Include="..\Shared\Theme.xaml" Link="Theme.xaml" />
+    <!-- Gemeinsamer Code wird direkt einkompiliert, keine zusätzliche DLL. -->
+    <Compile Include="..\Shared\JoinConfig.cs" Link="Shared\JoinConfig.cs" />
+    <Compile Include="..\Shared\ConfigPayload.cs" Link="Shared\ConfigPayload.cs" />
+    <Compile Include="..\Shared\ComputerNameValidator.cs" Link="Shared\ComputerNameValidator.cs" />
   </ItemGroup>
 </Project>

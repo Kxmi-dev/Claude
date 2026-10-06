@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Linq;
 
 namespace Lkds.JoinApp;
 
@@ -10,14 +11,13 @@ public static class Tools
     {
         try
         {
-            var psi = new ProcessStartInfo(exe)
+            var psi = new ProcessStartInfo(exe, string.Join(" ", args.Select(Quote)))
             {
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
             };
-            foreach (var a in args) psi.ArgumentList.Add(a);
 
             using var p = Process.Start(psi)!;
             var output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
@@ -29,4 +29,6 @@ public static class Tools
             return ex.Message;
         }
     }
+
+    private static string Quote(string arg) => "\"" + arg.Replace("\"", "\\\"") + "\"";
 }

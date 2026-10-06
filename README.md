@@ -7,7 +7,7 @@ Kleines Windows-Tool aus zwei Teilen:
 
 ## Voraussetzungen
 
-- Zum **Benutzen**: Windows 10/11 (64 Bit). .NET muss nicht installiert sein.
+- Zum **Benutzen**: Windows 10 (ab Version 1803) oder Windows 11. Nichts muss installiert werden, die Join-EXE nutzt das in Windows eingebaute .NET Framework und ist nur rund 30 KB groß.
 - Zum **Bauen**: Windows mit [.NET 9 SDK (oder neuer)](https://dotnet.microsoft.com/download) und Internetzugang für den ersten Build.
 
 ## Bauen
@@ -48,8 +48,8 @@ Das Log liegt unter `C:\ProgramData\LKDS-Join\join.log` (Zeit, Computer, Benutze
 
 ## Technik in Kürze
 
-- C#, .NET 9, WPF. Einzige Zusatzbibliothek: `System.DirectoryServices` (Microsoft) für den LDAP-Zugriff.
-- Die Join-EXE ist selbst-enthalten (Single-File). Der Builder hängt die Konfiguration als JSON ans Dateiende an, die Join-EXE liest sie beim Start aus sich selbst. Es gibt keine Konfigurationsdatei daneben.
+- Builder: C#, .NET 9, WPF. Join-EXE: C#, .NET Framework 4.7.2 (in Windows eingebaut), Windows Forms, deshalb winzig. Einzige Zusatzbibliothek: `System.DirectoryServices` (Microsoft) für den LDAP-Zugriff.
+- Der Builder enthält die kleine Join-Vorlage. Er hängt die Konfiguration als einfachen Text ans Dateiende an, die Join-EXE liest sie beim Start aus sich selbst. Es gibt keine Konfigurationsdatei daneben.
 - Der Join nutzt die Windows-Funktion `NetJoinDomain`.
 
 ## Sicherheitshinweise

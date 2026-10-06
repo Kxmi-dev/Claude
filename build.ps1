@@ -7,8 +7,8 @@ $tmp  = Join-Path $out 'join-vorlage'
 
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 
-# 1. Join-EXE (Vorlage) als Single-File bauen
-dotnet publish "$root\src\JoinApp\JoinApp.csproj" -c Release -o $tmp
+# 1. Join-EXE (Vorlage) bauen: .NET Framework 4.7.2, nur wenige KB groß
+dotnet build "$root\src\JoinApp\JoinApp.csproj" -c Release -o $tmp
 if ($LASTEXITCODE -ne 0) { throw 'Build der Join-Vorlage fehlgeschlagen.' }
 $template = Join-Path $tmp 'LKDS-Join-Vorlage.exe'
 

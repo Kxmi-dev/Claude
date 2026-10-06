@@ -4,7 +4,19 @@ using System.Runtime.InteropServices;
 namespace Lkds.JoinApp;
 
 /// <summary>Ergebnis eines Join-Versuchs mit Klartext-Meldung und technischem Detail.</summary>
-public record JoinResult(bool Success, string Message, string Details);
+public class JoinResult
+{
+    public bool Success { get; }
+    public string Message { get; }
+    public string Details { get; }
+
+    public JoinResult(bool success, string message, string details)
+    {
+        Success = success;
+        Message = message;
+        Details = details;
+    }
+}
 
 /// <summary>Domain Join über die Windows-API (netapi32 / kernel32). Passwörter werden nur im Speicher verwendet.</summary>
 public static class DomainJoiner

@@ -28,7 +28,7 @@ public static class PostScript
             var bat = Path.Combine(Folder, "nachlauf.bat");
             var runner = Path.Combine(Folder, "nachlauf-start.cmd");
             File.WriteAllBytes(bat, script);
-            File.WriteAllText(runner, RunnerText.ReplaceLineEndings("\r\n"), Encoding.ASCII);
+            File.WriteAllText(runner, RunnerText.Replace("\r\n", "\n").Replace("\n", "\r\n"), Encoding.ASCII);
 
             return Tools.Run("schtasks", "/Create", "/TN", TaskName, "/TR", $"\"{runner}\"",
                 "/SC", "ONSTART", "/RU", "SYSTEM", "/RL", "HIGHEST", "/F");

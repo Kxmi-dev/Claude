@@ -23,7 +23,8 @@ public class SharedTests
             Assert.NotNull(read);
             Assert.Equal(Config.Domain, read.Domain);
             Assert.Equal(Config.Users, read.Users);
-            Assert.Equal(Config.Locations, read.Locations);
+            Assert.Equal(Config.Locations.Select(l => l.Dn), read.Locations.Select(l => l.Dn));
+            Assert.Null(read.PostScript);
         }
         finally { File.Delete(path); }
     }
@@ -35,12 +36,9 @@ public class SharedTests
         try
         {
             File.WriteAllBytes(path, [0x4D, 0x5A]);
-            ConfigPayload.AppendTo(path, Config with { PostScript = "@echo hallo"u8.ToArray() });
+            ConfigPayload.AppendTo(path, new JoinConfig(Config.Domain, Config.BaseOu, Config.Users, Config.Locations, "@echo hallo"u8.ToArray()));
             Assert.Equal("@echo hallo"u8.ToArray(), ConfigPayload.ReadFrom(path)!.PostScript);
 
-            var alt = System.Text.Json.JsonSerializer.Deserialize<JoinConfig>(
-                "{\"Domain\":\"d\",\"BaseOu\":\"o\",\"Users\":[],\"Locations\":[]}");
-            Assert.Null(alt!.PostScript);
         }
         finally { File.Delete(path); }
     }
@@ -60,8 +58,8 @@ public class SharedTests
     [Fact]
     public void Konfiguration_enthaelt_kein_Passwortfeld()
     {
-        var json = System.Text.Encoding.UTF8.GetString(ConfigPayload.Build(Config));
-        Assert.DoesNotContain("assword", json, StringComparison.OrdinalIgnoreCase);
+        var text = System.Text.Encoding.UTF8.GetString(ConfigPayload.Build(Config));
+        Assert.DoesNotContain("assword", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
