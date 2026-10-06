@@ -12,9 +12,13 @@ Kleines Windows-Tool aus zwei Teilen:
 
 ## Bauen
 
+Einfach **`build.cmd` doppelklicken**. Alternativ in PowerShell:
+
 ```powershell
-.\build.ps1
+powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
+
+(Ein direkter Aufruf von `.\build.ps1` scheitert bei heruntergeladenen ZIP-Dateien oft mit „nicht digital signiert“. Die beiden Varianten oben umgehen das nur für diesen einen Start.)
 
 Ergebnis: `artifacts\LKDS-AD-Join-Builder.exe` (eine einzelne Datei, enthält die Join-Vorlage). Mit `dotnet test tests\Shared.Tests` laufen die Tests.
 
