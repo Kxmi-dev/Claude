@@ -34,7 +34,7 @@ Ergebnis: `artifacts\LKDS-AD-Join-Builder.exe` (eine einzelne Datei, enthält di
 ## Join-EXE verwenden
 
 1. EXE auf den Zielrechner kopieren und doppelklicken (die Windows-Abfrage für Administratorrechte bestätigen).
-2. AD-Benutzer und Standort wählen, Computername prüfen (vorausgefüllt, änderbar), Passwort eingeben.
+2. AD-Benutzer und Standort wählen, Computername prüfen (vorausgefüllt, änderbar), Passwort eingeben. Ein geänderter Name wird beim Join lokal gesetzt und das Computerkonto direkt unter diesem Namen in der Ziel-OU angelegt. Dafür ist nur ein Neustart nötig. Schlägt der Join fehl, wird der alte Name wiederhergestellt. Erlaubt sind höchstens 15 Zeichen: Buchstaben (ohne Umlaute), Ziffern und Bindestriche, nicht nur Ziffern.
 3. „COMPUTER JOINEN“ klicken. Bei Erfolg wird ein Neustart angeboten.
 
 Das Log liegt unter `C:\ProgramData\LKDS-Join\join.log` (Zeit, Computer, Benutzer, Standort, OU, Ergebnis, kein Passwort).
