@@ -18,7 +18,7 @@ public static class LdsSteps
         name.Length > 0 && name.Length <= 20 &&
         name.All(c => char.IsLetterOrDigit(c) && c < 128 || c == '-' || c == '_');
 
-    public static string DnsRegPath(string dnsName) => @"C:\LDS\REG\DNS-" + dnsName + ".reg";
+    public static string DnsRegPath(string dnsName) => @"C:\LDS\REG\DNS " + dnsName + ".reg";
 
     /// <summary>
     /// Vorauswahl der DNS-Datei für einen Standort. ANNAHME: LNWS verwendet LNRE (so von Kimi angegeben).

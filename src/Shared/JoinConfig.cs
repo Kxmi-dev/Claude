@@ -27,7 +27,7 @@ public class JoinConfig
     public byte[]? PostScript { get; }
     /// <summary>Fester LDS-Ablauf (Programme starten, Registry importieren) nach dem Neustart.</summary>
     public bool RunLdsSteps { get; }
-    /// <summary>Namen der wählbaren DNS-Dateien (C:\LDS\REG\DNS-NAME.reg), z. B. LNBE, LNRE, KWBR.</summary>
+    /// <summary>Namen der wählbaren DNS-Dateien (C:\LDS\REG\DNS NAME.reg), z. B. LNBE, LNRE, KWBR.</summary>
     public string[] DnsOptions { get; }
 
     public JoinConfig(string domain, string baseOu, string[] users, LocationEntry[] locations, byte[]? postScript = null, bool runLdsSteps = false, string[]? dnsOptions = null)

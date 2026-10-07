@@ -120,7 +120,7 @@
                                   Content="Standard-Nachlauf nach dem Neustart (Programme und Registry aus C:\LDS)"/>
                         <TextBlock Text="Startet ZENworks und Bitdefender, importiert die .reg-Dateien, dazu je nach Standort die DNS-Datei. Läuft einmalig als SYSTEM."
                                    Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="22,0,0,0"/>
-                        <TextBlock Text="DNS-Dateien zur Auswahl in der Join-EXE (C:\LDS\REG\DNS-….reg)" Style="{StaticResource Label}"/>
+                        <TextBlock Text="DNS-Dateien zur Auswahl in der Join-EXE (C:\LDS\REG\DNS ….reg)" Style="{StaticResource Label}"/>
                         <ItemsControl x:Name="DnsList">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>

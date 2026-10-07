@@ -77,7 +77,7 @@ public class SharedTests
     [Fact]
     public void Vor_dem_Join_werden_OES_und_gewaehlte_DNS_Datei_importiert()
     {
-        Assert.Equal([@"C:\LDS\REG\OES.reg", @"C:\LDS\REG\DNS-KWBR.reg"], LdsSteps.PreJoinRegFiles("KWBR"));
+        Assert.Equal([@"C:\LDS\REG\OES.reg", @"C:\LDS\REG\DNS KWBR.reg"], LdsSteps.PreJoinRegFiles("KWBR"));
         Assert.Equal([@"C:\LDS\REG\OES.reg"], LdsSteps.PreJoinRegFiles(null));
     }
 
@@ -103,7 +103,7 @@ public class SharedTests
     {
         var script = LdsSteps.Build();
         Assert.DoesNotContain("OES.reg", script);
-        Assert.DoesNotContain("DNS-", script);
+        Assert.DoesNotContain("DNS ", script);
         Assert.Contains("ZENworkspassivLogin.reg", script);
     }
 
