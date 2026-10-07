@@ -15,6 +15,7 @@ public class MainForm : Form
     private readonly JoinConfig? _config;
     private readonly ComboBox _userBox = new();
     private readonly ComboBox _locationBox = new();
+    private readonly ComboBox _dnsBox = new();
     private readonly TextBox _nameBox = new();
     private readonly TextBox _passwordBox = new();
     private readonly Button _joinButton = new();
@@ -38,13 +39,15 @@ public class MainForm : Form
         }
         catch (Exception ex)
         {
-            BuildLayout("Keine Konfiguration");
+            BuildLayout("Keine Konfiguration", false);
             ShowStatus("Die eingebettete Konfiguration konnte nicht gelesen werden.", ex.Message);
             _joinButton.Enabled = false;
             return;
         }
 
-        BuildLayout(_config is null ? "Keine Konfiguration enthalten" : $"Domäne: {_config.Domain}");
+        var showDns = _config is { RunLdsSteps: true } && _config.DnsOptions.Length > 0;
+        if (showDns) ClientSize = new Size(ClientSize.Width, ClientSize.Height + 52);
+        BuildLayout(_config is null ? "Keine Konfiguration enthalten" : $"Domäne: {_config.Domain}", showDns);
         _nameBox.Text = Environment.MachineName;
 
         if (_config is null)
@@ -57,7 +60,9 @@ public class MainForm : Form
         _userBox.Items.AddRange(_config.Users);
         _userBox.SelectedIndex = 0;
         foreach (var l in _config.Locations) _locationBox.Items.Add(l.Name);
+        _dnsBox.Items.AddRange(_config.DnsOptions);
         if (_locationBox.Items.Count > 0) _locationBox.SelectedIndex = 0;
+        SelectDefaultDns();
 
         var current = DomainJoiner.GetCurrentDomain();
         if (current is not null)
@@ -67,7 +72,7 @@ public class MainForm : Form
         }
     }
 
-    private void BuildLayout(string domainText)
+    private void BuildLayout(string domainText, bool showDns)
     {
         var y = 20;
         Add(new Label { Text = "LKDS Computer Join", Font = new Font("Segoe UI Semibold", 16f) }, 24, ref y, 30);
@@ -77,6 +82,12 @@ public class MainForm : Form
         _userBox.DropDownStyle = ComboBoxStyle.DropDownList;
         AddField("Standort", _locationBox, ref y);
         _locationBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        if (showDns)
+        {
+            AddField("DNS-Einstellung (Registry vor dem Join)", _dnsBox, ref y);
+            _dnsBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            _locationBox.SelectedIndexChanged += (_, _) => SelectDefaultDns();
+        }
         AddField("Computername", _nameBox, ref y);
         _nameBox.MaxLength = ComputerNameValidator.MaxLength;
         AddField("Passwort", _passwordBox, ref y);
@@ -137,10 +148,32 @@ public class MainForm : Form
         if (_passwordBox.Text.Length == 0) { ShowStatus("Bitte das Passwort eingeben.", ""); return; }
 
         var location = _config.Locations[_locationBox.SelectedIndex];
+        string? dnsName = null;
+        if (_config.RunLdsSteps && _config.DnsOptions.Length > 0)
+        {
+            dnsName = _dnsBox.SelectedItem as string;
+            if (dnsName is null || !LdsSteps.IsValidDnsName(dnsName)) { ShowStatus("Bitte eine DNS-Einstellung auswählen.", ""); return; }
+        }
         name = name.ToUpperInvariant();
         var password = _passwordBox.Text;
 
         _joinButton.Enabled = false;
+
+        if (_config.RunLdsSteps)
+        {
+            ShowStatus("Registry-Dateien werden importiert …", "");
+            var regFiles = LdsSteps.PreJoinRegFiles(dnsName);
+            var regError = await Task.Run(() => RegistryImport.Import(regFiles));
+            if (regError is not null)
+            {
+                _passwordBox.Clear();
+                JoinLog.Write(name, user, location.Name, location.Dn, "Fehler", $"Registry vor Join: {regError}");
+                ShowStatus("Die Registry-Dateien konnten nicht importiert werden. Der Join wurde nicht gestartet.", regError);
+                _joinButton.Enabled = true;
+                return;
+            }
+        }
+
         ShowStatus("Computer wird der Domäne hinzugefügt …", "");
 
         var result = await Task.Run(() => DomainJoiner.Join(_config.Domain, location.Dn, user, password, name));
@@ -161,7 +194,7 @@ public class MainForm : Form
                 details = $"Firewall-Fehler: {firewallError}";
             }
 
-            var script = BuildPostScript(location.Name);
+            var script = BuildPostScript();
             if (script is not null)
             {
                 var scriptError = await Task.Run(() => PostScript.Schedule(script));
@@ -195,10 +228,10 @@ public class MainForm : Form
     }
 
     /// <summary>Fester LDS-Ablauf (falls gewählt) gefolgt vom optionalen freien Skript.</summary>
-    private byte[]? BuildPostScript(string locationName)
+    private byte[]? BuildPostScript()
     {
         var parts = new List<byte[]>();
-        if (_config!.RunLdsSteps) parts.Add(Encoding.ASCII.GetBytes(LdsSteps.Build(locationName)));
+        if (_config!.RunLdsSteps) parts.Add(Encoding.ASCII.GetBytes(LdsSteps.Build()));
         if (_config.PostScript is { Length: > 0 } custom) parts.Add(custom);
         if (parts.Count == 0) return null;
 
@@ -210,6 +243,13 @@ public class MainForm : Form
             ms.Write(newline, 0, newline.Length);
         }
         return ms.ToArray();
+    }
+
+    private void SelectDefaultDns()
+    {
+        if (_config is null || _locationBox.SelectedIndex < 0 || _dnsBox.Items.Count == 0) return;
+        var wanted = LdsSteps.DefaultDnsFor(_config.Locations[_locationBox.SelectedIndex].Name, _config.DnsOptions);
+        _dnsBox.SelectedItem = wanted ?? _config.DnsOptions[0];
     }
 
     private void ShowStatus(string message, string details)

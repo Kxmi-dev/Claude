@@ -10,6 +10,8 @@
     <AssemblyName>LKDS-Join-Vorlage</AssemblyName>
     <RootNamespace>Lkds.JoinApp</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>

@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private readonly List<Profile> _profiles = ProfileStore.Load();
     private readonly List<CheckItem> _locations = [];
     private readonly List<CheckItem> _users = [];
+    private readonly List<CheckItem> _dnsFiles = LdsSteps.KnownDnsNames.Select(n => new CheckItem { Name = n, Selected = true }).ToList();
     private readonly UIElement[] _pages;
     private const int MaxBatBytes = 1024 * 1024;
     private int _step;
@@ -37,6 +38,7 @@ public partial class MainWindow : Window
         CurrentUserCheck_Changed(this, new RoutedEventArgs());
 
         OutputBox.Text = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+        DnsList.ItemsSource = _dnsFiles;
         ProfileBox.ItemsSource = _profiles;
         ProfileBox.SelectedIndex = 0;
         ShowStep(0);
@@ -261,7 +263,8 @@ public partial class MainWindow : Window
             $"Domäne:\n{DomainBox.Text}\n\n" +
             $"Benutzer:\n{string.Join("\n", _users.Where(u => u.Selected).Select(u => u.Name))}\n\n" +
             $"Standorte:\n{string.Join("\n", _locations.Where(l => l.Selected).Select(l => l.Name))}\n\n" +
-            $"Standard-Nachlauf (LDS): {(LdsCheck.IsChecked == true ? "ja" : "nein")}\n\n" +
+            $"Standard-Nachlauf (LDS): {(LdsCheck.IsChecked == true ? "ja" : "nein")}\n" +
+            $"DNS-Dateien: {string.Join(", ", _dnsFiles.Where(d => d.Selected).Select(d => d.Name))}\n\n" +
             $"Zusätzliches Skript:\n{(BatBox.Text.Length == 0 ? "keines" : Path.GetFileName(BatBox.Text))}";
     }
 
@@ -294,7 +297,8 @@ public partial class MainWindow : Window
             _users.Where(u => u.Selected).Select(u => u.Name).ToArray(),
             _locations.Where(l => l.Selected).Select(l => new LocationEntry(l.Name, l.Dn)).ToArray(),
             script,
-            LdsCheck.IsChecked == true);
+            LdsCheck.IsChecked == true,
+            _dnsFiles.Where(d => d.Selected).Select(d => d.Name).ToArray());
 
         try
         {

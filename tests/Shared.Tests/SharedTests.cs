@@ -75,12 +75,36 @@ public class SharedTests
         => Assert.Equal(gueltig, ComputerNameValidator.Validate(name) is null);
 
     [Fact]
-    public void LDS_Nachlauf_waehlt_DNS_Datei_nach_Standort()
+    public void Vor_dem_Join_werden_OES_und_gewaehlte_DNS_Datei_importiert()
     {
-        Assert.Contains(@"C:\LDS\REG\DNS-LNBE.reg", LdsSteps.Build("LNBE"));
-        Assert.Contains(@"C:\LDS\REG\DNS-LNRE.reg", LdsSteps.Build("lnws"));
-        Assert.DoesNotContain("DNS-LN", LdsSteps.Build("LNSU"));
-        Assert.Contains(@"C:\LDS\REG\OES.reg", LdsSteps.Build("LNBE"));
+        Assert.Equal([@"C:\LDS\REG\OES.reg", @"C:\LDS\REG\DNS-KWBR.reg"], LdsSteps.PreJoinRegFiles("KWBR"));
+        Assert.Equal([@"C:\LDS\REG\OES.reg"], LdsSteps.PreJoinRegFiles(null));
+    }
+
+    [Fact]
+    public void DNS_Vorauswahl_nach_Standort()
+    {
+        string[] options = ["LNBE", "LNRE", "KWBR"];
+        Assert.Equal("LNBE", LdsSteps.DefaultDnsFor("LNBE", options));
+        Assert.Equal("LNRE", LdsSteps.DefaultDnsFor("lnws", options));
+        Assert.Equal("KWBR", LdsSteps.DefaultDnsFor("KWBR", options));
+        Assert.Null(LdsSteps.DefaultDnsFor("LNSU", options));
+    }
+
+    [Theory]
+    [InlineData("LNBE", true)]
+    [InlineData("..\\x", false)]
+    [InlineData("", false)]
+    public void DNS_Name_darf_kein_Pfad_sein(string name, bool gueltig)
+        => Assert.Equal(gueltig, LdsSteps.IsValidDnsName(name));
+
+    [Fact]
+    public void Nachlauf_nach_Neustart_enthaelt_diese_Dateien_nicht_mehr()
+    {
+        var script = LdsSteps.Build();
+        Assert.DoesNotContain("OES.reg", script);
+        Assert.DoesNotContain("DNS-", script);
+        Assert.Contains("ZENworkspassivLogin.reg", script);
     }
 
     [Fact]
@@ -90,8 +114,10 @@ public class SharedTests
         try
         {
             File.WriteAllBytes(path, [0x4D, 0x5A]);
-            ConfigPayload.AppendTo(path, new JoinConfig("d", "o", ["u"], [], null, true));
-            Assert.True(ConfigPayload.ReadFrom(path)!.RunLdsSteps);
+            ConfigPayload.AppendTo(path, new JoinConfig("d", "o", ["u"], [], null, true, ["LNBE", "KWBR"]));
+            var read = ConfigPayload.ReadFrom(path)!;
+            Assert.True(read.RunLdsSteps);
+            Assert.Equal(new[] { "LNBE", "KWBR" }, read.DnsOptions);
         }
         finally { File.Delete(path); }
     }
