@@ -151,4 +151,19 @@ public class SharedTests
         }
         finally { File.Delete(path); }
     }
+
+    [Fact]
+    public void Aufraeumen_loescht_nur_die_genannten_Eintraege_unter_LDS()
+    {
+        var script = LdsSteps.Build();
+        Assert.Contains(@"del /f /q ""C:\LDS\sysprep.bat""", script);
+        Assert.Contains(@"del /f /q ""C:\LDS\unattend.xml""", script);
+        Assert.Contains(@"del /f /q ""C:\LDS\install_Windows 10 Enterprise.clg""", script);
+        Assert.Contains(@"rmdir /s /q ""C:\LDS\part""", script);
+
+        // Jede Lösch-Anweisung bezieht sich ausschließlich auf einen der vier erlaubten Pfade.
+        var allowed = LdsSteps.CleanupFiles.Concat(LdsSteps.CleanupFolders).ToList();
+        foreach (var line in script.Split('\n').Where(l => l.Contains("del /f") || l.Contains("rmdir")))
+            Assert.Contains(allowed, p => line.Contains("\"" + p + "\""));
+    }
 }

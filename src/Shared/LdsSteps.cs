@@ -32,6 +32,17 @@ public static class LdsSteps
         return list.FirstOrDefault(o => string.Equals(o, wanted, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Dateien, die nach dem Neustart gelöscht werden.</summary>
+    public static readonly string[] CleanupFiles =
+    {
+        @"C:\LDS\sysprep.bat",
+        @"C:\LDS\unattend.xml",
+        @"C:\LDS\install_Windows 10 Enterprise.clg"
+    };
+
+    /// <summary>Ordner, die samt Inhalt nach dem Neustart gelöscht werden.</summary>
+    public static readonly string[] CleanupFolders = { @"C:\LDS\part" };
+
     public const string OesRegFile = @"C:\LDS\REG\OES.reg";
 
     /// <summary>Batch-Skript für nach dem Neustart. dnsName: gewählte DNS-Datei (ohne Endung) oder null.</summary>
@@ -50,8 +61,23 @@ public static class LdsSteps
         AppendImport(sb, @"C:\LDS\eml.reg");
         AppendImport(sb, @"C:\LDS\Credential-Guard.reg");
 
+        // Aufräumen: genau diese Einträge unter C:\LDS, nichts anderes.
+        sb.AppendLine("echo Raeume auf...");
+        foreach (var file in CleanupFiles) AppendDeleteFile(sb, file);
+        foreach (var dir in CleanupFolders) AppendDeleteFolder(sb, dir);
+
         sb.AppendLine("echo LDS-Nachlauf beendet.");
         return sb.ToString().Replace("\r\n", "\n").Replace("\n", "\r\n");
+    }
+
+    private static void AppendDeleteFile(StringBuilder sb, string file)
+    {
+        sb.AppendLine($"if exist \"{file}\" (del /f /q \"{file}\" & if exist \"{file}\" (echo FEHLER beim Loeschen: {file}) else (echo Geloescht: {file})) else echo Nicht vorhanden: {file}");
+    }
+
+    private static void AppendDeleteFolder(StringBuilder sb, string folder)
+    {
+        sb.AppendLine($"if exist \"{folder}\\\" (rmdir /s /q \"{folder}\" & if exist \"{folder}\\\" (echo FEHLER beim Loeschen: {folder}) else (echo Geloescht: {folder})) else echo Nicht vorhanden: {folder}");
     }
 
     private static void AppendStart(StringBuilder sb, string exe, string args)
