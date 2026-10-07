@@ -25,13 +25,17 @@ public class MainForm : Form
 
     public MainForm()
     {
+        // Layout wächst mit Schrift und Windows-Skalierung (kein festes Pixelraster).
+        AutoScaleDimensions = new SizeF(96f, 96f);
+        AutoScaleMode = AutoScaleMode.Dpi;
         Text = "LKDS Computer Join";
         Font = new Font("Segoe UI", 9.75f);
         BackColor = Color.White;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(420, 470);
+        AutoSize = true;
+        AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
         try
         {
@@ -46,7 +50,6 @@ public class MainForm : Form
         }
 
         var showDns = _config is { RunLdsSteps: true } && _config.DnsOptions.Length > 0;
-        if (showDns) ClientSize = new Size(ClientSize.Width, ClientSize.Height + 52);
         BuildLayout(_config is null ? "Keine Konfiguration enthalten" : $"Domäne: {_config.Domain}", showDns);
         _nameBox.Text = Environment.MachineName;
 
@@ -72,28 +75,39 @@ public class MainForm : Form
         }
     }
 
+    private const int ContentWidth = 372;
+
     private void BuildLayout(string domainText, bool showDns)
     {
-        var y = 20;
-        Add(new Label { Text = "LKDS Computer Join", Font = new Font("Segoe UI Semibold", 16f) }, 24, ref y, 30);
-        Add(new Label { Text = domainText, ForeColor = Muted }, 24, ref y, 26);
+        var table = new TableLayoutPanel
+        {
+            ColumnCount = 1,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
+            Padding = new Padding(24, 20, 24, 24)
+        };
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ContentWidth));
+        Controls.Add(table);
 
-        AddField("AD-Benutzer", _userBox, ref y);
+        AddRow(table, new Label { Text = "LKDS Computer Join", Font = new Font("Segoe UI Semibold", 16f), AutoSize = true });
+        AddRow(table, new Label { Text = domainText, ForeColor = Muted, AutoSize = true, Margin = new Padding(3, 0, 3, 8) });
+
+        AddField(table, "AD-Benutzer", _userBox);
         _userBox.DropDownStyle = ComboBoxStyle.DropDownList;
-        AddField("Standort", _locationBox, ref y);
+        AddField(table, "Standort", _locationBox);
         _locationBox.DropDownStyle = ComboBoxStyle.DropDownList;
         if (showDns)
         {
-            AddField("DNS-Einstellung (Registry vor dem Join)", _dnsBox, ref y);
+            AddField(table, "DNS-Einstellung (Registry vor dem Join)", _dnsBox);
             _dnsBox.DropDownStyle = ComboBoxStyle.DropDownList;
             _locationBox.SelectedIndexChanged += (_, _) => SelectDefaultDns();
         }
-        AddField("Computername", _nameBox, ref y);
+        AddField(table, "Computername", _nameBox);
         _nameBox.MaxLength = ComputerNameValidator.MaxLength;
-        AddField("Passwort", _passwordBox, ref y);
+        AddField(table, "Passwort", _passwordBox);
         _passwordBox.UseSystemPasswordChar = true;
 
-        y += 14;
         _joinButton.Text = "COMPUTER JOINEN";
         _joinButton.BackColor = Accent;
         _joinButton.ForeColor = Color.White;
@@ -101,39 +115,43 @@ public class MainForm : Form
         _joinButton.FlatAppearance.BorderSize = 0;
         _joinButton.Font = new Font("Segoe UI Semibold", 10f);
         _joinButton.Cursor = Cursors.Hand;
+        _joinButton.AutoSize = true;
+        _joinButton.Padding = new Padding(0, 8, 0, 8);
+        _joinButton.Margin = new Padding(3, 20, 3, 3);
         _joinButton.Click += JoinButton_Click;
-        Add(_joinButton, 24, ref y, 40);
+        AddRow(table, _joinButton, fill: true);
 
-        y += 10;
-        Add(new Label { Text = "Status", ForeColor = Muted, Font = new Font("Segoe UI", 8.5f) }, 24, ref y, 18);
+        AddRow(table, new Label { Text = "Status", ForeColor = Muted, Font = new Font("Segoe UI", 8.5f), AutoSize = true, Margin = new Padding(3, 16, 3, 0) });
         _statusLabel.Text = "Bereit";
-        Add(_statusLabel, 24, ref y, 44);
+        _statusLabel.AutoSize = true;
+        _statusLabel.MaximumSize = new Size(ContentWidth - 6, 0);
+        AddRow(table, _statusLabel);
 
         _detailsLink.Text = "Details anzeigen";
+        _detailsLink.AutoSize = true;
         _detailsLink.Visible = false;
         _detailsLink.LinkClicked += (_, _) => _detailsBox.Visible = !_detailsBox.Visible;
-        Add(_detailsLink, 24, ref y, 22);
+        AddRow(table, _detailsLink);
 
         _detailsBox.Multiline = true;
         _detailsBox.ReadOnly = true;
         _detailsBox.ScrollBars = ScrollBars.Vertical;
         _detailsBox.Visible = false;
-        Add(_detailsBox, 24, ref y, 60);
+        _detailsBox.Height = 70;
+        AddRow(table, _detailsBox, fill: true);
     }
 
-    private void AddField(string label, Control input, ref int y)
+    private static void AddField(TableLayoutPanel table, string label, Control input)
     {
-        y += 6;
-        Add(new Label { Text = label, ForeColor = Muted, Font = new Font("Segoe UI", 8.5f) }, 24, ref y, 18);
-        Add(input, 24, ref y, 28);
+        AddRow(table, new Label { Text = label, ForeColor = Muted, Font = new Font("Segoe UI", 8.5f), AutoSize = true, Margin = new Padding(3, 10, 3, 2) });
+        AddRow(table, input, fill: true);
     }
 
-    private void Add(Control control, int x, ref int y, int height)
+    private static void AddRow(TableLayoutPanel table, Control control, bool fill = false)
     {
-        control.Location = new Point(x, y);
-        control.Size = new Size(ClientSize.Width - 2 * x, height);
-        Controls.Add(control);
-        y += height;
+        if (fill) control.Dock = DockStyle.Fill;
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.Controls.Add(control);
     }
 
     private async void JoinButton_Click(object? sender, EventArgs e)
