@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -189,11 +190,12 @@ public class MainForm : Form
 
         _joinButton.Enabled = false;
 
+        var importedRegs = new List<string>();
         if (_config.RunLdsSteps)
         {
             ShowStatus("Registry-Dateien werden importiert …", "");
             var regFiles = LdsSteps.PreJoinRegFiles(dnsName);
-            var regError = await Task.Run(() => RegistryImport.Import(regFiles));
+            var regError = await Task.Run(() => RegistryImport.Import(regFiles, importedRegs));
             if (regError is not null)
             {
                 _passwordBox.Clear();
@@ -211,17 +213,22 @@ public class MainForm : Form
 
         var message = result.Message;
         var details = result.Details;
+        if (importedRegs.Count > 0)
+        {
+            message += $" Registry importiert: {string.Join(", ", importedRegs)}.";
+            details = $"Registry vor dem Join importiert: {string.Join(", ", importedRegs)}. {details}";
+        }
         if (result.Success)
         {
             var firewallError = await Task.Run(Firewall.OpenPort445);
             if (firewallError is null)
             {
-                details = "Firewall: Port 445 (eingehend, Domänenprofil) geöffnet.";
+                details += " | Firewall: Port 445 (eingehend, Domänenprofil) geöffnet.";
             }
             else
             {
                 message += " Port 445 konnte nicht geöffnet werden.";
-                details = $"Firewall-Fehler: {firewallError}";
+                details += $" | Firewall-Fehler: {firewallError}";
             }
 
             var script = BuildPostScript();

@@ -30,5 +30,10 @@ public static class Tools
         }
     }
 
-    private static string Quote(string arg) => "\"" + arg.Replace("\"", "\\\"") + "\"";
+    // Nur Argumente mit Leerzeichen oder Anführungszeichen werden in Anführungszeichen gesetzt,
+    // einfache Wörter wie "import" oder "/F" bleiben unverändert (manche Programme mögen das lieber).
+    private static string Quote(string arg) =>
+        arg.Length > 0 && arg.IndexOfAny(new[] { ' ', '"', '\t' }) < 0
+            ? arg
+            : "\"" + arg.Replace("\"", "\\\"") + "\"";
 }
