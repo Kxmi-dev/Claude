@@ -1,0 +1,32 @@
+<Window x:Class="Lkds.Join.JoinApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LKDS Computer Join" Width="420" SizeToContent="Height"
+        ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
+        Loaded="Window_Loaded">
+    <StackPanel Margin="28,24,28,24">
+        <TextBlock Text="LKDS Computer Join" FontSize="22" FontWeight="SemiBold" />
+
+        <TextBlock Style="{StaticResource Label}" Text="AD-Benutzer" />
+        <ComboBox x:Name="UserBox" />
+
+        <TextBlock Style="{StaticResource Label}" Text="Standort" />
+        <ComboBox x:Name="LocationBox" DisplayMemberPath="Name" />
+
+        <TextBlock Style="{StaticResource Label}" Text="Computername" />
+        <TextBox x:Name="NameBox" MaxLength="15" CharacterCasing="Upper" />
+
+        <TextBlock Style="{StaticResource Label}" Text="Passwort" />
+        <PasswordBox x:Name="PasswordBox" KeyDown="PasswordBox_KeyDown" />
+
+        <Button x:Name="JoinButton" Content="COMPUTER JOINEN" Margin="0,22,0,0" Click="JoinButton_Click" />
+
+        <TextBlock Style="{StaticResource Label}" Text="Status" Margin="0,20,0,4" />
+        <TextBlock x:Name="StatusText" Text="Bereit" TextWrapping="Wrap" />
+
+        <Expander x:Name="DetailsExpander" Header="Details" Margin="0,8,0,0" Visibility="Collapsed">
+            <TextBox x:Name="DetailsText" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="140"
+                     VerticalScrollBarVisibility="Auto" Margin="0,6,0,0" />
+        </Expander>
+    </StackPanel>
+</Window>

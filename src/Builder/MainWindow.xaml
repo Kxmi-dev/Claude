@@ -1,0 +1,123 @@
+<Window x:Class="Lkds.Join.Builder.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LKDS AD Join Builder" Width="620" Height="860" MinHeight="600"
+        WindowStartupLocation="CenterScreen" Loaded="Window_Loaded">
+    <Window.Resources>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#E1E4E8" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+        <Style x:Key="Heading" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+        <DataTemplate x:Key="CheckTemplate">
+            <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                      Margin="2,3" Click="Selection_Changed" />
+        </DataTemplate>
+    </Window.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="28,24,28,24">
+            <TextBlock Text="LKDS AD Join Builder" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,16" />
+
+            <!-- Profil -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Heading}" Text="Profil" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="ProfileBox" IsEditable="True" DisplayMemberPath="Name"
+                                  SelectionChanged="ProfileBox_SelectionChanged" />
+                        <Button Grid.Column="1" Content="Speichern" Margin="8,0,0,0" Click="SaveProfile_Click" />
+                        <Button Grid.Column="2" Content="Löschen" Margin="8,0,0,0" Click="DeleteProfile_Click" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 1 AD-Verbindung -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Heading}" Text="1  AD-Verbindung" />
+                    <TextBlock Style="{StaticResource Label}" Text="Domäne" />
+                    <TextBox x:Name="DomainBox" Text="ad.lkds.de" />
+                    <TextBlock Style="{StaticResource Label}" Text="Basis-OU" />
+                    <TextBox x:Name="BaseOuBox" Text="OU=PCs,OU=Computer,OU=LKDS,DC=ad,DC=lkds,DC=de" />
+                    <TextBlock Style="{StaticResource Label}" Text="Benutzer (automatisch: aktuelle Windows-Anmeldung)" />
+                    <TextBox x:Name="UserBox" />
+                    <TextBlock Style="{StaticResource Label}" Text="Passwort (leer lassen = mit der aktuellen Anmeldung verbinden)" />
+                    <PasswordBox x:Name="PasswordBox" />
+                    <Button x:Name="ConnectButton" Content="Mit Active Directory verbinden" Margin="0,16,0,0"
+                            Click="Connect_Click" />
+                    <TextBlock x:Name="ConnectStatus" TextWrapping="Wrap" Margin="0,10,0,0" Foreground="#57606A" />
+                    <Expander x:Name="DetailsExpander" Header="Details" Visibility="Collapsed" Margin="0,6,0,0">
+                        <TextBox x:Name="DetailsText" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="120"
+                                 VerticalScrollBarVisibility="Auto" Margin="0,6,0,0" />
+                    </Expander>
+                </StackPanel>
+            </Border>
+
+            <!-- 2 Standorte -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Heading}" Text="2  Standorte" />
+                    <TextBlock x:Name="LocationsHint" Text="Zuerst mit dem Active Directory verbinden." Foreground="#57606A" />
+                    <ListBox x:Name="LocationList" ItemTemplate="{StaticResource CheckTemplate}"
+                             BorderThickness="0" MaxHeight="160" />
+                </StackPanel>
+            </Border>
+
+            <!-- 3 Benutzer -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Heading}" Text="3  Benutzer für die Join-EXE" />
+                    <ListBox x:Name="UserList" ItemTemplate="{StaticResource CheckTemplate}"
+                             BorderThickness="0" MaxHeight="140" />
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="NewUserBox" KeyDown="NewUserBox_KeyDown" />
+                        <Button Grid.Column="1" Content="Hinzufügen" Margin="8,0,0,0" Click="AddUser_Click" />
+                        <Button Grid.Column="2" Content="Markierten entfernen" Margin="8,0,0,0" Click="RemoveUser_Click" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 4 EXE erstellen -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Heading}" Text="4  EXE erstellen" />
+                    <TextBlock Style="{StaticResource Label}" Text="Dateiname" />
+                    <TextBox x:Name="FileNameBox" Text="LKDS-Join.exe" TextChanged="FileNameBox_TextChanged" />
+                    <TextBlock Style="{StaticResource Label}" Text="Ausgabeordner" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="OutputBox" />
+                        <Button Grid.Column="1" Content="Durchsuchen" Margin="8,0,0,0" Click="Browse_Click" />
+                    </Grid>
+                    <TextBlock Style="{StaticResource Label}" Text="Zusammenfassung" />
+                    <Border Background="#F5F6F8" CornerRadius="6" Padding="12">
+                        <TextBlock x:Name="SummaryText" TextWrapping="Wrap" />
+                    </Border>
+                    <Button x:Name="BuildButton" Content="EXE erstellen" Margin="0,16,0,0" Click="Build_Click" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Window>
