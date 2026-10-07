@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Bewusst .NET Framework 4.7.2 mit Windows Forms: ist in Windows 10/11 bereits eingebaut,
+    die fertige EXE ist dadurch nur wenige zehn KB groß und braucht keine Installation.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>LKDS-Join-Vorlage</AssemblyName>
+    <RootNamespace>Lkds.JoinApp</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <DebugType>none</DebugType>
+    <Optimize>true</Optimize>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Gemeinsamer Code wird direkt einkompiliert, keine zusätzliche DLL. -->
+    <Compile Include="..\Shared\JoinConfig.cs" Link="Shared\JoinConfig.cs" />
+    <Compile Include="..\Shared\ConfigPayload.cs" Link="Shared\ConfigPayload.cs" />
+    <Compile Include="..\Shared\SecretBox.cs" Link="Shared\SecretBox.cs" />
+    <Compile Include="..\Shared\LdsSteps.cs" Link="Shared\LdsSteps.cs" />
+    <Compile Include="..\Shared\ComputerNameValidator.cs" Link="Shared\ComputerNameValidator.cs" />
+  </ItemGroup>
+</Project>

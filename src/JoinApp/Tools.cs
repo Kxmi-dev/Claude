@@ -1,0 +1,39 @@
+using System.Diagnostics;
+using System.Linq;
+
+namespace Lkds.JoinApp;
+
+/// <summary>Startet Windows-Kommandozeilenprogramme (netsh, icacls, schtasks) ohne Shell und ohne Passwörter.</summary>
+public static class Tools
+{
+    /// <summary>Gibt null bei Erfolg zurück, sonst die Ausgabe des Programms als Fehlerbeschreibung.</summary>
+    public static string? Run(string exe, params string[] args)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo(exe, string.Join(" ", args.Select(Quote)))
+            {
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            using var p = Process.Start(psi)!;
+            var output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
+            p.WaitForExit();
+            return p.ExitCode == 0 ? null : output.Trim();
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    // Nur Argumente mit Leerzeichen oder Anführungszeichen werden in Anführungszeichen gesetzt,
+    // einfache Wörter wie "import" oder "/F" bleiben unverändert (manche Programme mögen das lieber).
+    private static string Quote(string arg) =>
+        arg.Length > 0 && arg.IndexOfAny(new[] { ' ', '"', '\t' }) < 0
+            ? arg
+            : "\"" + arg.Replace("\"", "\\\"") + "\"";
+}
