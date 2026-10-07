@@ -21,6 +21,7 @@ public static class ConfigPayload
         sb.Append("BaseOu=").Append(config.BaseOu).Append('\n');
         foreach (var user in config.Users) sb.Append("User=").Append(user).Append('\n');
         foreach (var l in config.Locations) sb.Append("Location=").Append(l.Name).Append(Separator).Append(l.Dn).Append('\n');
+        if (config.RunLdsSteps) sb.Append("LdsSteps=1\n");
         if (config.PostScript is { Length: > 0 }) sb.Append("Script=").Append(Convert.ToBase64String(config.PostScript)).Append('\n');
 
         var text = Encoding.UTF8.GetBytes(sb.ToString());
@@ -62,6 +63,7 @@ public static class ConfigPayload
         var users = new List<string>();
         var locations = new List<LocationEntry>();
         byte[]? script = null;
+        var ldsSteps = false;
 
         foreach (var line in text.Split('\n'))
         {
@@ -74,6 +76,7 @@ public static class ConfigPayload
                 case "Domain": domain = value; break;
                 case "BaseOu": baseOu = value; break;
                 case "User": users.Add(value); break;
+                case "LdsSteps": ldsSteps = value == "1"; break;
                 case "Script": script = Convert.FromBase64String(value); break;
                 case "Location":
                     var parts = value.Split(Separator);
@@ -81,7 +84,7 @@ public static class ConfigPayload
                     break;
             }
         }
-        return new JoinConfig(domain, baseOu, users.ToArray(), locations.ToArray(), script);
+        return new JoinConfig(domain, baseOu, users.ToArray(), locations.ToArray(), script, ldsSteps);
     }
 
     private static byte[] ReadAt(FileStream fs, long position, int count)

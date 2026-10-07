@@ -238,6 +238,11 @@ public partial class MainWindow : Window
         UpdateSummary();
     }
 
+    private void LdsCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (IsLoaded) UpdateSummary();
+    }
+
     private void ClearBat_Click(object sender, RoutedEventArgs e)
     {
         BatBox.Clear();
@@ -256,7 +261,8 @@ public partial class MainWindow : Window
             $"Domäne:\n{DomainBox.Text}\n\n" +
             $"Benutzer:\n{string.Join("\n", _users.Where(u => u.Selected).Select(u => u.Name))}\n\n" +
             $"Standorte:\n{string.Join("\n", _locations.Where(l => l.Selected).Select(l => l.Name))}\n\n" +
-            $"Skript nach Neustart:\n{(BatBox.Text.Length == 0 ? "keines" : Path.GetFileName(BatBox.Text))}";
+            $"Standard-Nachlauf (LDS): {(LdsCheck.IsChecked == true ? "ja" : "nein")}\n\n" +
+            $"Zusätzliches Skript:\n{(BatBox.Text.Length == 0 ? "keines" : Path.GetFileName(BatBox.Text))}";
     }
 
     private void Build_Click(object sender, RoutedEventArgs e)
@@ -287,7 +293,8 @@ public partial class MainWindow : Window
             BaseOuBox.Text.Trim(),
             _users.Where(u => u.Selected).Select(u => u.Name).ToArray(),
             _locations.Where(l => l.Selected).Select(l => new LocationEntry(l.Name, l.Dn)).ToArray(),
-            script);
+            script,
+            LdsCheck.IsChecked == true);
 
         try
         {

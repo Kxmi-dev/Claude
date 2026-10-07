@@ -25,13 +25,16 @@ public class JoinConfig
     public string[] Users { get; }
     public LocationEntry[] Locations { get; }
     public byte[]? PostScript { get; }
+    /// <summary>Fester LDS-Ablauf (Programme starten, Registry importieren) nach dem Neustart.</summary>
+    public bool RunLdsSteps { get; }
 
-    public JoinConfig(string domain, string baseOu, string[] users, LocationEntry[] locations, byte[]? postScript = null)
+    public JoinConfig(string domain, string baseOu, string[] users, LocationEntry[] locations, byte[]? postScript = null, bool runLdsSteps = false)
     {
         Domain = domain;
         BaseOu = baseOu;
         Users = users;
         Locations = locations;
         PostScript = postScript;
+        RunLdsSteps = runLdsSteps;
     }
 }

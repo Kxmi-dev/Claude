@@ -116,7 +116,11 @@
                             <TextBox x:Name="OutputBox" TextChanged="Summary_Changed"/>
                             <Button Grid.Column="1" Content="Auswählen …" Margin="8,0,0,0" Click="BrowseFolder_Click"/>
                         </Grid>
-                        <TextBlock Text="Skript nach dem Neustart (optional, .bat)" Style="{StaticResource Label}"/>
+                        <CheckBox x:Name="LdsCheck" IsChecked="True" Margin="0,16,0,0" Checked="LdsCheck_Changed" Unchecked="LdsCheck_Changed"
+                                  Content="Standard-Nachlauf nach dem Neustart (Programme und Registry aus C:\LDS)"/>
+                        <TextBlock Text="Startet ZENworks und Bitdefender, importiert die .reg-Dateien, dazu je nach Standort die DNS-Datei. Läuft einmalig als SYSTEM."
+                                   Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="22,0,0,0"/>
+                        <TextBlock Text="Zusätzliches Skript (optional, .bat)" Style="{StaticResource Label}"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>

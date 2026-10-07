@@ -73,4 +73,26 @@ public class SharedTests
     [InlineData("EinSehrLangerComputername", false)]
     public void Computername_wird_geprueft(string name, bool gueltig)
         => Assert.Equal(gueltig, ComputerNameValidator.Validate(name) is null);
+
+    [Fact]
+    public void LDS_Nachlauf_waehlt_DNS_Datei_nach_Standort()
+    {
+        Assert.Contains(@"C:\LDS\REG\DNS-LNBE.reg", LdsSteps.Build("LNBE"));
+        Assert.Contains(@"C:\LDS\REG\DNS-LNRE.reg", LdsSteps.Build("lnws"));
+        Assert.DoesNotContain("DNS-LN", LdsSteps.Build("LNSU"));
+        Assert.Contains(@"C:\LDS\REG\OES.reg", LdsSteps.Build("LNBE"));
+    }
+
+    [Fact]
+    public void LDS_Schalter_bleibt_in_der_Konfiguration_erhalten()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(path, [0x4D, 0x5A]);
+            ConfigPayload.AppendTo(path, new JoinConfig("d", "o", ["u"], [], null, true));
+            Assert.True(ConfigPayload.ReadFrom(path)!.RunLdsSteps);
+        }
+        finally { File.Delete(path); }
+    }
 }

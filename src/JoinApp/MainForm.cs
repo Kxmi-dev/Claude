@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.IO;
+using System.Text;
 using System.Drawing;
 using System.Windows.Forms;
 using Lkds.Shared;
@@ -159,12 +161,13 @@ public class MainForm : Form
                 details = $"Firewall-Fehler: {firewallError}";
             }
 
-            if (_config.PostScript is { Length: > 0 } script)
+            var script = BuildPostScript(location.Name);
+            if (script is not null)
             {
                 var scriptError = await Task.Run(() => PostScript.Schedule(script));
                 if (scriptError is null)
                 {
-                    details += " | Skript: wird beim nächsten Start als SYSTEM ausgeführt.";
+                    details += " | Nachlauf-Skript: wird beim nächsten Start als SYSTEM ausgeführt.";
                 }
                 else
                 {
@@ -189,6 +192,24 @@ public class MainForm : Form
         {
             _joinButton.Enabled = true;
         }
+    }
+
+    /// <summary>Fester LDS-Ablauf (falls gewählt) gefolgt vom optionalen freien Skript.</summary>
+    private byte[]? BuildPostScript(string locationName)
+    {
+        var parts = new List<byte[]>();
+        if (_config!.RunLdsSteps) parts.Add(Encoding.ASCII.GetBytes(LdsSteps.Build(locationName)));
+        if (_config.PostScript is { Length: > 0 } custom) parts.Add(custom);
+        if (parts.Count == 0) return null;
+
+        using var ms = new MemoryStream();
+        foreach (var part in parts)
+        {
+            ms.Write(part, 0, part.Length);
+            var newline = Encoding.ASCII.GetBytes("\r\n");
+            ms.Write(newline, 0, newline.Length);
+        }
+        return ms.ToArray();
     }
 
     private void ShowStatus(string message, string details)
