@@ -31,11 +31,8 @@ public class MainForm : Form
         Text = "LKDS Computer Join";
         Font = new Font("Segoe UI", 9.75f);
         BackColor = Color.White;
-        FormBorderStyle = FormBorderStyle.FixedDialog;
-        MaximizeBox = false;
+        FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition = FormStartPosition.CenterScreen;
-        AutoSize = true;
-        AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
         try
         {
@@ -75,10 +72,23 @@ public class MainForm : Form
         }
     }
 
-    private const int ContentWidth = 372;
+    private const int StartWidth = 460;
+    private const int StartHeight = 580;
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        // Startgröße in echten Pixeln, passend zur Windows-Skalierung. Danach frei veränderbar.
+        var size = new Size(LogicalToDeviceUnits(StartWidth), LogicalToDeviceUnits(StartHeight));
+        MinimumSize = SizeFromClientSize(new Size(LogicalToDeviceUnits(380), LogicalToDeviceUnits(420)));
+        ClientSize = size;
+        CenterToScreen();
+    }
 
     private void BuildLayout(string domainText, bool showDns)
     {
+        var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
+        Controls.Add(scroll);
         var table = new TableLayoutPanel
         {
             ColumnCount = 1,
@@ -87,8 +97,11 @@ public class MainForm : Form
             Dock = DockStyle.Top,
             Padding = new Padding(24, 20, 24, 24)
         };
-        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ContentWidth));
-        Controls.Add(table);
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        scroll.Controls.Add(table);
+        // Lange Meldungen umbrechen passend zur aktuellen Fensterbreite.
+        scroll.SizeChanged += (_, _) =>
+            _statusLabel.MaximumSize = new Size(Math.Max(100, scroll.ClientSize.Width - table.Padding.Horizontal - 10), 0);
 
         AddRow(table, new Label { Text = "LKDS Computer Join", Font = new Font("Segoe UI Semibold", 16f), AutoSize = true });
         AddRow(table, new Label { Text = domainText, ForeColor = Muted, AutoSize = true, Margin = new Padding(3, 0, 3, 8) });
@@ -124,7 +137,6 @@ public class MainForm : Form
         AddRow(table, new Label { Text = "Status", ForeColor = Muted, Font = new Font("Segoe UI", 8.5f), AutoSize = true, Margin = new Padding(3, 16, 3, 0) });
         _statusLabel.Text = "Bereit";
         _statusLabel.AutoSize = true;
-        _statusLabel.MaximumSize = new Size(ContentWidth - 6, 0);
         AddRow(table, _statusLabel);
 
         _detailsLink.Text = "Details anzeigen";
