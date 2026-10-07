@@ -108,9 +108,10 @@ public class SharedTests
         try
         {
             File.WriteAllBytes(path, [0x4D, 0x5A]);
-            ConfigPayload.AppendTo(path, new JoinConfig("d", "o", ["u"], [], null, true, ["LNBE", "KWBR"]));
+            ConfigPayload.AppendTo(path, new JoinConfig("d", "o", ["u"], [], null, true, ["LNBE", "KWBR"], null, null, true));
             var read = ConfigPayload.ReadFrom(path)!;
             Assert.True(read.RunLdsSteps);
+            Assert.True(read.SelfDelete);
             Assert.Equal(new[] { "LNBE", "KWBR" }, read.DnsOptions);
         }
         finally { File.Delete(path); }

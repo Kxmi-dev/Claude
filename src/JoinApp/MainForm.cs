@@ -257,7 +257,14 @@ public class MainForm : Form
             var restart = MessageBox.Show(this, "Der Computer muss neu gestartet werden. Jetzt neu starten?",
                 "Neustart", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (restart == DialogResult.Yes)
-                Process.Start(new ProcessStartInfo("shutdown", "/r /t 5") { CreateNoWindow = true, UseShellExecute = false });
+                Process.Start(new ProcessStartInfo("shutdown", "/r /t 15") { CreateNoWindow = true, UseShellExecute = false });
+
+            // Ganz zuletzt: EXE von der Platte entfernen, damit auch ein hinterlegtes Passwort nicht zurückbleibt.
+            if (_config.SelfDelete)
+            {
+                SelfDelete.Start(Application.ExecutablePath);
+                Close();
+            }
         }
         else
         {

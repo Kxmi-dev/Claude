@@ -130,6 +130,10 @@
                                   Content="Standard-Nachlauf nach dem Neustart (Programme und Registry aus C:\LDS)"/>
                         <TextBlock Text="Startet ZENworks und Bitdefender und importiert OES.reg, die gewählte DNS-Datei und die übrigen .reg-Dateien und räumt danach in C:\LDS auf (sysprep.bat, unattend.xml, install_Windows 10 Enterprise.clg, Ordner part). Läuft einmalig als SYSTEM."
                                    Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="22,0,0,0"/>
+                        <CheckBox x:Name="SelfDeleteCheck" IsChecked="True" Margin="0,16,0,0" Checked="LdsCheck_Changed" Unchecked="LdsCheck_Changed"
+                                  Content="Join-EXE löscht sich nach erfolgreichem Join selbst"/>
+                        <TextBlock Text="Empfohlen, vor allem mit hinterlegtem Passwort. Nach einem Fehler bleibt die EXE bestehen, damit man es erneut versuchen kann."
+                                   Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="22,0,0,0"/>
                         <TextBlock Text="DNS-Dateien zur Auswahl in der Join-EXE (C:\LDS\REG\DNS ….reg)" Style="{StaticResource Label}"/>
                         <ItemsControl x:Name="DnsList">
                             <ItemsControl.ItemsPanel>

@@ -41,6 +41,8 @@ Ergebnis: `artifacts\LKDS-AD-Join-Builder.exe` (eine einzelne Datei, enthält di
 
 **Zusätzliches Skript nach dem Neustart (optional):** Im Builder (Schritt 4) lässt sich eine `.bat` auswählen. Sie wird in die Join-EXE eingebettet, beim Join in `C:\ProgramData\LKDS-Join` abgelegt (nur Administratoren und SYSTEM dürfen dort schreiben) und per einmaliger geplanter Aufgabe „LKDS-Nachlauf“ beim nächsten Windows-Start ausgeführt. Sie läuft **als SYSTEM mit höchsten Rechten, nicht als angemeldeter Benutzer**, Netzlaufwerke oder Einstellungen eines Benutzers gibt es dort also nicht. Danach entfernen sich Aufgabe und Dateien selbst. Es wird kein Log geschrieben. Keine Passwörter in die `.bat` schreiben, sie ist in der EXE lesbar.
 
+**Selbstlöschung:** Im Builder (Schritt 4, standardmäßig an) kann man festlegen, dass sich die Join-EXE nach erfolgreichem Join (und der Neustart-Frage) als allerletzter Schritt selbst löscht, damit auch ein hinterlegtes Passwort nicht auf dem PC zurückbleibt. Nur die laufende Datei wird gelöscht. Kopien an anderen Orten (Ausgabeordner des Builders, USB-Stick, Downloads, Backups) bleiben bestehen und müssen selbst gesichert oder gelöscht werden. Nach einem Fehler bleibt die EXE bestehen.
+
 Die Join-EXE schreibt kein Log. Meldungen und technische Details erscheinen nur im Programmfenster („Details anzeigen“).
 
 ## Benötigte AD-Berechtigungen

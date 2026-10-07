@@ -35,9 +35,12 @@ public class JoinConfig
     public byte[]? Key { get; }
     /// <summary>Benutzername zu verschlüsseltem Passwort. Benutzer ohne Eintrag müssen das Passwort am PC eingeben.</summary>
     public Dictionary<string, byte[]> SealedPasswords { get; }
+    /// <summary>Die Join-EXE löscht sich nach erfolgreichem Join selbst.</summary>
+    public bool SelfDelete { get; }
 
     public JoinConfig(string domain, string baseOu, string[] users, LocationEntry[] locations, byte[]? postScript = null, bool runLdsSteps = false, string[]? dnsOptions = null,
-        byte[]? key = null, Dictionary<string, byte[]>? sealedPasswords = null)
+        byte[]? key = null, Dictionary<string, byte[]>? sealedPasswords = null,
+        bool selfDelete = false)
     {
         Domain = domain;
         BaseOu = baseOu;
@@ -47,6 +50,7 @@ public class JoinConfig
         RunLdsSteps = runLdsSteps;
         DnsOptions = dnsOptions ?? new string[0];
         Key = key;
+        SelfDelete = selfDelete;
         SealedPasswords = sealedPasswords ?? new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
     }
 

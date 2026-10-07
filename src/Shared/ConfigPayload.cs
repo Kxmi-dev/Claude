@@ -23,6 +23,7 @@ public static class ConfigPayload
         foreach (var user in config.Users) sb.Append("User=").Append(user).Append('\n');
         foreach (var l in config.Locations) sb.Append("Location=").Append(l.Name).Append(Separator).Append(l.Dn).Append('\n');
         if (config.RunLdsSteps) sb.Append("LdsSteps=1\n");
+        if (config.SelfDelete) sb.Append("SelfDelete=1\n");
         foreach (var dns in config.DnsOptions) sb.Append("Dns=").Append(dns).Append('\n');
         if (config.Key is not null && config.SealedPasswords.Count > 0)
         {
@@ -72,6 +73,7 @@ public static class ConfigPayload
         var locations = new List<LocationEntry>();
         byte[]? script = null;
         var ldsSteps = false;
+        var selfDelete = false;
         var dnsOptions = new List<string>();
         byte[]? secretKey = null;
         var passwords = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
@@ -93,6 +95,7 @@ public static class ConfigPayload
                     var pw = value.Split(Separator);
                     if (pw.Length == 2) passwords[pw[0]] = Convert.FromBase64String(pw[1]);
                     break;
+                case "SelfDelete": selfDelete = value == "1"; break;
                 case "LdsSteps": ldsSteps = value == "1"; break;
                 case "Script": script = Convert.FromBase64String(value); break;
                 case "Location":
@@ -101,7 +104,7 @@ public static class ConfigPayload
                     break;
             }
         }
-        return new JoinConfig(domain, baseOu, users.ToArray(), locations.ToArray(), script, ldsSteps, dnsOptions.ToArray(), secretKey, passwords);
+        return new JoinConfig(domain, baseOu, users.ToArray(), locations.ToArray(), script, ldsSteps, dnsOptions.ToArray(), secretKey, passwords, selfDelete);
     }
 
     private static byte[] ReadAt(FileStream fs, long position, int count)

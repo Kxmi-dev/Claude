@@ -268,6 +268,7 @@ public partial class MainWindow : Window
             $"Benutzer:\n{string.Join("\n", _users.Where(u => u.Selected).Select(u => u.Name + (u.Password is null ? "" : " (Passwort hinterlegt)")))}\n\n" +
             $"Standorte:\n{string.Join("\n", _locations.Where(l => l.Selected).Select(l => l.Name))}\n\n" +
             $"Standard-Nachlauf (LDS): {(LdsCheck.IsChecked == true ? "ja" : "nein")}\n" +
+            $"EXE löscht sich selbst: {(SelfDeleteCheck.IsChecked == true ? "ja" : "nein")}\n" +
             $"DNS-Dateien: {string.Join(", ", _dnsFiles.Where(d => d.Selected).Select(d => d.Name))}\n\n" +
             $"Zusätzliches Skript:\n{(BatBox.Text.Length == 0 ? "keines" : Path.GetFileName(BatBox.Text))}";
     }
@@ -320,7 +321,8 @@ public partial class MainWindow : Window
             LdsCheck.IsChecked == true,
             _dnsFiles.Where(d => d.Selected).Select(d => d.Name).ToArray(),
             key,
-            sealedPasswords);
+            sealedPasswords,
+            SelfDeleteCheck.IsChecked == true);
 
         try
         {
