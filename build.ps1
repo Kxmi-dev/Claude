@@ -5,6 +5,10 @@ $root = $PSScriptRoot
 $out  = Join-Path $root 'artifacts'
 $tmp  = Join-Path $out 'join-vorlage'
 
+if (-not (Test-Path "$root\src\JoinApp\JoinApp.csproj")) {
+    throw "Der Ordner 'src' fehlt neben build.ps1 ($root). Bitte das komplette ZIP entpacken und build.cmd aus dem entpackten Ordner starten, nicht einzelne Dateien kopieren."
+}
+
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 
 # 1. Join-EXE (Vorlage) bauen: .NET Framework 4.7.2, nur wenige KB groß
