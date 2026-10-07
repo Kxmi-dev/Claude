@@ -215,7 +215,6 @@ public class MainForm : Form
             _manualPassword.Add(user);
             UpdatePasswordField();
             _passwordBox.Focus();
-            JoinLog.Write(name, user, location.Name, location.Dn, "Fehler", result.Details + " | hinterlegtes Passwort falsch");
             ShowStatus("Das hinterlegte Passwort ist nicht korrekt. Bitte das richtige Passwort eingeben und erneut auf COMPUTER JOINEN klicken.", result.Details);
             _joinButton.Enabled = true;
             return;
@@ -251,9 +250,6 @@ public class MainForm : Form
                 }
             }
         }
-
-        JoinLog.Write(name, user, location.Name, location.Dn,
-            result.Success ? "Erfolg" : "Fehler", details);
         ShowStatus(message, details);
 
         if (result.Success)

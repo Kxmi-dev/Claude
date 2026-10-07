@@ -39,16 +39,13 @@ public static class PostScript
         }
     }
 
-    // Führt die .bat aus, schreibt die Ausgabe ins join.log und räumt anschließend alles auf.
+    // Führt die .bat aus (ohne Log) und räumt anschließend alles auf.
     private const string RunnerText = """
         @echo off
         set "D=%~dp0"
-        call "%D%nachlauf.bat" > "%D%nachlauf-ausgabe.txt" 2>&1
-        set "RC=%errorlevel%"
+        call "%D%nachlauf.bat" >nul 2>&1
         schtasks /Delete /TN "LKDS-Nachlauf" /F >nul 2>&1
-        echo %date% %time% - Nachlauf-Skript beendet, Exitcode %RC% >> "%D%join.log"
-        type "%D%nachlauf-ausgabe.txt" >> "%D%join.log"
-        del "%D%nachlauf-ausgabe.txt" "%D%nachlauf.bat" >nul 2>&1
+        del "%D%nachlauf.bat" >nul 2>&1
         (goto) 2>nul & del "%~f0"
         """;
 }
