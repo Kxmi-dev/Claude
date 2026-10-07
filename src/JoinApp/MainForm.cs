@@ -113,7 +113,7 @@ public class MainForm : Form
         _locationBox.DropDownStyle = ComboBoxStyle.DropDownList;
         if (showDns)
         {
-            AddField(table, "DNS-Einstellung (Registry vor dem Join)", _dnsBox);
+            AddField(table, "DNS-Einstellung (Registry nach dem Neustart)", _dnsBox);
             _dnsBox.DropDownStyle = ComboBoxStyle.DropDownList;
             _locationBox.SelectedIndexChanged += (_, _) => SelectDefaultDns();
         }
@@ -190,22 +190,6 @@ public class MainForm : Form
 
         _joinButton.Enabled = false;
 
-        var importedRegs = new List<string>();
-        if (_config.RunLdsSteps)
-        {
-            ShowStatus("Registry-Dateien werden importiert …", "");
-            var regFiles = LdsSteps.PreJoinRegFiles(dnsName);
-            var regError = await Task.Run(() => RegistryImport.Import(regFiles, importedRegs));
-            if (regError is not null)
-            {
-                _passwordBox.Clear();
-                JoinLog.Write(name, user, location.Name, location.Dn, "Fehler", $"Registry vor Join: {regError}");
-                ShowStatus("Die Registry-Dateien konnten nicht importiert werden. Der Join wurde nicht gestartet.", regError);
-                _joinButton.Enabled = true;
-                return;
-            }
-        }
-
         ShowStatus("Computer wird der Domäne hinzugefügt …", "");
 
         var result = await Task.Run(() => DomainJoiner.Join(_config.Domain, location.Dn, user, password, name));
@@ -213,11 +197,6 @@ public class MainForm : Form
 
         var message = result.Message;
         var details = result.Details;
-        if (importedRegs.Count > 0)
-        {
-            message += $" Registry importiert: {string.Join(", ", importedRegs)}.";
-            details = $"Registry vor dem Join importiert: {string.Join(", ", importedRegs)}. {details}";
-        }
         if (result.Success)
         {
             var firewallError = await Task.Run(Firewall.OpenPort445);
@@ -231,7 +210,7 @@ public class MainForm : Form
                 details += $" | Firewall-Fehler: {firewallError}";
             }
 
-            var script = BuildPostScript();
+            var script = BuildPostScript(dnsName);
             if (script is not null)
             {
                 var scriptError = await Task.Run(() => PostScript.Schedule(script));
@@ -265,10 +244,10 @@ public class MainForm : Form
     }
 
     /// <summary>Fester LDS-Ablauf (falls gewählt) gefolgt vom optionalen freien Skript.</summary>
-    private byte[]? BuildPostScript()
+    private byte[]? BuildPostScript(string? dnsName)
     {
         var parts = new List<byte[]>();
-        if (_config!.RunLdsSteps) parts.Add(Encoding.ASCII.GetBytes(LdsSteps.Build()));
+        if (_config!.RunLdsSteps) parts.Add(Encoding.ASCII.GetBytes(LdsSteps.Build(dnsName)));
         if (_config.PostScript is { Length: > 0 } custom) parts.Add(custom);
         if (parts.Count == 0) return null;
 

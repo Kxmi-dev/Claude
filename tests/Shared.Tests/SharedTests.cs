@@ -75,13 +75,6 @@ public class SharedTests
         => Assert.Equal(gueltig, ComputerNameValidator.Validate(name) is null);
 
     [Fact]
-    public void Vor_dem_Join_werden_OES_und_gewaehlte_DNS_Datei_importiert()
-    {
-        Assert.Equal([@"C:\LDS\REG\OES.reg", @"C:\LDS\REG\DNS KWBR.reg"], LdsSteps.PreJoinRegFiles("KWBR"));
-        Assert.Equal([@"C:\LDS\REG\OES.reg"], LdsSteps.PreJoinRegFiles(null));
-    }
-
-    [Fact]
     public void DNS_Vorauswahl_nach_Standort()
     {
         string[] options = ["LNBE", "LNRE", "KWBR"];
@@ -99,12 +92,13 @@ public class SharedTests
         => Assert.Equal(gueltig, LdsSteps.IsValidDnsName(name));
 
     [Fact]
-    public void Nachlauf_nach_Neustart_enthaelt_diese_Dateien_nicht_mehr()
+    public void Nachlauf_nach_Neustart_importiert_OES_und_gewaehlte_DNS_Datei()
     {
-        var script = LdsSteps.Build();
-        Assert.DoesNotContain("OES.reg", script);
-        Assert.DoesNotContain("DNS ", script);
+        var script = LdsSteps.Build("LNBE");
+        Assert.Contains(@"C:\LDS\REG\OES.reg", script);
+        Assert.Contains(@"C:\LDS\REG\DNS LNBE.reg", script);
         Assert.Contains("ZENworkspassivLogin.reg", script);
+        Assert.DoesNotContain("DNS ", LdsSteps.Build());
     }
 
     [Fact]

@@ -34,16 +34,8 @@ public static class LdsSteps
 
     public const string OesRegFile = @"C:\LDS\REG\OES.reg";
 
-    /// <summary>Registry-Dateien, die vor dem Join importiert werden: OES.reg und die gewählte DNS-Datei.</summary>
-    public static List<string> PreJoinRegFiles(string? dnsName)
-    {
-        var files = new List<string> { OesRegFile };
-        if (!string.IsNullOrEmpty(dnsName)) files.Add(DnsRegPath(dnsName!));
-        return files;
-    }
-
-    /// <summary>Batch-Skript für nach dem Neustart (ohne die Dateien, die schon vor dem Join importiert wurden).</summary>
-    public static string Build()
+    /// <summary>Batch-Skript für nach dem Neustart. dnsName: gewählte DNS-Datei (ohne Endung) oder null.</summary>
+    public static string Build(string? dnsName = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine("@echo off");
@@ -52,6 +44,8 @@ public static class LdsSteps
         AppendStart(sb, @"C:\LDS\bitdef\epskit_x64.exe", " /silent /bdparams");
 
         sb.AppendLine("echo Importiere Registry...");
+        AppendImport(sb, OesRegFile);
+        if (!string.IsNullOrEmpty(dnsName)) AppendImport(sb, DnsRegPath(dnsName!));
         AppendImport(sb, @"C:\LDS\ZENworkspassivLogin.reg");
         AppendImport(sb, @"C:\LDS\eml.reg");
         AppendImport(sb, @"C:\LDS\Credential-Guard.reg");
