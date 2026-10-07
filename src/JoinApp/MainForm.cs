@@ -19,6 +19,7 @@ public class MainForm : Form
     private readonly ComboBox _dnsBox = new();
     private readonly TextBox _nameBox = new();
     private readonly TextBox _passwordBox = new();
+    private readonly Label _passwordLabel = new();
     private readonly Button _joinButton = new();
     private readonly Label _statusLabel = new();
     private readonly LinkLabel _detailsLink = new();
@@ -60,6 +61,7 @@ public class MainForm : Form
 
         _userBox.Items.AddRange(_config.Users);
         _userBox.SelectedIndex = 0;
+        UpdatePasswordField();
         foreach (var l in _config.Locations) _locationBox.Items.Add(l.Name);
         _dnsBox.Items.AddRange(_config.DnsOptions);
         if (_locationBox.Items.Count > 0) _locationBox.SelectedIndex = 0;
@@ -119,8 +121,15 @@ public class MainForm : Form
         }
         AddField(table, "Computername", _nameBox);
         _nameBox.MaxLength = ComputerNameValidator.MaxLength;
-        AddField(table, "Passwort", _passwordBox);
+        _passwordLabel.Text = "Passwort";
+        _passwordLabel.ForeColor = Muted;
+        _passwordLabel.Font = new Font("Segoe UI", 8.5f);
+        _passwordLabel.AutoSize = true;
+        _passwordLabel.Margin = new Padding(3, 10, 3, 2);
+        AddRow(table, _passwordLabel);
+        AddRow(table, _passwordBox, fill: true);
         _passwordBox.UseSystemPasswordChar = true;
+        _userBox.SelectedIndexChanged += (_, _) => UpdatePasswordField();
 
         _joinButton.Text = "COMPUTER JOINEN";
         _joinButton.BackColor = Accent;
@@ -176,7 +185,9 @@ public class MainForm : Form
         if (nameError is not null) { ShowStatus(nameError, ""); return; }
         if (_userBox.SelectedItem is not string user) { ShowStatus("Bitte einen AD-Benutzer auswählen.", ""); return; }
         if (_locationBox.SelectedIndex < 0) { ShowStatus("Bitte einen Standort auswählen.", ""); return; }
-        if (_passwordBox.Text.Length == 0) { ShowStatus("Bitte das Passwort eingeben.", ""); return; }
+        var saved = _config.GetPassword(user);
+        if (_config.HasPassword(user) && saved is null) { ShowStatus("Das hinterlegte Passwort ist beschädigt. Bitte neu mit dem Builder erstellen.", ""); return; }
+        if (saved is null && _passwordBox.Text.Length == 0) { ShowStatus("Bitte das Passwort eingeben.", ""); return; }
 
         var location = _config.Locations[_locationBox.SelectedIndex];
         string? dnsName = null;
@@ -186,7 +197,7 @@ public class MainForm : Form
             if (dnsName is null || !LdsSteps.IsValidDnsName(dnsName)) { ShowStatus("Bitte eine DNS-Einstellung auswählen.", ""); return; }
         }
         name = name.ToUpperInvariant();
-        var password = _passwordBox.Text;
+        var password = saved ?? _passwordBox.Text;
 
         _joinButton.Enabled = false;
 
@@ -259,6 +270,16 @@ public class MainForm : Form
             ms.Write(newline, 0, newline.Length);
         }
         return ms.ToArray();
+    }
+
+    /// <summary>Ist für den Benutzer ein Passwort hinterlegt, entfällt die Eingabe.</summary>
+    private void UpdatePasswordField()
+    {
+        var user = _userBox.SelectedItem as string;
+        var saved = _config is not null && user is not null && _config.HasPassword(user);
+        _passwordBox.Enabled = !saved;
+        _passwordBox.Clear();
+        _passwordLabel.Text = saved ? "Passwort (im Programm hinterlegt)" : "Passwort";
     }
 
     private void SelectDefaultDns()

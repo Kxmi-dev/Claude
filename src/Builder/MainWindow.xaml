@@ -85,21 +85,31 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <CheckBox IsChecked="{Binding Selected}" Content="{Binding Name}"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <CheckBox IsChecked="{Binding Selected}" Content="{Binding Name}"/>
+                                            <TextBlock Text="{Binding Hint}" Foreground="{StaticResource Muted}" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                        </StackPanel>
                                         <Button Grid.Column="1" Content="Entfernen" Padding="8,2" FontSize="12" Click="RemoveUser_Click"/>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
-                    <Grid Grid.Row="2" Margin="0,12,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="NewUserBox" KeyDown="NewUserBox_KeyDown"/>
-                        <Button Grid.Column="1" Content="Hinzufügen" Margin="8,0,0,0" Click="AddUser_Click"/>
-                    </Grid>
+                    <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="NewUserBox" KeyDown="NewUserBox_KeyDown" ToolTip="AD-Benutzername"/>
+                            <PasswordBox x:Name="NewPasswordBox" Grid.Column="1" Margin="8,0,0,0" KeyDown="NewUserBox_KeyDown"
+                                         ToolTip="Passwort (optional)"/>
+                            <Button Grid.Column="2" Content="Hinzufügen" Margin="8,0,0,0" Click="AddUser_Click"/>
+                        </Grid>
+                        <TextBlock Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"
+                                   Text="Links Benutzername, rechts optional das Passwort. Ohne Passwort fragt die Join-EXE am PC danach. Ein hinterlegtes Passwort wird verschlüsselt in die EXE gelegt, ist aber mit etwas Aufwand auslesbar. Am besten ein Konto verwenden, das nur Computer in die Domäne aufnehmen darf. Passwörter werden nie im Profil gespeichert."/>
+                    </StackPanel>
                 </Grid>
 
                 <!-- Schritt 4: EXE erstellen -->

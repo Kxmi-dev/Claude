@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -23,6 +24,12 @@ public static class ConfigPayload
         foreach (var l in config.Locations) sb.Append("Location=").Append(l.Name).Append(Separator).Append(l.Dn).Append('\n');
         if (config.RunLdsSteps) sb.Append("LdsSteps=1\n");
         foreach (var dns in config.DnsOptions) sb.Append("Dns=").Append(dns).Append('\n');
+        if (config.Key is not null && config.SealedPasswords.Count > 0)
+        {
+            sb.Append("Key=").Append(Convert.ToBase64String(config.Key)).Append('\n');
+            foreach (var pw in config.SealedPasswords)
+                sb.Append("Pw=").Append(pw.Key).Append(Separator).Append(Convert.ToBase64String(pw.Value)).Append('\n');
+        }
         if (config.PostScript is { Length: > 0 }) sb.Append("Script=").Append(Convert.ToBase64String(config.PostScript)).Append('\n');
 
         var text = Encoding.UTF8.GetBytes(sb.ToString());
@@ -66,6 +73,8 @@ public static class ConfigPayload
         byte[]? script = null;
         var ldsSteps = false;
         var dnsOptions = new List<string>();
+        byte[]? secretKey = null;
+        var passwords = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var line in text.Split('\n'))
         {
@@ -79,6 +88,11 @@ public static class ConfigPayload
                 case "BaseOu": baseOu = value; break;
                 case "User": users.Add(value); break;
                 case "Dns": dnsOptions.Add(value); break;
+                case "Key": secretKey = Convert.FromBase64String(value); break;
+                case "Pw":
+                    var pw = value.Split(Separator);
+                    if (pw.Length == 2) passwords[pw[0]] = Convert.FromBase64String(pw[1]);
+                    break;
                 case "LdsSteps": ldsSteps = value == "1"; break;
                 case "Script": script = Convert.FromBase64String(value); break;
                 case "Location":
@@ -87,7 +101,7 @@ public static class ConfigPayload
                     break;
             }
         }
-        return new JoinConfig(domain, baseOu, users.ToArray(), locations.ToArray(), script, ldsSteps, dnsOptions.ToArray());
+        return new JoinConfig(domain, baseOu, users.ToArray(), locations.ToArray(), script, ldsSteps, dnsOptions.ToArray(), secretKey, passwords);
     }
 
     private static byte[] ReadAt(FileStream fs, long position, int count)

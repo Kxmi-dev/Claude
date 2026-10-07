@@ -26,7 +26,7 @@ Ergebnis: `artifacts\LKDS-AD-Join-Builder.exe` (eine einzelne Datei, enthält di
 
 1. **AD-Verbindung:** Domäne (`ad.lkds.de`) und Basis-OU sind vorausgefüllt. Standardmäßig wird mit dem aktuell angemeldeten Windows-Konto verbunden, ein Passwort ist dann nicht nötig. Alternativ Haken entfernen und Benutzer und Passwort eingeben. Dann „Mit Active Directory verbinden“.
 2. **Standorte:** Alle OUs direkt unterhalb der Basis-OU erscheinen automatisch (z. B. LNBE, LNWS, später LNSU, LNAU). Per Haken auswählen. Der vollständige Distinguished Name wird mitgespeichert.
-3. **Benutzer:** Benutzer hinzufügen, entfernen und per Haken auswählen. Mindestens einer ist nötig.
+3. **Benutzer:** Benutzer hinzufügen, entfernen und per Haken auswählen. Mindestens einer ist nötig. Beim Hinzufügen kann optional ein Passwort angegeben werden, das verschlüsselt in die EXE gelegt wird. Ohne Passwort fragt die Join-EXE am PC danach.
 4. **EXE erstellen:** Dateiname (z. B. `LKDS-Join.exe`) und Ausgabeordner wählen, Zusammenfassung prüfen, „EXE erstellen“.
 
 **Profile** (Standard, IT, Notebook, Test …) speichern Domäne, Basis-OU, Benutzer und Standorte, nie ein Passwort. Sie liegen in `%AppData%\LKDS-AD-Join-Builder\profile.json` und gehören nur zum Builder.
@@ -56,7 +56,7 @@ Das Log liegt unter `C:\ProgramData\LKDS-Join\join.log` (Zeit, Computer, Benutze
 
 ## Sicherheitshinweise
 
-- Passwörter werden nie gespeichert, geloggt, übergeben (keine Kommandozeile) oder in die EXE eingebettet.
+- Passwörter werden nie in Profilen, im Log oder auf der Kommandozeile gespeichert oder übergeben. **Einzige Ausnahme:** Ein im Builder bewusst eingegebenes Passwort wird verschlüsselt (AES-256) in die Join-EXE gelegt. Der Schlüssel steckt in derselben EXE. Das schützt vor dem Lesen mit Texteditor oder Suchwerkzeugen, **nicht** vor jemandem, der die EXE gezielt analysiert. Dafür ein Konto verwenden, das nur Computer in die Domäne aufnehmen darf, und diese EXE nicht weitergeben. Wer das nicht möchte, lässt das Passwortfeld leer.
 - Benutzernamen, Domäne und OUs stehen lesbar in der Join-EXE. Das ist gewollt, sie sind nicht geheim.
 - Die Join-EXE ist nicht digital signiert. Wer signieren will, muss nach dem Erstellen signieren (eine Signatur vor dem Anhängen würde ungültig).
 - Die EXE-Dateien nur an Administratoren und Techniker weitergeben, da sie die Ziel-OUs verraten.

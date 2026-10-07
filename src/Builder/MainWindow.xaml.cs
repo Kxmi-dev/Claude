@@ -10,6 +10,8 @@ public class CheckItem
     public string Name { get; set; } = "";
     public string Dn { get; set; } = "";
     public bool Selected { get; set; }
+    public string? Password { get; set; }
+    public string Hint => string.IsNullOrEmpty(Password) ? "" : "Passwort hinterlegt";
 }
 
 public partial class MainWindow : Window
@@ -200,8 +202,10 @@ public partial class MainWindow : Window
     {
         var name = NewUserBox.Text.Trim();
         if (name.Length == 0 || _users.Any(u => u.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) return;
-        _users.Add(new CheckItem { Name = name, Selected = true });
+        var password = NewPasswordBox.Password;
+        _users.Add(new CheckItem { Name = name, Selected = true, Password = password.Length > 0 ? password : null });
         NewUserBox.Clear();
+        NewPasswordBox.Clear();
         RefreshUsers();
     }
 
@@ -261,7 +265,7 @@ public partial class MainWindow : Window
         SummaryText.Text =
             $"EXE:\n{ExeNameBox.Text}\n\n" +
             $"Domäne:\n{DomainBox.Text}\n\n" +
-            $"Benutzer:\n{string.Join("\n", _users.Where(u => u.Selected).Select(u => u.Name))}\n\n" +
+            $"Benutzer:\n{string.Join("\n", _users.Where(u => u.Selected).Select(u => u.Name + (u.Password is null ? "" : " (Passwort hinterlegt)")))}\n\n" +
             $"Standorte:\n{string.Join("\n", _locations.Where(l => l.Selected).Select(l => l.Name))}\n\n" +
             $"Standard-Nachlauf (LDS): {(LdsCheck.IsChecked == true ? "ja" : "nein")}\n" +
             $"DNS-Dateien: {string.Join(", ", _dnsFiles.Where(d => d.Selected).Select(d => d.Name))}\n\n" +
@@ -291,6 +295,22 @@ public partial class MainWindow : Window
             catch (Exception ex) { BuildStatus.Text = $"Die .bat-Datei konnte nicht gelesen werden.\n\nDetails: {ex.Message}"; return; }
         }
 
+        var withPassword = _users.Where(u => u.Selected && u.Password is not null).ToList();
+        if (withPassword.Count > 0 && MessageBox.Show(this,
+                $"Für {string.Join(", ", withPassword.Select(u => u.Name))} wird das Passwort verschlüsselt in die EXE gelegt.\n\n" +
+                "Wer die EXE besitzt und gezielt danach sucht, kann das Passwort mit etwas Aufwand auslesen. " +
+                "Verwende dafür ein Konto, das nur Computer in die Domäne aufnehmen darf, und gib die EXE nicht weiter.\n\nFortfahren?",
+                Title, MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+
+        byte[]? key = null;
+        var sealedPasswords = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        if (withPassword.Count > 0)
+        {
+            key = SecretBox.NewKey();
+            foreach (var u in withPassword) sealedPasswords[u.Name] = SecretBox.Seal(u.Password!, key);
+        }
+
         var config = new JoinConfig(
             DomainBox.Text.Trim(),
             BaseOuBox.Text.Trim(),
@@ -298,7 +318,9 @@ public partial class MainWindow : Window
             _locations.Where(l => l.Selected).Select(l => new LocationEntry(l.Name, l.Dn)).ToArray(),
             script,
             LdsCheck.IsChecked == true,
-            _dnsFiles.Where(d => d.Selected).Select(d => d.Name).ToArray());
+            _dnsFiles.Where(d => d.Selected).Select(d => d.Name).ToArray(),
+            key,
+            sealedPasswords);
 
         try
         {

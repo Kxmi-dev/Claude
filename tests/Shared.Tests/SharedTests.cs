@@ -115,4 +115,40 @@ public class SharedTests
         }
         finally { File.Delete(path); }
     }
+
+    [Fact]
+    public void Passwort_wird_verschluesselt_und_wieder_entschluesselt()
+    {
+        var key = SecretBox.NewKey();
+        var data = SecretBox.Seal("Geheim123!äöü", key);
+        Assert.DoesNotContain("Geheim123", System.Text.Encoding.UTF8.GetString(data));
+        Assert.Equal("Geheim123!äöü", SecretBox.Open(data, key));
+        Assert.Null(SecretBox.Open(data, SecretBox.NewKey()));
+
+        data[20] ^= 1;
+        Assert.Null(SecretBox.Open(data, key));
+    }
+
+    [Fact]
+    public void Hinterlegtes_Passwort_ueberlebt_die_EXE_und_steht_nie_im_Klartext()
+    {
+        var key = SecretBox.NewKey();
+        var passwords = new Dictionary<string, byte[]> { ["test-wadm"] = SecretBox.Seal("Geheim123!", key) };
+        var config = new JoinConfig("d", "o", ["test-wadm", "support-wadm"], [], null, false, null, key, passwords);
+
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(path, [0x4D, 0x5A]);
+            ConfigPayload.AppendTo(path, config);
+            Assert.DoesNotContain("Geheim123", File.ReadAllText(path));
+
+            var read = ConfigPayload.ReadFrom(path)!;
+            Assert.Equal("Geheim123!", read.GetPassword("test-wadm"));
+            Assert.True(read.HasPassword("TEST-WADM"));
+            Assert.False(read.HasPassword("support-wadm"));
+            Assert.Null(read.GetPassword("support-wadm"));
+        }
+        finally { File.Delete(path); }
+    }
 }
