@@ -9,12 +9,15 @@ public class JoinResult
     public bool Success { get; }
     public string Message { get; }
     public string Details { get; }
+    /// <summary>True, wenn der Join wegen eines falschen Passworts scheiterte.</summary>
+    public bool WrongPassword { get; }
 
-    public JoinResult(bool success, string message, string details)
+    public JoinResult(bool success, string message, string details, bool wrongPassword = false)
     {
         Success = success;
         Message = message;
         Details = details;
+        WrongPassword = wrongPassword;
     }
 }
 
@@ -73,7 +76,8 @@ public static class DomainJoiner
             return new JoinResult(true, "Der Computer wurde erfolgreich der Domäne hinzugefügt.", "");
 
         if (rename) SetComputerNameEx(ComputerNamePhysicalDnsHostname, oldName);
-        return new JoinResult(false, Describe(code), $"Fehlercode {code}: {new Win32Exception(code).Message}");
+        return new JoinResult(false, Describe(code), $"Fehlercode {code}: {new Win32Exception(code).Message}",
+            wrongPassword: code == 1326 || code == 1331 || code == 86);
     }
 
     private static string Describe(int code) => code switch

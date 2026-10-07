@@ -20,6 +20,8 @@ public class MainForm : Form
     private readonly TextBox _nameBox = new();
     private readonly TextBox _passwordBox = new();
     private readonly Label _passwordLabel = new();
+    // Benutzer, bei denen das hinterlegte Passwort falsch war: dort wird das Passwort von Hand eingegeben.
+    private readonly HashSet<string> _manualPassword = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     private readonly Button _joinButton = new();
     private readonly Label _statusLabel = new();
     private readonly LinkLabel _detailsLink = new();
@@ -185,8 +187,9 @@ public class MainForm : Form
         if (nameError is not null) { ShowStatus(nameError, ""); return; }
         if (_userBox.SelectedItem is not string user) { ShowStatus("Bitte einen AD-Benutzer auswählen.", ""); return; }
         if (_locationBox.SelectedIndex < 0) { ShowStatus("Bitte einen Standort auswählen.", ""); return; }
-        var saved = _config.GetPassword(user);
-        if (_config.HasPassword(user) && saved is null) { ShowStatus("Das hinterlegte Passwort ist beschädigt. Bitte neu mit dem Builder erstellen.", ""); return; }
+        var useSaved = _config.HasPassword(user) && !_manualPassword.Contains(user);
+        var saved = useSaved ? _config.GetPassword(user) : null;
+        if (useSaved && saved is null) { ShowStatus("Das hinterlegte Passwort ist beschädigt. Bitte neu mit dem Builder erstellen.", ""); return; }
         if (saved is null && _passwordBox.Text.Length == 0) { ShowStatus("Bitte das Passwort eingeben.", ""); return; }
 
         var location = _config.Locations[_locationBox.SelectedIndex];
@@ -205,6 +208,18 @@ public class MainForm : Form
 
         var result = await Task.Run(() => DomainJoiner.Join(_config.Domain, location.Dn, user, password, name));
         _passwordBox.Clear();
+
+        if (!result.Success && result.WrongPassword && saved is not null)
+        {
+            // Hinterlegtes Passwort war falsch: Eingabe freigeben, damit man das richtige tippen kann.
+            _manualPassword.Add(user);
+            UpdatePasswordField();
+            _passwordBox.Focus();
+            JoinLog.Write(name, user, location.Name, location.Dn, "Fehler", result.Details + " | hinterlegtes Passwort falsch");
+            ShowStatus("Das hinterlegte Passwort ist nicht korrekt. Bitte das richtige Passwort eingeben und erneut auf COMPUTER JOINEN klicken.", result.Details);
+            _joinButton.Enabled = true;
+            return;
+        }
 
         var message = result.Message;
         var details = result.Details;
@@ -277,9 +292,11 @@ public class MainForm : Form
     {
         var user = _userBox.SelectedItem as string;
         var saved = _config is not null && user is not null && _config.HasPassword(user);
-        _passwordBox.Enabled = !saved;
+        var manual = saved && _manualPassword.Contains(user!);
+        _passwordBox.Enabled = !saved || manual;
         _passwordBox.Clear();
-        _passwordLabel.Text = saved ? "Passwort (im Programm hinterlegt)" : "Passwort";
+        _passwordLabel.Text = manual ? "Passwort (hinterlegtes war falsch, bitte eingeben)"
+            : saved ? "Passwort (im Programm hinterlegt)" : "Passwort";
     }
 
     private void SelectDefaultDns()
