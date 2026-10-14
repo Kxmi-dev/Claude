@@ -28,6 +28,10 @@ UNDO_LOCK_SECONDS = 1.0
 # So lange wartet die Abbruch-Frage ([*] und dann [-]) auf Bestätigung.
 ABORT_CONFIRM_SECONDS = 5
 
+# So lange sind [Enter]/[*] in der Auswertung nach Partie-Ende gesperrt (Schutz vor
+# versehentlichem Doppeldruck direkt ins Hauptmenü). 0 = keine Sperre.
+RESULT_LOCK_SECONDS = 5
+
 # True  = während der Partie zählen nur Tasten des Nummernblocks.
 # False = zusätzlich die Ziffern-/Zeichentasten der normalen Tastatur.
 NUMPAD_ONLY = True

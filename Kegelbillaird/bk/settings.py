@@ -71,6 +71,7 @@ class AppSettings:
     font_scale: int = 100                                # Schriftgröße in % (80 … 130)
     show_history: bool = True                            # Feld „Letzte Stöße“ anzeigen
     show_input_status: bool = True                       # Feld „Eingabe“ anzeigen
+    result_lock_seconds: float = 5.0                     # Sperre der Auswertung nach Partie-Ende
 
     @property
     def logo_path(self) -> Path:
@@ -135,6 +136,7 @@ class AppSettings:
             font_scale=int(getattr(cfg, "FONT_SCALE", 100)),
             show_history=bool(getattr(cfg, "SHOW_HISTORY", True)),
             show_input_status=bool(getattr(cfg, "SHOW_INPUT_STATUS", True)),
+            result_lock_seconds=float(getattr(cfg, "RESULT_LOCK_SECONDS", 5)),
         )
         settings.validate()
         return settings
@@ -172,6 +174,8 @@ class AppSettings:
         for color in (self.primary_color, self.secondary_color):
             if len(color) != 3 or any(not 0 <= int(c) <= 255 for c in color):
                 raise ValueError("Farben bestehen aus drei Werten von 0 bis 255 (R, G, B).")
+        if not 0 <= self.result_lock_seconds <= 30:
+            raise ValueError("RESULT_LOCK_SECONDS muss zwischen 0 und 30 liegen.")
         if self.font_scale not in FONT_SCALES:
             raise ValueError(f"FONT_SCALE muss einer dieser Werte sein: {', '.join(map(str, FONT_SCALES))}.")
         if self.history_length < 1 or self.history_length > 10:

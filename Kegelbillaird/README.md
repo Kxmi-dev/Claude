@@ -133,19 +133,27 @@ Tippfehler beim letzten Stoß mit `/` korrigiert werden. Danach wird die Partie
 automatisch abgeschlossen: Ergebnis speichern, **PDF automatisch in `results` ablegen**,
 Spielstand archivieren – und das Hauptfenster zeigt die **Auswertung** (kein Extra-Fenster).
 
-Die Auswertung passt komplett auf einen Bildschirm (ohne Blättern): Überschrift mit
-ENDRESULTAT, Kennzahlen (Endresultat, Halbzeit, Minuspunkte, Schnitt je Stoß, Stöße,
-Spieldauer), links die **Stoßliste** im Raster der Zählansicht, rechts **Anzahl je Wertung**
-(Balken für +7 … −7) und drei Knöpfe:
+Die Auswertung („Endergebnis“) passt komplett auf einen Bildschirm (ohne Blättern):
+
+* oben groß **Halbzeit** und **Ergebnis**, daneben **Spielzeit** und **Minus**, rechts das Vereinslogo
+* **Spielanalyse:** wie oft 1er, 2er … 7er, Leerstöße und Minusstöße gestoßen wurden
+* **Statistik** in drei Spalten: Ausgeführte / Positive / Leer- / Minusstöße · Summe positive Punkte,
+  Summe Minuspunkte, Netto-Endergebnis, Durchschnitt je Stoß · Höchstes Stoßergebnis, Halbzeitergebnis,
+  Punkte 2. Halbzeit, **Korrekturen** (wie oft mit `/` zurückgenommen wurde; bei Partien vor Version 3 „–“)
 
 | Knopf | Wirkung |
 |-------|---------|
-| **Als PDF speichern** | speichert ohne Nachfrage im eingestellten PDF-Speicherort (Standard: „Dokumente“) |
-| **Drucken** | druckt sofort auf dem eingestellten Drucker bzw. dem **Windows-Standarddrucker** – ohne Druckdialog |
-| **Weiter** / **Zurück** | nach einer Partie ins Hauptmenü, sonst zurück ins Archiv bzw. zur Wiedergabe |
+| **Partie speichern** | speichert das PDF ohne Nachfrage im eingestellten PDF-Speicherort (Standard: „Dokumente“) |
+| **Partie drucken** | druckt sofort auf dem eingestellten Drucker bzw. dem **Windows-Standarddrucker** – ohne Druckdialog |
+| **Neue Partie** | startet sofort dieselbe Spielart noch einmal (nur direkt nach einer Partie) |
+| **Hauptmenü** / **Zurück** | nach einer Partie ins Hauptmenü, sonst zurück ins Archiv bzw. zur Wiedergabe |
 
-Das PDF selbst (automatisch gespeichert, „Als PDF speichern“ und Ausdruck) ist unverändert.
-Bedienung: `4` / `6` Knopf wählen, `Enter` ausführen, `*` oder `Esc` weiter – oder mit der Maus.
+**Sperre nach Partie-Ende:** Die ersten **5 Sekunden** reagiert die Auswertung nicht auf `Enter`, `*` oder
+Mausklicks (Fußzeile: „Eingabe gesperrt – noch … s“) – so landet man nicht durch einen doppelten Tastendruck
+versehentlich im Hauptmenü. Einstellbar unter Einstellungen → Eingabe → „Sperre nach Partie-Ende“ (0 = aus).
+
+Das PDF selbst (automatisch gespeichert, „Partie speichern“ und Ausdruck) ist unverändert.
+Bedienung: `4` / `6` Knopf wählen, `Enter` ausführen, `*` oder `Esc` zurück – oder mit der Maus.
 
 ### Archiv
 Hauptmenü → **Archiv** zeigt alle gespeicherten Partien (neueste oben) mit Datum, Uhrzeit,

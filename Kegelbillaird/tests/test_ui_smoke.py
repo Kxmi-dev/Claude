@@ -28,6 +28,7 @@ NO = Qt.KeyboardModifier.NoModifier if QApplication else None
 @unittest.skipIf(QApplication is None, "PySide6 nicht installiert")
 class UiSmokeTests(unittest.TestCase):
     LOCK = 0.25
+    RESULT_LOCK = 0.6
 
     @classmethod
     def setUpClass(cls):
@@ -39,7 +40,8 @@ class UiSmokeTests(unittest.TestCase):
             AppSettings.from_config(config),
             data_dir=self.tmp.path / "data", results_dir=self.tmp.path / "results",
             logs_dir=self.tmp.path / "logs", input_lock_seconds=self.LOCK, undo_lock_seconds=0.1,
-            abort_confirm_seconds=2.0, auto_enable_numlock=False, fullscreen=False)
+            abort_confirm_seconds=2.0, auto_enable_numlock=False, fullscreen=False,
+            result_lock_seconds=self.RESULT_LOCK)
         self.storage = GameStorage(self.settings.data_dir, self.settings.results_dir)
         self.storage.ensure_directories()
         self.windows = []
@@ -122,14 +124,19 @@ class UiSmokeTests(unittest.TestCase):
         QTest.qWait(300)
         result = window.result_screen                             # Auswertung im Hauptfenster
         self.assertIs(window.stack.currentWidget(), result)
-        self.assertIn(f"ENDRESULTAT: {total}", result._plate._text)
+        self.assertEqual(result._plate._text, "Endergebnis")
         self.assertEqual(result.boxes["total"].text(), str(total).replace("-", "\u2212"))
-        self.assertEqual(result.boxes["strokes"].text(), "50 / 50")
+        self.assertEqual(result.stats[0].rows()[0][:2], ("Ausgeführte Stöße", "50"))
+        self.assertEqual(result.button_texts(), ["Partie speichern", "Partie drucken", "Neue Partie", "Hauptmenü"])
         pdfs = list(self.settings.results_dir.glob("BK50_*.pdf"))
         self.assertEqual(len(pdfs), 1)                            # PDF wurde automatisch gespeichert
         self.assertFalse(self.storage.has_active_files())
         self.assertEqual(len(list((self.settings.data_dir / "archive").glob("*_beendet.json"))), 1)
-        self.key(window, Qt.Key.Key_Enter)                       # "Weiter" ist vorgewählt
+        self.key(window, Qt.Key.Key_Enter)                       # noch gesperrt -> bleibt stehen
+        self.assertIs(window.stack.currentWidget(), result)
+        self.assertIn("gesperrt", window.footer.current_text())
+        QTest.qWait(int(self.RESULT_LOCK * 1000) + 100)
+        self.key(window, Qt.Key.Key_Enter)                       # "Hauptmenü" ist vorgewählt
         self.assertIs(window.stack.currentWidget(), window.menu_screen)
 
     def test_undo_of_last_stroke_during_lock_prevents_finish(self):
@@ -148,7 +155,35 @@ class UiSmokeTests(unittest.TestCase):
         self.assertEqual(game.played, 49)
         self.score(window, 2)
         QTest.qWait(int(self.LOCK * 1000) + 300)
-        self.assertIn("ENDRESULTAT: 51", window.result_screen._plate._text)
+        self.assertEqual(window.result_screen.boxes["total"].text(), "51")
+
+    def test_result_screen_statistics_and_new_game(self):
+        state = GameState.new(BK50)
+        state.strokes.extend([7, -2, 0] + [1] * 46)
+        state.corrections = 2
+        self.storage.save_active(state)
+        window = self.open_window()
+        self.key(window, Qt.Key.Key_Enter)                       # PARTIE FORTSETZEN
+        self.score(window, 5)
+        QTest.qWait(int(self.LOCK * 1000) + 300)
+        result = window.result_screen
+        self.assertIs(window.stack.currentWidget(), result)
+        counts = {name: box.text() for name, box in result.analysis.items()}
+        self.assertEqual((counts["1er"], counts["5er"], counts["7er"], counts["Leer"], counts["Minus"]),
+                         ("46", "1", "1", "1", "1"))
+        rows = {label: value for table in result.stats for label, value, _ in table.rows()}
+        self.assertEqual(rows["Summe positive Punkte"], "58")
+        self.assertEqual(rows["Summe Minuspunkte"], "\u22122")
+        self.assertEqual(rows["Höchstes Stoßergebnis"], "7")
+        self.assertEqual(rows["Halbzeitergebnis"], "27")             # 7 − 2 + 0 + 22 × 1
+        self.assertEqual(rows["Punkte 2. Halbzeit"], "29")
+        self.assertEqual(rows["Korrekturen"], "2")
+        QTest.qWait(int(self.RESULT_LOCK * 1000) + 100)
+        self.key(window, Qt.Key.Key_4)                           # „Neue Partie“
+        self.key(window, Qt.Key.Key_Enter)
+        self.assertIs(window.stack.currentWidget(), window.game_screen)
+        self.assertEqual(window.game_screen.game.state.mode.key, "BK50")
+        self.assertEqual(window.game_screen.game.played, 0)
 
     def test_abort_with_star_and_minus(self):
         window = self.open_window()
@@ -273,6 +308,8 @@ class UiSmokeTests(unittest.TestCase):
         self.key(window, Qt.Key.Key_Enter)                       # AUSWERTUNG ANZEIGEN
         result = window.result_screen
         self.assertIs(window.stack.currentWidget(), result)      # kein Extra-Fenster
+        self.assertEqual(result.button_texts(), ["Partie speichern", "Partie drucken", "Zurück"])
+        self.assertEqual(result.stats[2].rows()[3], ("Korrekturen", "0", False))
         self.assertEqual(result.state.strokes, finished.strokes)
         saved = result.save_pdf(self.tmp.path / "usb" / "bericht")    # Endung wird ergänzt
         self.assertEqual(saved.name, "bericht.pdf")

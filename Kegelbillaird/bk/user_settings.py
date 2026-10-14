@@ -98,6 +98,7 @@ FIELDS: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]]] = {
     "input_lock_seconds": (_float, float),
     "undo_lock_seconds": (_float, float),
     "abort_confirm_seconds": (_float, float),
+    "result_lock_seconds": (_float, float),
     "numpad_only": (_bool, bool),
     "auto_enable_numlock": (_bool, bool),
     "key_bindings": (_keys, _encode_keys),

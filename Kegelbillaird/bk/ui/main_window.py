@@ -174,6 +174,7 @@ class MainWindow(QWidget):
         self.menu_screen.archive_requested.connect(self.show_archive)
         self.menu_screen.settings_requested.connect(self.show_settings)
         self.result_screen.closed.connect(self._close_result)
+        self.result_screen.new_game_requested.connect(self._new_game_from_result)
         self.result_screen.message.connect(self._flash)
         self.result_screen.footer_changed.connect(self._refresh_footer)
         self.settings_screen.back_requested.connect(self._settings_back)
@@ -370,14 +371,10 @@ class MainWindow(QWidget):
                                  back_choice=len(actions) - 1), handler)
 
     def _show_archive_report(self, state: GameState) -> None:
-        started = datetime.fromisoformat(state.started_at)
-        game = Game(state)
         status = {GameStatus.FINISHED: "beendet", GameStatus.ABORTED: "abgebrochen"}.get(state.status, "unterbrochen")
         from_replay = self.stack.currentWidget() is self.game_screen and self.game_screen.is_replay
         back = (lambda: self._show_screen(self.game_screen)) if from_replay else self.show_archive
-        self.show_result(state, f"{state.mode.title} vom {started:%d.%m.%Y}  –  Ergebnis: {game.total}",
-                         f"Partie {status}   ·   {game.played} von {game.max_strokes} Stößen",
-                         on_close=back, continue_label="Zurück")
+        self.show_result(state, f"aus dem Archiv – Partie {status}", on_close=back, close_label="Zurück")
 
     def _start_replay(self, state: GameState) -> None:
         log.info("Wiedergabe: %s vom %s", state.mode.key, state.started_at)
@@ -396,11 +393,13 @@ class MainWindow(QWidget):
         self._flash("Partie aus dem Archiv wird fortgesetzt.")
 
     # ============================================================ Auswertung
-    def show_result(self, state: GameState, heading: str, note: str = "", on_close=None,
-                    continue_label: str = "Weiter") -> bool:
-        """Auswertung im Hauptfenster anzeigen (kein Extra-Fenster)."""
+    def show_result(self, state: GameState, note: str = "", on_close=None, close_label: str = "Hauptmenü",
+                    after_game: bool = False) -> bool:
+        """Auswertung im Hauptfenster anzeigen (kein Extra-Fenster). Direkt nach einer Partie
+        mit „Neue Partie“ und kurzer Eingabesperre gegen versehentlichen Doppeldruck."""
         try:
-            self.result_screen.show_state(state, heading, note, continue_label)
+            self.result_screen.show_state(state, note, close_label, offer_new_game=after_game,
+                                          lock_seconds=self._settings.result_lock_seconds if after_game else 0.0)
         except Exception:
             log.exception("Auswertung konnte nicht angezeigt werden")
             self._flash("Auswertung konnte nicht angezeigt werden – siehe logs/application.log", True)
@@ -410,6 +409,15 @@ class MainWindow(QWidget):
         self._show_screen(self.result_screen)
         log.info("Auswertung angezeigt: %s vom %s", state.mode.key, state.started_at)
         return True
+
+    def _new_game_from_result(self, mode: GameMode) -> None:
+        """„Neue Partie“ in der Auswertung: dieselbe Spielart sofort neu starten."""
+        current = next((m for m in self._settings.game_modes if m.key == mode.key and m.available), None)
+        if current is None:
+            self._flash(f"Spielart „{mode.title}“ ist nicht mehr verfügbar.", True)
+            return
+        self._result_close = None
+        self._start_new_game(current)
 
     def _close_result(self) -> None:
         action, self._result_close = self._result_close, None
@@ -584,8 +592,7 @@ class MainWindow(QWidget):
             note = f"PDF automatisch gespeichert: {pdf_path.parent.name}\\{pdf_path.name}"
             if recovered:
                 note += "   (Abschluss nach Programmneustart nachgeholt)"
-            if self.show_result(state, f"Partie beendet  –  ENDRESULTAT: {game.total}", note,
-                                on_close=self.show_menu):
+            if self.show_result(state, note, on_close=self.show_menu, after_game=True):
                 return
         self.footer.set_segments([f"Weiter mit  [{keymap.label('enter')}]"])
         self._ask(OverlayContent("Partie beendet", lines, big=f"ENDRESULTAT: {game.total}",

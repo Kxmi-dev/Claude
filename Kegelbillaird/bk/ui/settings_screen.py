@@ -442,6 +442,9 @@ class SettingsScreen(QWidget):
                               hint="Schutz vor Doppeleingaben. Gilt ab der nächsten Partie."),
             self._number_item("Sperre nach Korrektur", "undo_lock_seconds", 0.5, 0, 5),
             self._number_item("Wartezeit der Abbruch-Frage", "abort_confirm_seconds", 1, 1, 30),
+            self._number_item("Sperre nach Partie-Ende", "result_lock_seconds", 1, 0, 30,
+                              hint="So lange reagiert die Auswertung nicht auf [Enter] – kein versehentlicher "
+                                   "Sprung ins Hauptmenü. 0 = aus."),
             self._bool_item("Nur Nummernblock", "numpad_only",
                             "An = in der Partie zählen nur Tasten des Nummernblocks."),
             self._bool_item("NumLock automatisch einschalten", "auto_enable_numlock"),

@@ -45,7 +45,7 @@ bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, Billiard vs Fußball (25 S
                      Vereinslogo zusätzlich klein rechts in der Titelleiste (`TitleBar.set_logo`).
 bk/ui/game_screen.py Zählansicht + Wiedergabe-Modus
 bk/ui/archive_screen.py  Archivliste
-bk/ui/result_screen.py   Auswertung im Hauptfenster (Kennzahlen, Raster, Anzahl je Wertung, Knöpfe)
+bk/ui/result_screen.py   Auswertung „Endergebnis“ im Hauptfenster (Kennzahlen, Spielanalyse, Statistik, Knöpfe, Sperre)
 bk/ui/report_output.py   PDF speichern (ohne Nachfrage) + drucken (ohne Dialog), gleiche Bytes wie results-PDF
 bk/ui/overlays.py    Abfrage-Karten (Fortsetzen, Abbruch, Archiv-Auswahl, Fehler)
 bk/ui/celebration.py Bild-/GIF-Einblendung bei CELEBRATION_VALUES
@@ -58,7 +58,7 @@ bk/media.py          Ton (winsound/Qt, fehlerfrei geschluckt) + Bildauswahl (1 D
 bk/ui/widgets.py, theme.py, keymap.py
 sounds/, bilder/     Ton- und Bilddateien neben der .exe (austauschbar, ohne Neubau)
 vereinslogo/         Vereinslogo (beliebiges Bildformat), Auswahl im Einstellungsmenü
-tests/               158 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
+tests/               159 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
 ```
 Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), `results/` (PDF+JSON), `logs/`.
 
@@ -120,9 +120,12 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 
 ## Auswertung & Archiv
 - **Kein Extra-Fenster** (Nutzerwunsch): `ResultScreen` im Stack, alles auf einem Bildschirm ohne Scrollen
-  (Referenz 1024×702 wie Menü/Archiv). Kennzahlen-Reihe, ScoreGrid (show_current=False), DistributionBox,
-  Knöpfe **Als PDF speichern** (ohne Nachfrage in `pdf_save_dir`, Standard Dokumente) / **Drucken** (gewählter
-  bzw. Standarddrucker, kein Dialog) / **Weiter** (Archiv: „Zurück“). `4`/`6`, Enter, `*`/Esc.
+  (Referenz 1024×702). Aufbau nach Nutzer-Foto („Endergebnis“): Halbzeit · Ergebnis · Spielzeit/Minus · LogoBox;
+  Spielanalyse 1er–7er/Leer/Minus (Anzahl); Statistik 3 Spalten (`StatsTable`, gemeinsame große Schrift);
+  Knöpfe Partie speichern / Partie drucken / Neue Partie (nur nach Partie, gleiche Spielart) / Hauptmenü
+  (Archiv: Zurück). Kein Raster/„Anzahl je Wertung“ mehr am Bildschirm. „Partie bearbeiten“ bewusst weggelassen.
+- **Sperre nach Partie-Ende** `result_lock_seconds` (Standard 5, Einstellungen → Eingabe): Enter/Back/Klick wirkungslos.
+- **Korrekturen** werden in `GameState.corrections` gezählt (`Game.undo`); alte Spielstände ohne Feld → None → „–“.
 - **Das PDF bleibt unverändert** (Nutzer: „so wie es jetzt ist“) – Formatierung nur auf ausdrücklichen Wunsch ändern.
   Einzige gewünschte Änderung bisher: Logo oben rechts = Vereinslogo statt BK-Scoreboard-Bild.
 - PDF enthält „**Anzahl je Wertung**“ (wie oft −7…+7 gestoßen) und gleich dicke Tabellenlinien
