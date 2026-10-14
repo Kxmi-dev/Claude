@@ -55,7 +55,7 @@ bk/media.py          Ton (winsound/Qt, fehlerfrei geschluckt) + Bildauswahl (1 D
 bk/ui/widgets.py, theme.py, keymap.py
 sounds/, bilder/     Ton- und Bilddateien neben der .exe (austauschbar, ohne Neubau)
 vereinslogo/         Vereinslogo (beliebiges Bildformat), Auswahl im Einstellungsmenü
-tests/               153 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
+tests/               154 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
 ```
 Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), `results/` (PDF+JSON), `logs/`.
 
@@ -78,7 +78,9 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   **„Billiard vs Fußball“** (Schlüssel BK25): 25 Stoß, keine Halbzeit, Raster 5 × 5.
 - Anzeigen: Stoß-Anzahl (nächster Stoß / max), Punktestand, Prognose, Halbzeit (nach 50 bzw. 25),
   Aktueller Stoß (rot getönt bei Minus-Modus), Letzte Stöße (5), Minus (Summe Minuspunkte),
-  Eingabe (BEREIT / MINUS / GESPERRT + Countdown), Spieldauer, 10er-Raster.
+  Eingabe (BEREIT / MINUS / GESPERRT + Countdown), Spieldauer, 10er-Raster mit Reihensumme rechts (Spalte Σ,
+  auch in der Auswertung). Stoß-Anzahl zeigt NUR die Nummer (kein „/ 100“), Aktueller Stoß ohne „+“
+  (nur Minus mit Vorzeichen). Logo: „Version 3.0“, APP_VERSION 3.0.
 
 ## Einstellungsmenü (mit dem Nutzer abgestimmt)
 - Hauptmenü: … Archiv, **Einstellungen**, Beenden, Beenden & Herunterfahren. Nur außerhalb einer Partie erreichbar.

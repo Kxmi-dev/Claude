@@ -95,7 +95,7 @@ class UiSmokeTests(unittest.TestCase):
         self.key(window, Qt.Key.Key_Slash)                       # Rücknahme
         self.assertEqual(game.state.strokes, [5])
         self.assertEqual(self.storage.load_active().state.strokes, [5])
-        self.assertEqual(window.game_screen.strokes_box.text(), "2 / 50")
+        self.assertEqual(window.game_screen.strokes_box.text(), "2")
 
     def test_non_numpad_and_autorepeat_keys_are_ignored(self):
         window = self.open_window()
@@ -200,6 +200,13 @@ class UiSmokeTests(unittest.TestCase):
         self.assertEqual(game.state.mode.key, "BK25")
         self.assertEqual(game.state.mode.strokes, 25)
         self.assertEqual(window.title_bar._title, "Partie: Billiard vs Fußball")
+
+    def test_grid_shows_points_per_row(self):
+        from bk.ui.widgets import ScoreGrid
+        grid = ScoreGrid()
+        grid.configure(25, 10, None, 5)
+        grid.set_values([1] * 10 + [-2, 3])
+        self.assertEqual(grid.row_sums(), [10, 1, None])
 
     def test_minus_mode_applies_to_one_stroke_only(self):
         window = self.open_window()

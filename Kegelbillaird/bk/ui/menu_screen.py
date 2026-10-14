@@ -107,9 +107,9 @@ class MenuScreen(QWidget):
             y = 155 + i * step + (gap if i >= modes else 0)
             place(button, 146, y, 298 + shadow, height + shadow)
         if self._club_logo.has_image:
-            # BK-Bild etwas kleiner, darunter das Vereinslogo
-            place(self._logo, 599, 40, 387, 450)
-            place(self._club_logo, 599, 505, 387, 175)
+            # BK-Bild kleiner, darunter groß das Vereinslogo
+            place(self._logo, 599, 30, 387, 300)
+            place(self._club_logo, 599, 345, 387, 340)
         else:
             place(self._logo, 599, 50, 387, 595)
 

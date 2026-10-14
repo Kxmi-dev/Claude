@@ -509,7 +509,11 @@ class LogoWidget(_Painted):
 
 # ============================================================ Stoß-Raster
 class ScoreGrid(_Painted):
-    """Raster mit einem Feld pro Stoß (z. B. 10 × 10 bei 100 Stoß)."""
+    """Raster mit einem Feld pro Stoß (z. B. 10 × 10 bei 100 Stoß).
+
+    Rechts neben jeder Reihe steht die Punktzahl dieser Reihe (Spalte „Σ“)."""
+
+    SUM_WIDTH = 1.25          # Breite der Summen-Spalte in Kästchenbreiten
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -543,6 +547,25 @@ class ScoreGrid(_Painted):
     def _has_subtotal(self, number: int) -> bool:
         return (self._halftime is not None and number == self._halftime) or number == self._strokes
 
+    def row_sums(self) -> list[int | None]:
+        """Punkte je Reihe (None = Reihe noch ohne Wertung)."""
+        sums: list[int | None] = []
+        for row in range(self._rows):
+            chunk = self._values[row * self._columns:(row + 1) * self._columns]
+            sums.append(sum(chunk) if chunk else None)
+        return sums
+
+    def _paint_row_sums(self, p: QPainter, left: float, right: float, ch: float) -> None:
+        width = right - left
+        p.fillRect(QRectF(left, 0, width, ch * self._rows), QColor("#f1f1ea"))
+        p.setFont(theme.base_font(theme.fitted_font("\u221270", width * 0.86, ch * 0.62, bold=True).pixelSize(),
+                                  bold=True))
+        for row, total in enumerate(self.row_sums()):
+            if total is None:
+                continue
+            p.setPen(theme.MINUS if total < 0 else theme.TEXT)
+            p.drawText(QRectF(left, row * ch, width, ch), Qt.AlignmentFlag.AlignCenter, format_number(total))
+
     def _line_pen(self, color: QColor) -> QPen:
         """Gitterlinie mit fester Breite in Bildschirmpixeln (kosmetischer Stift).
 
@@ -558,7 +581,8 @@ class ScoreGrid(_Painted):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
         w, h = self.width() - 1, self.height() - 1
-        cw, ch = w / self._columns, h / self._rows
+        cw, ch = w / (self._columns + self.SUM_WIDTH), h / self._rows
+        grid_w = cw * self._columns                      # rechts davon: Reihensummen
         p.fillRect(QRectF(0, 0, w, h), theme.WHITE)
         value_px = theme.fitted_font("\u22127", cw * 0.86, ch * 0.8).pixelSize()   # Zahlen füllen die Kästchen
         small_px = max(6, int(ch * 0.25))
@@ -591,6 +615,7 @@ class ScoreGrid(_Painted):
                 p.setPen(self._line_pen(QColor("#9a9a9a")))
                 y = cell.bottom() - ch * 0.06
                 p.drawLine(int(cell.left() + cw * 0.18), int(y), int(cell.right() - cw * 0.1), int(y))
+        self._paint_row_sums(p, grid_w, w, ch)
         # Gitterlinien – alle mit derselben Stärke
         p.setPen(self._line_pen(theme.GRID_LINE))
         for c in range(1, self._columns):
@@ -600,6 +625,7 @@ class ScoreGrid(_Painted):
         p.setPen(self._line_pen(theme.GRID_OUTER))
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawRect(0, 0, int(w), int(h))
+        p.drawLine(round(grid_w), 0, round(grid_w), int(h))     # Trennlinie vor den Summen
         # nächster Stoß
         current = len(self._values)
         if self._show_current and current < self._strokes:
