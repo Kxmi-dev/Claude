@@ -40,12 +40,14 @@ from PySide6.QtGui import QColor, QKeyEvent
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QSizePolicy, QSpacerItem, QVBoxLayout, QWidget
 
 from ..game import Game, GameError
+from ..media import SoundPlayer, existing_files, pick_image, resolve_file
 from ..input_logic import Action, GameKey, InputResult, ScoreInputController
 from ..models import GameState, GameStatus
 from ..pdf_report import format_duration
 from ..settings import AppSettings
 from ..storage import GameStorage, StorageError
 from . import theme
+from .celebration import CelebrationOverlay
 from .keymap import MenuKey, map_game_key, map_menu_key
 from .widgets import DisplayBox, HistoryBox, Panel, ScoreGrid, format_number, format_points
 
@@ -53,6 +55,8 @@ log = logging.getLogger(__name__)
 
 TICK_MS = 100
 MINUS_TINT = QColor("#fbe7e7")
+HALFTIME_TINT = QColor("#fff2a8")   # Halbzeit-Feld leuchtet kurz auf
+HALFTIME_FLASH_SECONDS = 4
 REPLAY_SPEEDS = (2.0, 1.2, 0.8, 0.5, 0.3, 0.15)   # Sekunden pro Stoß
 
 
@@ -91,6 +95,12 @@ class GameScreen(QWidget):
         self._replay_speed = 2
         self._replay_timer = QTimer(self)
         self._replay_timer.timeout.connect(self._replay_step)
+        self._sound = SoundPlayer()
+        self._last_image = None
+        self._celebration = CelebrationOverlay(self)
+        self._flash_timer = QTimer(self)
+        self._flash_timer.setSingleShot(True)
+        self._flash_timer.timeout.connect(lambda: self.halftime_box.set_fill(None))
 
     # ================================================================ Aufbau
     def _spacer(self, w: float, h: float) -> QSpacerItem:
@@ -216,6 +226,7 @@ class GameScreen(QWidget):
     def start_game(self, game: Game) -> None:
         """Neue oder fortgesetzte Partie anzeigen und Eingabe freigeben."""
         self._end_replay()
+        self._hide_extras()
         self._game = game
         self._controller.reset()
         self._completion_sent = False
@@ -232,6 +243,7 @@ class GameScreen(QWidget):
         self._tick.stop()
         self._autosave.stop()
         self._replay_timer.stop()
+        self._hide_extras()
         if self._game is not None and not self.is_replay:
             self._game.state.elapsed_seconds = self.current_elapsed()
             self._elapsed_base = self._game.state.elapsed_seconds
@@ -355,6 +367,9 @@ class GameScreen(QWidget):
                 return
             log.info("Stoß %s: %s (Gesamt %s)", entry.number, entry.value, entry.running_total)
             self._persist(reason="wertung")
+            self._celebrate(entry.value)
+            if game.played == game.state.mode.halftime_after:
+                self._halftime_alert()
             if game.is_complete:
                 self.message.emit("Letzter Stoß gewertet – Korrektur mit [/] noch während der Sperrzeit möglich.",
                                   False)
@@ -368,6 +383,7 @@ class GameScreen(QWidget):
                 self.message.emit("Keine Wertung zum Zurücknehmen vorhanden.", True)
             else:
                 log.info("Stoß %s (%s) zurückgenommen", removed.number, removed.value)
+                self._celebration.dismiss()
                 self._persist(reason="ruecknahme")
                 self.message.emit(f"Stoß {removed.number} ({format_points(removed.value)}) zurückgenommen.", False)
         elif action is Action.ABORT_REQUESTED:
@@ -386,6 +402,41 @@ class GameScreen(QWidget):
         elif action is Action.IGNORED_INVALID:
             self.message.emit("Nur die Zahlen 0 bis 7 sind erlaubt.", True)
         self.refresh()
+
+    # ================================================== Ton und Bilder (Zugabe)
+    def _hide_extras(self) -> None:
+        self._celebration.dismiss()
+        self._flash_timer.stop()
+        self.halftime_box.set_fill(None)
+
+    def _celebrate(self, value: int) -> None:
+        """Bild/GIF bei den in der config.py genannten Wertungen. Fehler stören die Partie nie."""
+        self._celebration.dismiss()
+        cfg = self._settings
+        if not cfg.celebration_enabled or value not in cfg.celebration_values:
+            return
+        try:
+            files = existing_files(cfg.images_dir, cfg.celebration_images)
+            image = pick_image(files, self._last_image)
+            if image is not None and self._celebration.show_image(image, cfg.celebration_seconds):
+                self._last_image = image
+        except Exception:
+            log.exception("Bildeinblendung fehlgeschlagen")
+
+    def _halftime_alert(self) -> None:
+        """Halbzeit: Ton (falls möglich) und das Halbzeit-Feld leuchtet kurz auf."""
+        cfg = self._settings
+        try:
+            self.halftime_box.set_fill(HALFTIME_TINT)
+            self._flash_timer.start(int(HALFTIME_FLASH_SECONDS * 1000))
+            if cfg.sound_enabled:
+                self._sound.play(resolve_file(cfg.sounds_dir, cfg.halftime_sound))
+        except Exception:
+            log.exception("Halbzeit-Hinweis fehlgeschlagen")
+
+    def resizeEvent(self, event) -> None:  # noqa: N802 (Qt-Name)
+        super().resizeEvent(event)
+        self._celebration.reposition()
 
     def _persist(self, reason: str) -> bool:
         """Spielstand sofort und sicher speichern."""

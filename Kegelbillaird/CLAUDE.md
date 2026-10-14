@@ -42,8 +42,11 @@ bk/ui/game_screen.py Zählansicht + Wiedergabe-Modus
 bk/ui/archive_screen.py  Archivliste
 bk/ui/report_dialog.py   Statistik-Fenster (PDF-Ansicht, Speichern, Drucken, Schließen)
 bk/ui/overlays.py    Abfrage-Karten (Fortsetzen, Abbruch, Archiv-Auswahl, Fehler)
+bk/ui/celebration.py Bild-/GIF-Einblendung bei CELEBRATION_VALUES
+bk/media.py          Ton (winsound/Qt, fehlerfrei geschluckt) + Bildauswahl (1 Datei = immer, sonst zufällig)
 bk/ui/widgets.py, theme.py, keymap.py
-tests/               102 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
+sounds/, bilder/     Ton- und Bilddateien neben der .exe (austauschbar, ohne Neubau)
+tests/               114 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
 ```
 Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), `results/` (PDF+JSON), `logs/`.
 
@@ -68,6 +71,13 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   Aktueller Stoß (rot getönt bei Minus-Modus), Letzte Stöße (5), Minus (Summe Minuspunkte),
   Eingabe (BEREIT / MINUS / GESPERRT + Countdown), Spieldauer, 10er-Raster.
 
+## Ton & Bilder (reine Zugabe, stören die Partie nie)
+- Halbzeit (nach `halftime_after`): Ton `HALFTIME_SOUND` (WAV in `sounds/`) + Halbzeit-Feld leuchtet 4 s gelb
+  (geht auch ohne Tonausgabe). Fehlende Datei/kein Audiogerät → nur Logeintrag.
+- Wertung in `CELEBRATION_VALUES` (Standard +6/+7) → Bild/GIF aus `CELEBRATION_IMAGES` (Ordner `bilder/`),
+  eine Datei = immer diese, mehrere = zufällig. `/` blendet es sofort aus. Ton/Bilder sind unter Windows
+  (winsound, GIF/Bild in der .exe) noch nicht auf dem echten PC geprüft.
+
 ## Statistik-Fenster & Archiv
 - Statistik-Fenster zeigt den Bericht wie im PDF: Knöpfe **Als PDF speichern** (Dialog, Vorschlag Dokumente-Ordner),
   **Drucken** (sofort auf **Windows-Standarddrucker, kein Druckdialog**; ohne Standarddrucker Hinweistext),
@@ -82,7 +92,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   `RESULTS_RETENTION_DAYS = 0` (PDFs nie löschen). Aktive Partie / aktuelles Log nie.
 
 ## Wichtige config.py-Schalter
-INPUT_LOCK_SECONDS, UNDO_LOCK_SECONDS, ABORT_CONFIRM_SECONDS, NUMPAD_ONLY, FULLSCREEN, HISTORY_LENGTH,
+SOUND_ENABLED, HALFTIME_SOUND, CELEBRATION_*, INPUT_LOCK_SECONDS, UNDO_LOCK_SECONDS, ABORT_CONFIRM_SECONDS, NUMPAD_ONLY, FULLSCREEN, HISTORY_LENGTH,
 APP_TITLE, APP_VERSION, CLUB_NAME, AUTO_ENABLE_NUMLOCK, NUMLOCK_CHECK_SECONDS, AUTOSAVE_SECONDS,
 GAME_MODES, SHOW_UNAVAILABLE_MODES, PDF_ROWS_PER_BLOCK/BLOCKS_PER_ROW, SHOW_REPORT_AFTER_GAME,
 OPEN_PDF_AFTER_GAME, REPLAY_SECONDS_PER_STROKE, *_RETENTION_DAYS, Ordnerpfade (exe-aware).

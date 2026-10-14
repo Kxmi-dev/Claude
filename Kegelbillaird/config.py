@@ -41,6 +41,30 @@ APP_VERSION = "2.0"
 CLUB_NAME = "SG Grün-Weiß Schlepzig e.V."
 
 # ---------------------------------------------------------------------
+#  TON UND BILDER (reine Zugabe – fehlt etwas, läuft die Partie normal weiter)
+# ---------------------------------------------------------------------
+
+# Ton zur Halbzeit (nach Stoß 25 bei 50 Stoß, nach Stoß 50 bei 100 Stoß).
+# Format: WAV-Datei im Ordner "sounds" neben der .exe. Leer lassen = kein Ton.
+# Hat der PC/Monitor keine Tonausgabe, blinkt das Halbzeit-Feld trotzdem.
+SOUND_ENABLED = True
+HALFTIME_SOUND = "halbzeit.wav"
+
+# Bilder/GIFs bei bestimmten Wertungen (Ordner "bilder" neben der .exe).
+#   CELEBRATION_VALUES  bei diesen Wertungen erscheint ein Bild
+#                       (6, 7 = nur +6 und +7; für auch -6/-7:  (6, 7, -6, -7))
+#   CELEBRATION_IMAGES  Liste der verfügbaren Dateien. Steht nur eine drin,
+#                       kommt immer diese, sonst zufällig (nie zweimal hintereinander dieselbe).
+#   Leere Liste = keine Bilder.
+CELEBRATION_ENABLED = True
+CELEBRATION_VALUES = (6, 7)
+CELEBRATION_IMAGES = [
+    # "bild1.gif",
+    # "bild2.png",
+]
+CELEBRATION_SECONDS = 3      # So lange bleibt das Bild stehen
+
+# ---------------------------------------------------------------------
 #  NUMLOCK
 # ---------------------------------------------------------------------
 
@@ -129,3 +153,5 @@ DATA_DIR = BASE_DIR / "data"        # aktiver Spielstand, Archiv
 RESULTS_DIR = BASE_DIR / "results"  # PDF + JSON jeder beendeten Partie
 LOGS_DIR = BASE_DIR / "logs"        # application.log
 ASSETS_DIR = BASE_DIR / "assets"    # logo.png, icon.png
+SOUNDS_DIR = BASE_DIR / "sounds"    # Töne (WAV)
+IMAGES_DIR = BASE_DIR / "bilder"    # Bilder und GIFs

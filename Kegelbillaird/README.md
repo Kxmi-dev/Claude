@@ -152,6 +152,10 @@ Alle Einstellungen stehen zentral in `config.py`. Nach einer Änderung das Progr
 | `FULLSCREEN` | `True` | Start im Vollbild |
 | `HISTORY_LENGTH` | `5` | Einträge unter „Letzte Stöße“ |
 | `APP_TITLE`, `APP_VERSION`, `CLUB_NAME` | | Texte in Titelleiste und PDF |
+| `SOUND_ENABLED`, `HALFTIME_SOUND` | `True`, `"halbzeit.wav"` | Ton zur Halbzeit (WAV im Ordner `sounds`). Leerer Name = kein Ton. Ohne Tonausgabe läuft alles weiter, das Halbzeit-Feld leuchtet zusätzlich ca. 4 s gelb auf |
+| `CELEBRATION_ENABLED`, `CELEBRATION_VALUES` | `True`, `(6, 7)` | bei diesen Wertungen erscheint ein Bild/GIF (`(6, 7, -6, -7)` = auch bei Minus) |
+| `CELEBRATION_IMAGES` | `[]` | Liste der Dateien im Ordner `bilder`. Eine Datei = immer diese, mehrere = zufällig (nie zweimal hintereinander dieselbe). Leer = keine Bilder |
+| `CELEBRATION_SECONDS` | `3` | Anzeigedauer des Bildes; verschwindet auch bei `/` und der nächsten Wertung |
 | `AUTO_ENABLE_NUMLOCK` | `True` | NumLock prüfen und automatisch einschalten (`False` = nur warnen) |
 | `NUMLOCK_CHECK_SECONDS` | `2` | Prüfintervall für NumLock |
 | `AUTOSAVE_SECONDS` | `15` | zusätzliche Sicherung der Spieldauer (Wertungen werden **immer sofort** gespeichert) |
@@ -414,6 +418,8 @@ BK-Scoreboard\
 ├── _internal\          ← Python, Qt, ReportLab … (nicht verändern)
 ├── config.py           ← Einstellungen – editierbar, danach Programm neu starten
 ├── assets\             ← Logo und Symbol – austauschbar
+├── sounds\             ← Töne (WAV), z. B. halbzeit.wav – austauschbar
+├── bilder\             ← Bilder/GIFs für hohe Wertungen – austauschbar
 └── README.md
 ```
 `data`, `results` und `logs` legt das Programm beim ersten Start daneben an.
@@ -423,6 +429,9 @@ BK-Scoreboard\
   nicht nach `C:\Programme`, dort darf das Programm keine Spielstände speichern
 * Verknüpfung auf `BK-Scoreboard.exe` auf den Desktop bzw. in den Autostart (`shell:startup`) legen
 * Optionen funktionieren wie bei Python, z. B. Verknüpfung mit Ziel `BK-Scoreboard.exe --windowed`
+
+**Ton und Bilder ändern:** Datei in `sounds` bzw. `bilder` legen, den Dateinamen in `config.py` eintragen,
+Programm neu starten – ein Neubau der .exe ist dafür nicht nötig.
 
 **Einstellungen ändern:** `config.py` neben der .exe mit dem Editor öffnen, Wert ändern
 (z. B. `INPUT_LOCK_SECONDS = 4`), speichern, Programm neu starten. Ein Neubau ist nicht nötig.

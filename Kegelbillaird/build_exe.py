@@ -12,6 +12,8 @@ Ergebnis: dist\\BK-Scoreboard\\
     _internal\\          Python, Qt, ReportLab … (nicht verändern)
     config.py           Einstellungen – editierbar, Programm danach neu starten
     assets\\             Logo und Symbol – austauschbar
+    sounds\\            Töne (WAV), z. B. halbzeit.wav
+    bilder\\            Bilder/GIFs für hohe Wertungen
     README.md
 
 Dieser Ordner läuft auf jedem Windows-PC (64 Bit) OHNE Python- oder pip-Installation.
@@ -98,6 +100,9 @@ def main() -> int:
     # Editierbare Dateien neben die .exe legen
     shutil.copy2(ROOT / "config.py", TARGET / "config.py")
     shutil.copytree(ROOT / "assets", TARGET / "assets", dirs_exist_ok=True)
+    for folder in ("sounds", "bilder"):        # Ton und Bilder – austauschbar, bleiben beim Update erhalten
+        if (ROOT / folder).is_dir():
+            shutil.copytree(ROOT / folder, TARGET / folder, dirs_exist_ok=True)
     shutil.copy2(ROOT / "README.md", TARGET / "README.md")
 
     size_mb = sum(p.stat().st_size for p in TARGET.rglob("*") if p.is_file() and not p.is_symlink()) / 1_000_000

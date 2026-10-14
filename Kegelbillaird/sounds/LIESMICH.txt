@@ -1,0 +1,2 @@
+Hier liegen die Töne (WAV). Der Dateiname steht in config.py unter HALFTIME_SOUND.
+halbzeit.wav ist nur ein Beispielton und kann ersetzt werden.

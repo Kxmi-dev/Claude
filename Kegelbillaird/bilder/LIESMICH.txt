@@ -1,0 +1,2 @@
+Hier liegen die Bilder und GIFs (png, jpg, gif ...).
+In config.py unter CELEBRATION_IMAGES die Dateinamen eintragen, z. B. ["bild1.gif", "bild2.png"].

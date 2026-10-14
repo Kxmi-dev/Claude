@@ -44,6 +44,14 @@ class AppSettings:
     results_dir: Path
     logs_dir: Path
     assets_dir: Path
+    sound_enabled: bool = True
+    halftime_sound: str = ""
+    celebration_enabled: bool = True
+    celebration_values: tuple[int, ...] = (6, 7)
+    celebration_images: tuple[str, ...] = ()
+    celebration_seconds: float = 3.0
+    sounds_dir: Path = Path("sounds")
+    images_dir: Path = Path("bilder")
 
     @property
     def logo_path(self) -> Path:
@@ -89,6 +97,14 @@ class AppSettings:
             results_dir=Path(cfg.RESULTS_DIR),
             logs_dir=Path(cfg.LOGS_DIR),
             assets_dir=Path(cfg.ASSETS_DIR),
+            sound_enabled=bool(getattr(cfg, "SOUND_ENABLED", True)),
+            halftime_sound=str(getattr(cfg, "HALFTIME_SOUND", "") or ""),
+            celebration_enabled=bool(getattr(cfg, "CELEBRATION_ENABLED", True)),
+            celebration_values=tuple(int(v) for v in getattr(cfg, "CELEBRATION_VALUES", (6, 7))),
+            celebration_images=tuple(str(n) for n in (getattr(cfg, "CELEBRATION_IMAGES", ()) or ())),
+            celebration_seconds=float(getattr(cfg, "CELEBRATION_SECONDS", 3)),
+            sounds_dir=Path(getattr(cfg, "SOUNDS_DIR", Path(cfg.ASSETS_DIR).parent / "sounds")),
+            images_dir=Path(getattr(cfg, "IMAGES_DIR", Path(cfg.ASSETS_DIR).parent / "bilder")),
         )
         settings.validate()
         return settings
@@ -113,3 +129,7 @@ class AppSettings:
             raise ValueError("Die *_RETENTION_DAYS-Werte dürfen nicht negativ sein (0 = nie löschen).")
         if not 0.05 <= self.replay_seconds_per_stroke <= 10:
             raise ValueError("REPLAY_SECONDS_PER_STROKE muss zwischen 0.05 und 10 liegen.")
+        if not 0.5 <= self.celebration_seconds <= 30:
+            raise ValueError("CELEBRATION_SECONDS muss zwischen 0.5 und 30 liegen.")
+        if any(not -7 <= v <= 7 for v in self.celebration_values):
+            raise ValueError("CELEBRATION_VALUES darf nur Werte von -7 bis 7 enthalten.")
