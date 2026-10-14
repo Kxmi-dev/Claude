@@ -273,9 +273,8 @@ Grundlage: BKV-Regeln, insbesondere §3 und §4
 * **Vorzeitig beendete Partien** werden laut §3 (1) mit Null gewertet, bei nicht
   vorhersehbaren Gründen mit dem erzielten Ergebnis. Das entscheidet die Wettkampfleitung –
   das Programm archiviert abgebrochene Partien mit allen Wertungen, erstellt aber kein PDF.
-* **„2x 50 Stoß“ und „Zweikampf“** stehen in der Designvorlage, sind im BKV-Regelwerk aber
-  nicht definiert. Um keine Regeln zu erfinden, werden sie im Menü als „in Vorbereitung“
-  angezeigt und sind nicht startbar. Sobald die Regeln feststehen, können sie ergänzt werden.
+* **Billiard vs Fußball (BK25):** 25 Stoß hintereinander, ohne Halbzeitstand (kein
+  Halbzeitton); Raster 5 × 5. Ansonsten gelten dieselben Wertungsregeln wie bei BK 50.
 
 **Bewusste Abweichungen von Vorlage und Spezifikation:**
 * **Kein Spielername und kein Spielerdaten-Fenster** (auf Wunsch des Vereins): Die Partie

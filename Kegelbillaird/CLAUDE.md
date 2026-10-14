@@ -38,7 +38,7 @@ bk/numlock.py        Windows: GetKeyState + SendInput (Fallback keybd_event)
 bk/settings.py       AppSettings aus config.py (neue Einträge per getattr mit Default → alte config.py bleibt gültig)
 bk/logging_setup.py  logs/application.log (täglich neu), crash.log (faulthandler)
 bk/ui/main_window.py Bildschirmwechsel, Startprüfung, Abschluss, Archiv-Aktionen, NumLockGuard, Cleanup-Timer
-bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, 2x 50 (gesperrt), Zweikampf (gesperrt), Archiv, Ende
+bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, Billiard vs Fußball (25 Stoß), Archiv, Einstellungen, Ende
 bk/ui/game_screen.py Zählansicht + Wiedergabe-Modus
 bk/ui/archive_screen.py  Archivliste
 bk/ui/result_screen.py   Auswertung im Hauptfenster (Kennzahlen, Raster, Anzahl je Wertung, Knöpfe)
@@ -70,8 +70,8 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   Ergebnis-JSON + PDF in `results/`, Archiv „beendet“, **Auswertung** im Hauptfenster (kein Extra-Fenster).
 - Speichern nach JEDER Wertung/Rücknahme. Start: „Unterbrochene Partie gefunden“ →
   PARTIE FORTSETZEN / NEUE PARTIE (alte wird archiviert, nie gelöscht).
-- **2x 50 Stoß und Zweikampf** sind im BKV-Regelwerk nicht definiert → im Menü „in Vorbereitung“,
-  nicht startbar. Erst freischalten, wenn der Nutzer die Regeln liefert (keine Regeln erfinden!).
+- „2x 50 Stoß“ und „Zweikampf“ wurden auf Wunsch des Nutzers entfernt. Dafür gibt es
+  **„Billiard vs Fußball“** (Schlüssel BK25): 25 Stoß, keine Halbzeit, Raster 5 × 5.
 - Anzeigen: Stoß-Anzahl (nächster Stoß / max), Punktestand, Prognose, Halbzeit (nach 50 bzw. 25),
   Aktueller Stoß (rot getönt bei Minus-Modus), Letzte Stöße (5), Minus (Summe Minuspunkte),
   Eingabe (BEREIT / MINUS / GESPERRT + Countdown), Spieldauer, 10er-Raster.
@@ -135,4 +135,3 @@ Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lese
 - NumLock-Automatik, Drucken auf echtem Drucker, Ton (MCI), Druckerauswahl und die .exe wurden nur unter
   Linux/simuliert getestet –
   Rückmeldung vom Windows-PC des Nutzers steht aus.
-- Regeln für „2x 50 Stoß“ und „Zweikampf“ fehlen noch.

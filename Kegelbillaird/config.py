@@ -131,12 +131,8 @@ GAME_MODES = (
              grid_columns=10, highlight_last=5),
     GameMode(key="BK50", title="50 Stoß", strokes=50, halftime_after=25,
              grid_columns=10, highlight_last=5),
-    # Die folgenden Spielarten sind im BKV-Regelwerk (BK 50 / BK 100) nicht
-    # definiert. Sie werden erst freigeschaltet, wenn ihre Regeln feststehen.
-    GameMode(key="BK2x50", title="2x 50 Stoß", available=False,
-             note="Regeln für „2x 50 Stoß“ sind noch nicht hinterlegt."),
-    GameMode(key="ZWEIKAMPF", title="Zweikampf", available=False,
-             note="Regeln für „Zweikampf“ sind noch nicht hinterlegt."),
+    GameMode(key="BK25", title="Billiard vs Fußball", strokes=25, halftime_after=None,
+             grid_columns=5, highlight_last=5),
 )
 
 # False = nicht verfügbare Spielarten im Menü ausblenden.

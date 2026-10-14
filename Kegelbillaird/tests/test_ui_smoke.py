@@ -190,13 +190,16 @@ class UiSmokeTests(unittest.TestCase):
         self.assertIs(window.stack.currentWidget(), window.menu_screen)
         self.assertEqual(len(list((self.settings.data_dir / "corrupt").iterdir())), 1)
 
-    def test_unavailable_mode_cannot_be_started(self):
+    def test_billiard_vs_fussball_starts_with_25_strokes(self):
         window = self.open_window()
         self.key(window, Qt.Key.Key_2)
-        self.key(window, Qt.Key.Key_2)                           # "2x 50 Stoß"
+        self.key(window, Qt.Key.Key_2)                           # "Billiard vs Fußball"
         self.key(window, Qt.Key.Key_Enter)
-        self.assertIs(window.stack.currentWidget(), window.menu_screen)
-        self.assertIn("nicht", window.footer.current_text())
+        self.assertIs(window.stack.currentWidget(), window.game_screen)
+        game = window.game_screen.game
+        self.assertEqual(game.state.mode.key, "BK25")
+        self.assertEqual(game.state.mode.strokes, 25)
+        self.assertEqual(window.title_bar._title, "Partie: Billiard vs Fußball")
 
     def test_minus_mode_applies_to_one_stroke_only(self):
         window = self.open_window()
@@ -237,7 +240,7 @@ class UiSmokeTests(unittest.TestCase):
         return finished, aborted
 
     def open_archive(self, window):
-        for _ in range(4):
+        for _ in range(3):
             self.key(window, Qt.Key.Key_2)                       # bis "Archiv" nach unten
         self.key(window, Qt.Key.Key_Enter)
         self.assertIs(window.stack.currentWidget(), window.archive_screen)
