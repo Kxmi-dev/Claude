@@ -26,7 +26,7 @@ main.py              Einstieg: CLI (--windowed, --selftest, --pdf FILE), Datei-/
                      QLockFile (Einzelinstanz), lädt in der .exe die config.py NEBEN der .exe
 config.py            Grundwerte (Nutzer braucht sie normalerweise nicht mehr – Einstellungsmenü)
 einstellungen.json   Werte aus dem Einstellungsmenü (Vorrang vor config.py), atomar + .bak
-build_exe.py/.bat    Selftest + PyInstaller → dist\BK-Scoreboard\ (bricht ab, wenn dort Spieldaten liegen)
+build_exe.py/.bat    Selftest (abschaltbar: --skip-test / build_exe_ohne_test.bat) + PyInstaller → dist\BK-Scoreboard\ (bricht ab, wenn dort Spieldaten liegen)
 install_windows.bat  .venv anlegen, requirements, Selftest
 bk/models.py         GameMode, GameState (kein Spielername mehr!), GameStatus; strenge Prüfung beim Laden
 bk/game.py           Engine: record/undo/finish/abort, total, minus_total, halftime, prognosis, value_counts

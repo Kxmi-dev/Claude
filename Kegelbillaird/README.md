@@ -325,6 +325,7 @@ bk_scoreboard/
 ├── install_windows.bat      Installation per Doppelklick
 ├── start_bk_scoreboard.bat  Start per Doppelklick
 ├── build_exe.bat            .exe erstellen per Doppelklick
+├── build_exe_ohne_test.bat  dasselbe ohne Selbsttest (--skip-test)
 ├── build_exe.py             Build-Skript (PyInstaller, Selbsttest, Datenschutz)
 ├── assets/                  logo.png, icon.png, app.ico (Programmsymbol der .exe)
 ├── docs/                    Screenshots und Beispiel-Spielbericht (PDF)
@@ -469,6 +470,9 @@ installiert ist (`install_windows.bat` wurde ausgeführt). Das Ergebnis läuft d
 1. installiert PyInstaller in die vorhandene `.venv`,
 2. führt den Selbsttest aus (bei einem Fehler wird keine .exe erstellt),
 3. erstellt die Programmversion und öffnet den fertigen Ordner.
+
+**Ohne Selbsttest (schneller):** Doppelklick auf **`build_exe_ohne_test.bat`** oder in der Eingabeaufforderung
+`build_exe.bat --skip-test` bzw. `python build_exe.py --skip-test`.
 
 Dauer: einige Minuten. Alternativ in der Eingabeaufforderung:
 `.venv\Scripts\python.exe -m pip install pyinstaller` und dann `.venv\Scripts\python.exe build_exe.py`.

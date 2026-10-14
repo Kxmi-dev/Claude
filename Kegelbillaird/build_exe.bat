@@ -4,6 +4,7 @@ rem  BK-Scoreboard als eigenstaendige .exe erstellen
 rem  Einmalig auf DIESEM PC ausfuehren (nach install_windows.bat).
 rem  Das Ergebnis (dist\BK-Scoreboard) laeuft auf jedem Windows-PC
 rem  OHNE Python- oder pip-Installation.
+rem  Ohne Selbsttest:  build_exe.bat --skip-test   (oder build_exe_ohne_test.bat)
 rem =====================================================================
 setlocal
 cd /d "%~dp0"
@@ -22,7 +23,7 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-".venv\Scripts\python.exe" build_exe.py
+".venv\Scripts\python.exe" build_exe.py %*
 if errorlevel 1 (
     echo.
     echo  Es wurde keine .exe erstellt - siehe Meldungen oben.

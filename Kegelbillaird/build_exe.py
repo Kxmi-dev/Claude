@@ -3,7 +3,10 @@ Erstellt die eigenständige Windows-Programmversion (.exe) des BK-Scoreboards.
 
 Aufruf im Programmordner (Pakete aus requirements.txt + PyInstaller installiert):
     python build_exe.py              Selbsttest ausführen, dann .exe erstellen
-    python build_exe.py --skip-tests nur .exe erstellen
+    python build_exe.py --skip-test  nur .exe erstellen, ohne Selbsttest (auch: --skip-tests)
+
+Per Doppelklick: build_exe.bat (mit Test) bzw. build_exe_ohne_test.bat.
+Auch möglich: build_exe.bat --skip-test
 
 Am einfachsten per Doppelklick auf build_exe.bat.
 
@@ -61,7 +64,10 @@ def main() -> int:
                     "Der Ordner wird beim Erstellen komplett geleert. Bitte das Programm vorher an seinen\n"
                     "endgültigen Ort kopieren (z. B. C:\\BK-Scoreboard) und dist\\BK-Scoreboard löschen.")
 
-    if "--skip-tests" not in sys.argv:
+    skip_tests = any(arg in ("--skip-test", "--skip-tests") for arg in sys.argv[1:])
+    if skip_tests:
+        print("\n--- Selbsttest übersprungen (--skip-test) ---")
+    else:
         print("\n--- Selbsttest ---")
         result = subprocess.run([sys.executable, str(ROOT / "main.py"), "--selftest"], cwd=ROOT)
         if result.returncode != 0:
