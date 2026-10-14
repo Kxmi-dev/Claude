@@ -4,8 +4,7 @@ Vereinslogo
 Das Logo des Vereins einfach in diesen Ordner ziehen und dann im Programm unter
 Einstellungen -> Anzeige -> „Vereinslogo“ auswählen (mit [4] / [6]).
 
-Es erscheint groß rechts im Hauptmenü. Ein einfarbiger Hintergrund (z. B. weiß)
-wird automatisch entfernt (freigestellt), damit das Logo zum Hintergrund passt.
+Es erscheint groß rechts im Hauptmenü – genau so, wie die Datei ist.
 
 Erlaubte Dateiarten: PNG, JPG/JPEG, GIF, BMP, WEBP, SVG, ICO, TIF.
 Tipp: PNG mit durchsichtigem Hintergrund sieht am besten aus.

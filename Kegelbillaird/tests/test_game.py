@@ -183,3 +183,26 @@ class SettingsCompatibilityTests(unittest.TestCase):
         settings = AppSettings.from_config(old)
         self.assertTrue(settings.show_report_after_game)
         self.assertEqual(settings.replay_seconds_per_stroke, 0.8)
+
+
+class CorrectionCountTests(unittest.TestCase):
+    def test_undo_is_counted_and_saved(self):
+        from bk.models import GameState
+        game = new_game(BK50)
+        self.assertEqual(game.state.corrections, 0)
+        game.record(3)
+        game.undo()
+        game.undo()                                  # nichts mehr da -> zählt nicht
+        self.assertEqual(game.state.corrections, 1)
+        loaded = GameState.from_dict(game.state.to_dict())
+        self.assertEqual(loaded.corrections, 1)
+
+    def test_old_saves_without_counter_load(self):
+        from bk.models import GameState
+        data = new_game(BK50).state.to_dict()
+        del data["corrections"]
+        self.assertIsNone(GameState.from_dict(data).corrections)
+        data["corrections"] = -1
+        with self.assertRaises(ValueError):
+            GameState.from_dict(data)
+

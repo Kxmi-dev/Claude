@@ -88,8 +88,8 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   übernimmt live (keymap, theme.apply_colors, Titelleiste, GameScreen.set_settings, Fenster, NumLock-Guard).
 - Bereiche: Anzeige (Vollbild, Fenstergröße-Presets, Schriftgröße 80–130 % (`theme.FONT_SCALE` wirkt in
   `fitted_font` auf die Höhe, Breite bleibt Grenze; große Zahlen per `base_font` unverändert), Vereinsname per
-  QInputDialog, Vereinslogo aus `vereinslogo/` (Hauptmenü rechts groß, automatisch freigestellt per
-  `media.cut_out_background` (Pillow-Flutfüllung vom Rand); BK-Scoreboard-Bild im Menü UND im PDF ENTFERNT, ohne Logo Menü mittig; im PDF-Kopf nur das Vereinslogo,
+  QInputDialog, Vereinslogo aus `vereinslogo/` (Hauptmenü rechts groß, unverändert angezeigt – automatisches Freistellen
+  wurde auf Wunsch WIEDER ENTFERNT, der Verein passt das Logo selbst an; BK-Scoreboard-Bild im Menü UND im PDF ENTFERNT, ohne Logo Menü mittig; im PDF-Kopf nur das Vereinslogo,
   max. 74×84 pt, Transparenz → weiß), Letzte Stöße,
   Felder „Letzte Stöße“/„Eingabe“ ausblendbar (`show_history`/`show_input_status`, Nachbar spannt dann 2 Spalten),
   Beim Windows-Start öffnen (NICHT in einstellungen.json, sondern Registry)), Design

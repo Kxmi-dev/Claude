@@ -46,52 +46,6 @@ def list_logos(folder: Path) -> list[str]:
     return list_files(folder, LOGO_SUFFIXES)
 
 
-def cut_out_background(path: Path, tolerance: int = 40, max_side: int = 1200):
-    """Logo „freistellen“: einfarbigen Hintergrund (z. B. weiß) durchsichtig machen.
-
-    Der Hintergrund wird an den Bildrändern erkannt und von dort aus (Flutfüllung)
-    entfernt – Flächen in derselben Farbe IM Logo bleiben erhalten. Hat das Bild
-    schon Transparenz oder keinen einheitlichen Rand, bleibt es unverändert.
-    Liefert ein Pillow-Bild (RGBA) oder None, wenn die Datei nicht lesbar ist."""
-    try:
-        from PIL import Image, ImageChops, ImageDraw, ImageFilter
-        image = Image.open(path)
-        image.load()
-    except Exception as exc:
-        log.warning("Logo nicht lesbar (%s): %s", Path(path).name, exc)
-        return None
-    image = image.convert("RGBA")
-    if max(image.size) > max_side:
-        image.thumbnail((max_side, max_side))
-    if image.getextrema()[3][0] < 250:           # hat schon durchsichtige Stellen
-        return image
-    rgb = image.convert("RGB")
-    w, h = rgb.size
-    corners = [rgb.getpixel(p) for p in ((0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1))]
-    background = tuple(sorted(c[i] for c in corners)[1] for i in range(3))
-
-    def close(color) -> bool:
-        return sum(abs(a - b) for a, b in zip(color, background)) <= tolerance * 3
-
-    step = max(1, min(w, h) // 40)
-    seeds = ([(x, 0) for x in range(0, w, step)] + [(x, h - 1) for x in range(0, w, step)]
-             + [(0, y) for y in range(0, h, step)] + [(w - 1, y) for y in range(0, h, step)])
-    seeds = [p for p in seeds if close(rgb.getpixel(p))]
-    if len(seeds) < 4:
-        return image                               # kein einheitlicher Rand
-    marker = (255, 0, 255) if background != (255, 0, 255) else (0, 255, 0)
-    filled = rgb.copy()
-    for seed in seeds:
-        if filled.getpixel(seed) != marker:
-            ImageDraw.floodfill(filled, seed, marker, thresh=tolerance)
-    removed = ImageChops.difference(filled, rgb).convert("L").point(lambda v: 255 if v else 0)
-    if removed.getbbox() is None:
-        return image
-    alpha = ImageChops.invert(removed).filter(ImageFilter.GaussianBlur(0.6))   # weiche Kante
-    image.putalpha(ImageChops.darker(alpha, image.getchannel("A")))
-    return image
-
-
 def resolve_file(folder: Path, name: str) -> Path | None:
     """Datei im Ordner suchen (auch ein absoluter Pfad ist erlaubt). None, wenn sie fehlt."""
     name = str(name).strip()

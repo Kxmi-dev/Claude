@@ -193,8 +193,8 @@ automatisch erkannt. Ist `minus` leer, werden die Plus-Bilder genommen. Eine Dat
 
 **Vereinslogo:** Logo in den Ordner `vereinslogo` ziehen (PNG, JPG, GIF, BMP, WEBP, SVG, ICO, TIF) und unter
 Einstellungen → Anzeige → „Vereinslogo“ auswählen. Es erscheint groß rechts im Hauptmenü (ohne Logo steht das
-Menü mittig). Ein einfarbiger Hintergrund (z. B. weiß bei JPG) wird automatisch **freigestellt**, damit das Logo
-zum Hintergrund passt – gleichfarbige Flächen innerhalb des Logos bleiben erhalten. Fehlt die Datei,
+Menü mittig). Das Logo wird genau so angezeigt, wie die Datei ist (am besten PNG mit durchsichtigem
+Hintergrund). Fehlt die Datei,
 erscheint ein Hinweis in der Fußzeile. Im PDF-Spielbericht steht oben rechts ebenfalls nur das Vereinslogo
 (ohne gewähltes Logo: kein Bild).
 

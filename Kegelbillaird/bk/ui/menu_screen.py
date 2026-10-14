@@ -62,8 +62,8 @@ class MenuScreen(QWidget):
                                     "" if mode.available else "in Vorbereitung", parent=self)
             button.clicked.connect(lambda i=index: self._click(i))
             self._buttons.append(button)
-        # Rechts nur noch das Vereinslogo (freigestellt); das BK-Scoreboard-Bild entfällt
-        self._club_logo = LogoWidget(None, self, placeholder=False, cut_out=True)
+        # Rechts nur noch das Vereinslogo (so wie die Datei ist); das BK-Scoreboard-Bild entfällt
+        self._club_logo = LogoWidget(None, self, placeholder=False)
         self._shutdown_armed = False
         self._disarm_timer = QTimer(self)
         self._disarm_timer.setSingleShot(True)

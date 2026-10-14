@@ -102,6 +102,16 @@ class GameMode:
         )
 
 
+def _corrections(value: Any) -> int | None:
+    """Korrekturzähler (fehlt bei älteren Spielständen → None)."""
+    if value is None:
+        return None
+    number = _strict_int(value, "corrections")
+    if number < 0:
+        raise ValueError("Ungültige Anzahl Korrekturen.")
+    return number
+
+
 def _strict_int(value: Any, name: str) -> int:
     """Akzeptiert nur echte Ganzzahlen (kein bool, kein float, kein Text)."""
     if isinstance(value, bool) or not isinstance(value, int):
@@ -126,6 +136,7 @@ class GameState:
     finished_at: str | None = None
     elapsed_seconds: float = 0.0
     revision: int = 0
+    corrections: int | None = None   # Anzahl Korrekturen mit [/]; None = alte Partie (nicht gezählt)
 
     # ------------------------------------------------------------------ Fabrik
     @classmethod
@@ -136,6 +147,7 @@ class GameState:
             game_id=uuid.uuid4().hex,
             mode=mode,
             started_at=started_at or now_iso(),
+            corrections=0,
         )
 
     # ------------------------------------------------------ Serialisierung
@@ -149,6 +161,7 @@ class GameState:
             "finished_at": self.finished_at,
             "elapsed_seconds": round(float(self.elapsed_seconds), 1),
             "revision": self.revision,
+            "corrections": self.corrections,
         }
 
     @classmethod
@@ -193,6 +206,7 @@ class GameState:
                 finished_at=finished_at,
                 elapsed_seconds=float(elapsed),
                 revision=_strict_int(data.get("revision", 0), "revision"),
+                corrections=_corrections(data.get("corrections")),
             )
         except KeyError as exc:
             raise ValueError(f"Pflichtfeld fehlt im Spielstand: {exc}") from exc

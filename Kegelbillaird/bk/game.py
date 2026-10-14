@@ -156,6 +156,8 @@ class Game:
         number = self.played
         total_before = self.total
         value = self._state.strokes.pop()
+        if self._state.corrections is not None:
+            self._state.corrections += 1
         return StrokeEntry(number, value, total_before)
 
     def finish(self, finished_at: str | None = None) -> None:

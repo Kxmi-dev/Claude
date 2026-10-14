@@ -26,37 +26,6 @@ from bk.settings import AppSettings
 from bk.storage import GameStorage
 
 
-class CutOutTests(unittest.TestCase):
-    def test_uniform_background_becomes_transparent_inner_areas_stay(self):
-        from PIL import Image, ImageDraw
-        from bk.media import cut_out_background
-        with TempDir() as tmp:
-            image = Image.new("RGB", (100, 100), "white")
-            draw = ImageDraw.Draw(image)
-            draw.ellipse((20, 20, 80, 80), fill="red")
-            draw.ellipse((45, 45, 55, 55), fill="white")            # weißer Punkt IM Logo
-            path = tmp.path / "logo.jpg"
-            image.save(path, quality=95)
-            result = cut_out_background(path)
-            self.assertEqual(result.mode, "RGBA")
-            self.assertEqual(result.getpixel((2, 2))[3], 0)          # Hintergrund durchsichtig
-            self.assertEqual(result.getpixel((30, 50))[3], 255)      # rot bleibt
-            self.assertEqual(result.getpixel((50, 50))[3], 255)      # weißer Punkt innen bleibt
-
-    def test_images_without_uniform_border_or_with_alpha_are_unchanged(self):
-        from PIL import Image
-        from bk.media import cut_out_background
-        with TempDir() as tmp:
-            stripes = Image.new("RGB", (40, 40))
-            stripes.putdata([(255, 0, 0) if (x // 4) % 2 else (0, 0, 255) for y in range(40) for x in range(40)])
-            stripes.save(tmp.path / "a.png")
-            self.assertEqual(cut_out_background(tmp.path / "a.png").getextrema()[3], (255, 255))
-            Image.new("RGBA", (10, 10), (0, 0, 0, 0)).save(tmp.path / "b.png")
-            self.assertEqual(cut_out_background(tmp.path / "b.png").getpixel((0, 0))[3], 0)
-            (tmp.path / "c.png").write_bytes(b"kaputt")
-            self.assertIsNone(cut_out_background(tmp.path / "c.png"))
-
-
 class MediaLogicTests(unittest.TestCase):
     def setUp(self):
         self.tmp = TempDir()
