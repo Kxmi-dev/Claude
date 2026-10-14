@@ -118,9 +118,9 @@ class GameScreen(QWidget):
         self.minus_box = DisplayBox()
         self.status_box = DisplayBox()
         self.duration_box = DisplayBox("flat")
-        self.score_box.text_ratio = 0.78
-        self.strokes_box.text_ratio = 0.78
-        self.current_box.text_ratio = 0.62
+        self.score_box.text_ratio = 0.66
+        self.strokes_box.text_ratio = 0.66
+        self.current_box.text_ratio = 0.58
         self.grid = ScoreGrid()
 
         self.panels = {
@@ -165,7 +165,7 @@ class GameScreen(QWidget):
         duration_row.addWidget(self.panels["duration"], 200)
         duration_row.addStretch(61)
         self._right.addLayout(duration_row, 3, 0, 1, 2)
-        for row, stretch in enumerate((150, 214, 104, 76)):
+        for row, stretch in enumerate((150, 214, 152, 76)):   # Zeile 2 (Minus/Eingabe) größer
             self._right.setRowStretch(row, stretch)
         self._right.setColumnStretch(0, 1)
         self._right.setColumnStretch(1, 1)
@@ -180,7 +180,7 @@ class GameScreen(QWidget):
         self._root.setContentsMargins(round(16 * unit), round(25 * unit), round(14 * unit), round(13 * unit))
         self._root.setSpacing(0)
         self._right.setHorizontalSpacing(round(16 * unit))
-        self._right.setVerticalSpacing(round(40 * unit))
+        self._right.setVerticalSpacing(round(24 * unit))
         for item, w, h in self._spacers:
             item.changeSize(round(w * unit), round(h * unit), QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         for panel in self.panels.values():

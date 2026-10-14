@@ -191,7 +191,7 @@ class DisplayBox(_Painted):
         self._progress_color = QColor(theme.MINUS)
         self._progress_text = ""
         self._fill = QColor(theme.WHITE)
-        self.text_ratio = 0.72
+        self.text_ratio = 0.62       # Höhe der Ziffern (Versalhöhe) im Verhältnis zur Feldhöhe
 
     def set_fill(self, color: QColor | None) -> None:
         """Hintergrundfarbe des Innenfelds (z. B. Tönung bei gewähltem Vorzeichen)."""
@@ -269,7 +269,10 @@ class DisplayBox(_Painted):
             main.setHeight(inner.height() - zone_h)
         if not self._text:
             return
-        max_h = main.height() * self.text_ratio
+        # Schrift so groß wählen, dass die Ziffern (Versalhöhe) text_ratio der Feldhöhe füllen
+        probe = theme.base_font(100, self._bold)
+        cap = QFontMetricsF(probe).capHeight() or 70.0
+        max_h = main.height() * self.text_ratio * 100 / cap
         avail_w = main.width() * 0.9
         font = theme.base_font(max_h, self._bold)
         suffix_font = theme.base_font(max_h * 0.42, self._bold)
