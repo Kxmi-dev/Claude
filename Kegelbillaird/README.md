@@ -139,9 +139,42 @@ Spielart, Status (beendet / abgebrochen / unterbrochen), Stoßzahl und Ergebnis.
 * **WEITERSPIELEN** – nur bei abgebrochenen oder unterbrochenen Partien: Die Partie wird
   wieder zur laufenden Partie und genau dort fortgesetzt, wo sie aufgehört hat.
 
-## 4. Konfiguration (`config.py`)
+## 4. Einstellungen
 
-Alle Einstellungen stehen zentral in `config.py`. Nach einer Änderung das Programm neu starten.
+### Einstellungsmenü (Hauptmenü → „Einstellungen“)
+
+Alles Wichtige wird direkt im Programm eingestellt – `config.py` muss dafür nicht mehr geöffnet werden.
+Jede Änderung wird **sofort gespeichert** (Datei `einstellungen.json` neben der .exe, atomar mit Sicherung
+`einstellungen.json.bak`) und gilt sofort; Sperrzeiten einer bereits laufenden Partie ab der nächsten Partie.
+Das Menü ist nur aus dem Hauptmenü erreichbar, nie während einer Partie.
+
+Bedienung: `8`/`2` wählen · `4`/`6` Wert ändern · `Enter` Bereich öffnen / Text oder Zahl eingeben /
+Taste aufnehmen / Ton probehören · `*`/`Esc` zurück (bzw. die eingestellten Tasten). Maus geht zusätzlich.
+
+| Bereich | Einstellungen |
+|---------|---------------|
+| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), Vereinsname (normale Tastatur), Anzahl „Letzte Stöße“ |
+| Design | Farbschema **Klassisch** (Vorlage) oder **Eigene Farben**: Primärfarbe (Leisten, Hintergrund, gewählter Knopf) und Sekundärfarbe (Rahmen, Beschriftungen, Knöpfe, Linien) als R/G/B 0–255. Rot/Grün der Wertung bleiben immer gleich; auf dunklen Leisten wird die Schrift automatisch weiß |
+| Eingabe | Sperrzeit nach Wertung, Sperre nach Korrektur, Wartezeit der Abbruch-Frage, Nur Nummernblock, NumLock automatisch |
+| Tasten | jede Aktion: `Enter`, dann die neue Taste drücken (doppelt belegte Tasten werden abgelehnt); `4`/`6` = Standard. Legende passt sich sofort an |
+| Töne | Töne an/aus, Lautstärke 0–100 %, Ton zur Halbzeit, Ton am Partie-Ende – Auswahl aus allen `.wav`/`.mp3` im Ordner `sounds` |
+| Bilder | Bilder an/aus, Anzeigedauer, Übersicht „Bilder bei +6/+7“ und „−6/−7“ mit An/Aus je Bild |
+| Drucken & PDF | Drucker (Windows-Standarddrucker oder ein installierter Drucker), PDF-Speicherort für „Als PDF speichern“ (ohne Nachfrage; Standard: Dokumente), Statistik nach der Partie, PDF automatisch öffnen |
+| Archiv & Aufräumen | Wiedergabe-Tempo, Aufbewahrung von Archiv, Protokollen und PDFs |
+| Alle Einstellungen zurücksetzen | zweimal `Enter` – danach gelten wieder die Werte aus `config.py` |
+
+Ist `einstellungen.json` beschädigt, startet das Programm trotzdem (Sicherung bzw. Standardwerte) und zeigt einen Hinweis.
+
+**Töne:** Unter Windows werden `.wav` und `.mp3` mit der Windows-eigenen Tonausgabe (MCI) abgespielt, mit Lautstärke.
+Fehlt die Tonausgabe (z. B. Monitor ohne Lautsprecher), läuft alles normal weiter; das Halbzeit-Feld leuchtet trotzdem auf.
+
+**Bilder:** Bilder/GIFs einfach in `bilder\plus` (für +6/+7) bzw. `bilder\minus` (für −6/−7) legen – sie werden
+automatisch erkannt. Ist `minus` leer, werden die Plus-Bilder genommen. Eine Datei = immer diese, mehrere = zufällig.
+
+### Grundwerte (`config.py`)
+
+`config.py` liefert die Grundwerte und Einstellungen, die es im Menü nicht gibt (Spielarten, Ordner, PDF-Raster …).
+Werte aus dem Einstellungsmenü haben Vorrang. Nach einer Änderung hier das Programm neu starten.
 
 | Einstellung | Standard | Bedeutung |
 |-------------|----------|-----------|
@@ -155,9 +188,8 @@ Alle Einstellungen stehen zentral in `config.py`. Nach einer Änderung das Progr
 | `KEY_PLUS`, `KEY_MINUS`, `KEY_UNDO`, `KEY_ABORT` | `+` `-` `/` `*` | Tasten in der Partie: Plus, Minus (auch „Ja“ bei der Abbruch-Frage), Rücknahme, Partie abbrechen |
 | `KEY_UP`, `KEY_DOWN`, `KEY_LEFT`, `KEY_RIGHT`, `KEY_ENTER`, `KEY_BACK` | `8` `2` `4` `6` `Enter` `*`/`Esc` | Tasten in Menüs, Archiv, Statistik-Fenster und Wiedergabe |
 | `SOUND_ENABLED`, `HALFTIME_SOUND` | `True`, `"halbzeit.wav"` | Ton zur Halbzeit (WAV im Ordner `sounds`). Leerer Name = kein Ton. Ohne Tonausgabe läuft alles weiter, das Halbzeit-Feld leuchtet zusätzlich ca. 4 s gelb auf |
-| `CELEBRATION_ENABLED`, `CELEBRATION_VALUES` | `True`, `(6, 7)` | bei diesen Wertungen erscheint ein Bild/GIF (`(6, 7, -6, -7)` = auch bei Minus) |
-| `CELEBRATION_IMAGES` | `[]` | Liste der Dateien im Ordner `bilder`. Eine Datei = immer diese, mehrere = zufällig (nie zweimal hintereinander dieselbe). Leer = keine Bilder |
-| `CELEBRATION_MINUS_VALUES`, `CELEBRATION_MINUS_IMAGES` | `(-6, -7)`, `[]` | dasselbe für Minus-Wertungen mit eigener Bilderliste; leer = die Bilder von `CELEBRATION_IMAGES`; `()` bei den Werten = aus |
+| `CELEBRATION_ENABLED`, `CELEBRATION_VALUES`, `CELEBRATION_MINUS_VALUES` | `True`, `(6, 7)`, `(-6, -7)` | bei diesen Wertungen erscheint ein Bild aus `bilder\plus` bzw. `bilder\minus`; `()` = aus |
+| `END_SOUND`, `SOUND_VOLUME`, `WINDOW_SIZE` | `""`, `80`, `(1280, 800)` | Ende-Ton, Lautstärke, Fenstergröße (alles auch im Menü) |
 | `CELEBRATION_SECONDS` | `3` | Anzeigedauer des Bildes; verschwindet auch bei `/` und der nächsten Wertung |
 | `AUTO_ENABLE_NUMLOCK` | `True` | NumLock prüfen und automatisch einschalten (`False` = nur warnen) |
 | `NUMLOCK_CHECK_SECONDS` | `2` | Prüfintervall für NumLock |
@@ -422,7 +454,8 @@ BK-Scoreboard\
 ├── config.py           ← Einstellungen – editierbar, danach Programm neu starten
 ├── assets\             ← Logo und Symbol – austauschbar
 ├── sounds\             ← Töne (WAV), z. B. halbzeit.wav – austauschbar
-├── bilder\             ← Bilder/GIFs für hohe Wertungen – austauschbar
+├── bilder\plus, minus  ← Bilder/GIFs für +6/+7 bzw. −6/−7 – werden automatisch erkannt
+├── einstellungen.json  ← Werte aus dem Einstellungsmenü (legt das Programm an)
 └── README.md
 ```
 `data`, `results` und `logs` legt das Programm beim ersten Start daneben an.
@@ -433,22 +466,22 @@ BK-Scoreboard\
 * Verknüpfung auf `BK-Scoreboard.exe` auf den Desktop bzw. in den Autostart (`shell:startup`) legen
 * Optionen funktionieren wie bei Python, z. B. Verknüpfung mit Ziel `BK-Scoreboard.exe --windowed`
 
-**Tasten ändern:** In `config.py` steht pro Aktion eine Liste, z. B. `KEY_UNDO = ["U", "Backspace"]`.
+**Tasten ändern:** Am einfachsten im Menü unter „Einstellungen → Tasten“. In `config.py` steht pro Aktion eine Liste, z. B. `KEY_UNDO = ["U", "Backspace"]`.
 Die erste Taste erscheint in der Legende (Fußleiste, Hinweise, Abbruch-Frage), weitere sind zusätzliche Möglichkeiten.
 Erlaubt sind `+ - / * . ,`, Ziffern, Buchstaben, `Enter Esc Space Tab Backspace Delete Insert Home End PageUp PageDown`,
 `Up Down Left Right` und `F1` bis `F12`. Die Wertungsziffern `0`–`7` sind fest. Doppelt belegte Tasten oder unbekannte
 Namen meldet das Programm beim Start mit einer Fehlermeldung. Buchstaben, F-Tasten und `Esc` gibt es nicht auf dem
 Nummernblock; sie funktionieren in der Partie trotzdem auch bei `NUMPAD_ONLY = True`.
 
-**Ton und Bilder ändern:** Datei in `sounds` bzw. `bilder` legen, den Dateinamen in `config.py` eintragen,
-Programm neu starten – ein Neubau der .exe ist dafür nicht nötig.
+**Ton und Bilder ändern:** Datei in `sounds` bzw. `bilder\plus` / `bilder\minus` legen – sie wird automatisch
+erkannt; Töne im Menü unter „Einstellungen → Töne“ auswählen. Ein Neubau der .exe ist dafür nicht nötig.
 
-**Einstellungen ändern:** `config.py` neben der .exe mit dem Editor öffnen, Wert ändern
-(z. B. `INPUT_LOCK_SECONDS = 4`), speichern, Programm neu starten. Ein Neubau ist nicht nötig.
+**Einstellungen ändern:** im Programm unter „Einstellungen“ (wird sofort gespeichert). Nur für Sonderfälle:
+`config.py` neben der .exe mit dem Editor öffnen, Wert ändern, Programm neu starten. Ein Neubau ist nicht nötig.
 Enthält die Datei einen Fehler, meldet das Programm beim Start die Zeile.
 
 **Neue Programmversion einspielen:** neue .exe erstellen und im installierten Ordner nur
-`BK-Scoreboard.exe` und `_internal` ersetzen. `config.py`, `data`, `results` und `logs`
+`BK-Scoreboard.exe` und `_internal` ersetzen. `config.py`, `einstellungen.json`, `sounds`, `bilder`, `data`, `results` und `logs`
 bleiben erhalten.
 
 **Schutz beim Neubau:** PyInstaller leert `dist\BK-Scoreboard` vollständig. Liegen dort

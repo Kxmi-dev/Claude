@@ -29,10 +29,12 @@ from ..models import GameMode, GameState, GameStatus
 from ..pdf_report import PdfError, report_base_name, write_report
 from ..settings import AppSettings
 from ..storage import ArchiveEntry, GameStorage, LoadStatus, StorageError
+from ..user_settings import UserSettingsStore
 from . import keymap, theme
 from .archive_screen import ArchiveScreen
 from .game_screen import GameScreen
 from .menu_screen import MenuScreen
+from .settings_screen import SettingsScreen
 from .overlays import Overlay, OverlayContent
 from .widgets import FooterBar, TitleBar
 
@@ -76,6 +78,10 @@ class NumLockGuard(QObject):
     def stop_watch(self) -> None:
         self._timer.stop()
 
+    def update_settings(self, auto_enable: bool, interval_seconds: float) -> None:
+        self._auto_enable = auto_enable
+        self._timer.setInterval(int(interval_seconds * 1000))
+
     def check(self) -> None:
         """NumLock prüfen; bei AUTO_ENABLE_NUMLOCK einschalten, sonst nur warnen."""
         if not self._supported:
@@ -111,9 +117,14 @@ class NumLockGuard(QObject):
 
 
 class MainWindow(QWidget):
-    def __init__(self, settings: AppSettings, storage: GameStorage) -> None:
+    def __init__(self, settings: AppSettings, storage: GameStorage,
+                 store: UserSettingsStore | None = None) -> None:
         super().__init__()
-        keymap.configure(settings.key_bindings)   # Tastenbelegung aus config.py
+        keymap.configure(settings.key_bindings)   # Tastenbelegung
+        theme.apply_colors(settings.theme_mode, settings.primary_color, settings.secondary_color)
+        # Ohne Angabe: Speicher ohne Laden (Tests); main.py übergibt den geladenen Speicher
+        self._store = store if store is not None else UserSettingsStore(settings)
+        self._force_windowed = False
         self._settings = settings
         self._storage = storage
         self._background: QPixmap | None = None
@@ -133,7 +144,9 @@ class MainWindow(QWidget):
         self.menu_screen = MenuScreen(settings)
         self.game_screen = GameScreen(settings, storage)
         self.archive_screen = ArchiveScreen(settings, storage)
-        for screen in (self.menu_screen, self.archive_screen, self.game_screen):
+        self.settings_screen = SettingsScreen(self._store)
+        self.settings_screen.preview_sound = self.game_screen.play_sound
+        for screen in (self.menu_screen, self.archive_screen, self.game_screen, self.settings_screen):
             self.stack.addWidget(screen)
         self._report_dialog = None
 
@@ -153,6 +166,11 @@ class MainWindow(QWidget):
         self.menu_screen.mode_chosen.connect(self._start_new_game)
         self.menu_screen.quit_requested.connect(self.close)
         self.menu_screen.archive_requested.connect(self.show_archive)
+        self.menu_screen.settings_requested.connect(self.show_settings)
+        self.settings_screen.back_requested.connect(self._settings_back)
+        self.settings_screen.settings_changed.connect(self.apply_settings)
+        self.settings_screen.notice.connect(self._flash)
+        self.settings_screen.footer_changed.connect(self._refresh_footer)
         self.archive_screen.entry_chosen.connect(self._on_archive_entry)
         self.archive_screen.back_requested.connect(self._archive_back)
         self.game_screen.footer_changed.connect(self._refresh_footer)
@@ -239,6 +257,52 @@ class MainWindow(QWidget):
         self.title_bar.set_title(screen.title())
         if not self.overlay.interactive:
             self.footer.set_segments(screen.footer_segments())
+
+    # ========================================================= Einstellungen
+    def show_settings(self) -> None:
+        self.settings_screen.open_page()
+        self._show_screen(self.settings_screen)
+
+    def _settings_back(self) -> None:
+        self.show_menu()
+        self.menu_screen.select_settings()
+
+    def show_window(self, force_windowed: bool = False) -> None:
+        """Erstes Anzeigen: Vollbild oder Fenster in der eingestellten Größe."""
+        self._force_windowed = force_windowed
+        self._apply_window_mode(first=True)
+
+    def _apply_window_mode(self, first: bool = False) -> None:
+        s = self._settings
+        if s.fullscreen and not self._force_windowed:
+            self.showFullScreen()
+            return
+        if self.isFullScreen() or first:
+            self.showNormal()
+        width, height = s.window_size
+        screen = self.screen().availableGeometry() if self.screen() is not None else None
+        if screen is not None:
+            width, height = min(width, screen.width()), min(height, screen.height())
+        self.resize(width, height)
+        if screen is not None:
+            self.move(screen.center().x() - width // 2, screen.center().y() - height // 2)
+        self.show()
+
+    def apply_settings(self, settings: AppSettings) -> None:
+        """Im Einstellungsmenü geänderte Werte sofort übernehmen."""
+        old = self._settings
+        self._settings = settings
+        keymap.configure(settings.key_bindings)
+        theme.apply_colors(settings.theme_mode, settings.primary_color, settings.secondary_color)
+        self.title_bar.set_club(settings.club_name)
+        self.game_screen.set_settings(settings)
+        self.numlock_guard.update_settings(settings.auto_enable_numlock, settings.numlock_check_seconds)
+        if (old.fullscreen, old.window_size) != (settings.fullscreen, settings.window_size) and self.isVisible():
+            self._apply_window_mode()
+        self._background = None
+        for widget in [self] + self.findChildren(QWidget):
+            widget.update()
+        self._refresh_footer()
 
     # =============================================================== Archiv
     def show_archive(self) -> None:
@@ -334,6 +398,8 @@ class MainWindow(QWidget):
             log.info("NumLock-Prüfung ist nur unter Windows verfügbar")
         self.run_cleanup()
         self._cleanup_timer.start()
+        for text in self._store.warnings:      # z. B. beschädigte einstellungen.json
+            self.footer.flash(text, True, seconds=6)
         self._check_unfinished_game()
 
     def run_cleanup(self) -> None:
@@ -436,6 +502,7 @@ class MainWindow(QWidget):
         except StorageError:
             log.error("Beendeter Zustand konnte nicht gesichert werden")
         self._complete_finished_state(game.state, recovered=False)
+        self.game_screen.play_sound(self._settings.end_sound)
 
     def _complete_finished_state(self, state: GameState, recovered: bool) -> None:
         """Ergebnis-JSON, PDF, Archivierung und Abschlussanzeige."""

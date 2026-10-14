@@ -2,8 +2,11 @@
 =====================================================================
   BK-Scoreboard – ZENTRALE KONFIGURATION
 =====================================================================
-Alle Einstellungen, die man im Vereinsalltag ändern möchte, stehen hier.
-Nach einer Änderung das Programm einfach neu starten.
+Fast alles lässt sich bequem im Programm einstellen: Hauptmenü → „Einstellungen“.
+Was dort geändert wird, steht in „einstellungen.json“ und hat Vorrang vor
+dieser Datei. Diese Datei liefert nur die Grundwerte (bzw. Werte, die es im
+Menü nicht gibt) und muss im Normalfall nicht mehr bearbeitet werden.
+Nach einer Änderung hier das Programm neu starten.
 """
 
 import sys
@@ -34,6 +37,7 @@ NUMPAD_ONLY = True
 # ---------------------------------------------------------------------
 
 FULLSCREEN = True            # Start direkt im Vollbild
+WINDOW_SIZE = (1280, 800)    # Fenstergröße, wenn FULLSCREEN = False
 HISTORY_LENGTH = 5           # Anzahl der Einträge unter "Letzte Stöße"
 
 APP_TITLE = "BK-Scoreboard"
@@ -75,31 +79,21 @@ KEY_BACK = ["*", "Esc"]      # zurück / Fenster schließen / Wiedergabe beenden
 #  TON UND BILDER (reine Zugabe – fehlt etwas, läuft die Partie normal weiter)
 # ---------------------------------------------------------------------
 
-# Ton zur Halbzeit (nach Stoß 25 bei 50 Stoß, nach Stoß 50 bei 100 Stoß).
-# Format: WAV-Datei im Ordner "sounds" neben der .exe. Leer lassen = kein Ton.
+# Töne: .wav oder .mp3 im Ordner "sounds" neben der .exe (werden im Menü automatisch angeboten).
+# Halbzeit = nach Stoß 25 bei 50 Stoß bzw. nach Stoß 50 bei 100 Stoß. Leer = kein Ton.
 # Hat der PC/Monitor keine Tonausgabe, blinkt das Halbzeit-Feld trotzdem.
 SOUND_ENABLED = True
 HALFTIME_SOUND = "halbzeit.wav"
+END_SOUND = ""               # Ton am Partie-Ende
+SOUND_VOLUME = 80            # Lautstärke 0 … 100 %
 
-# Bilder/GIFs bei bestimmten Wertungen (Ordner "bilder" neben der .exe).
-#   CELEBRATION_VALUES  bei diesen Wertungen erscheint ein Bild
-#                       (6, 7 = nur +6 und +7)
-#   CELEBRATION_IMAGES  Liste der verfügbaren Dateien. Steht nur eine drin,
-#                       kommt immer diese, sonst zufällig (nie zweimal hintereinander dieselbe).
-#   Leere Liste = keine Bilder.
+# Bilder/GIFs: ALLE Bilder in "bilder\\plus" erscheinen bei CELEBRATION_VALUES,
+# alle in "bilder\\minus" bei CELEBRATION_MINUS_VALUES (Ordner leer -> Plus-Bilder).
+# Eine Datei = immer diese, mehrere = zufällig (nie zweimal hintereinander dieselbe).
+# Einzelne Bilder lassen sich im Menü ausschalten. () schaltet die Bilder für diese Werte ab.
 CELEBRATION_ENABLED = True
 CELEBRATION_VALUES = (6, 7)
-CELEBRATION_IMAGES = [
-    # "bild1.gif",
-    # "bild2.png",
-]
-#   CELEBRATION_MINUS_VALUES / CELEBRATION_MINUS_IMAGES  dasselbe für Minus-Wertungen
-#                       (-6, -7). Bleibt die Minus-Liste leer, werden die Bilder von
-#                       CELEBRATION_IMAGES verwendet. CELEBRATION_MINUS_VALUES = () schaltet es ab.
 CELEBRATION_MINUS_VALUES = (-6, -7)
-CELEBRATION_MINUS_IMAGES = [
-    # "minus1.gif",
-]
 CELEBRATION_SECONDS = 3      # So lange bleibt das Bild stehen
 
 # ---------------------------------------------------------------------
@@ -192,4 +186,5 @@ RESULTS_DIR = BASE_DIR / "results"  # PDF + JSON jeder beendeten Partie
 LOGS_DIR = BASE_DIR / "logs"        # application.log
 ASSETS_DIR = BASE_DIR / "assets"    # logo.png, icon.png
 SOUNDS_DIR = BASE_DIR / "sounds"    # Töne (WAV)
-IMAGES_DIR = BASE_DIR / "bilder"    # Bilder und GIFs
+IMAGES_DIR = BASE_DIR / "bilder"    # Bilder und GIFs (Unterordner plus und minus)
+SETTINGS_FILE = BASE_DIR / "einstellungen.json"   # Werte aus dem Einstellungsmenü

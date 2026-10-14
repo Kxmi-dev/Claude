@@ -25,23 +25,28 @@ from .widgets import LogoWidget, MenuButton, Plate
 CONTENT_W, CONTENT_H = 1024, 702
 
 ARCHIVE = "archive"   # Menüeinträge, die keine Spielart sind
+SETTINGS = "settings"
 QUIT = "quit"
+EXTRA_ENTRIES = (ARCHIVE, SETTINGS, QUIT)
 
 
 class MenuScreen(QWidget):
     mode_chosen = Signal(object)      # GameMode
     archive_requested = Signal()
+    settings_requested = Signal()
     quit_requested = Signal()
     notice = Signal(str, bool)        # Text, Warnung?
 
     def __init__(self, settings: AppSettings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._modes: list[GameMode | str] = list(settings.menu_modes) + [ARCHIVE, QUIT]
+        self._modes: list[GameMode | str] = list(settings.menu_modes) + list(EXTRA_ENTRIES)
         self._plate = Plate("Bitte Spielmodus wählen", self)
         self._buttons: list[MenuButton] = []
         for index, mode in enumerate(self._modes):
             if mode == ARCHIVE:
                 button = MenuButton("Archiv", True, parent=self)
+            elif mode == SETTINGS:
+                button = MenuButton("Einstellungen", True, parent=self)
             elif mode == QUIT:
                 button = MenuButton("Ende", True, parent=self)
             else:
@@ -76,14 +81,14 @@ class MenuScreen(QWidget):
             widget.setGeometry(QRect(round(ox + x * unit), round(oy + y * unit), round(w * unit), round(h * unit)))
 
         place(self._plate, 64, 62, 463, 47)
-        # Spielarten untereinander, danach abgesetzt "Archiv" und "Ende" – alles passt
-        # immer zwischen Überschrift (y = 155) und Unterkante (y = 690)
+        # Spielarten untereinander, danach abgesetzt "Archiv", "Einstellungen" und "Ende" – alles
+        # passt immer zwischen Überschrift (y = 155) und Unterkante (y = 690)
         count = len(self._buttons)
-        gap = 30
+        gap = 24
         step = min(94.0, (690 - 155 - 64 - gap) / max(1, count - 1))
         height = min(64.0, step * 0.7)
         shadow = height * 0.075
-        modes = count - 2
+        modes = count - len(EXTRA_ENTRIES)
         for i, button in enumerate(self._buttons):
             y = 155 + i * step + (gap if i >= modes else 0)
             place(button, 146, y, 298 + shadow, height + shadow)
@@ -96,6 +101,10 @@ class MenuScreen(QWidget):
 
     def select_archive(self) -> None:
         self._index = self._modes.index(ARCHIVE)
+        self._update_selection()
+
+    def select_settings(self) -> None:
+        self._index = self._modes.index(SETTINGS)
         self._update_selection()
 
     def _update_selection(self) -> None:
@@ -117,6 +126,8 @@ class MenuScreen(QWidget):
             self.quit_requested.emit()
         elif mode == ARCHIVE:
             self.archive_requested.emit()
+        elif mode == SETTINGS:
+            self.settings_requested.emit()
         elif not mode.available:
             self.notice.emit(mode.note or f"„{mode.title}“ ist noch nicht verfügbar.", True)
         else:

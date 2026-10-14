@@ -5,3 +5,5 @@ results/
 logs/
 build/
 dist/
+einstellungen.json
+einstellungen.json.*

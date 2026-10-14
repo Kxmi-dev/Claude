@@ -39,7 +39,7 @@ REQUIRED_FILES = (
     "config.py",
     "bk/__init__.py", "bk/models.py", "bk/game.py", "bk/input_logic.py", "bk/storage.py",
     "bk/pdf_report.py", "bk/numlock.py", "bk/settings.py", "bk/logging_setup.py", "bk/maintenance.py",
-    "bk/media.py", "bk/keys.py", "bk/ui/celebration.py",
+    "bk/media.py", "bk/keys.py", "bk/user_settings.py", "bk/ui/celebration.py", "bk/ui/settings_screen.py",
     "bk/ui/__init__.py", "bk/ui/theme.py", "bk/ui/widgets.py", "bk/ui/keymap.py",
     "bk/ui/menu_screen.py", "bk/ui/game_screen.py", "bk/ui/archive_screen.py",
     "bk/ui/report_dialog.py", "bk/ui/overlays.py", "bk/ui/main_window.py",
@@ -160,7 +160,7 @@ def regenerate_pdf(settings: AppSettings, result_file: str) -> int:
     return 0
 
 
-def run_gui(settings: AppSettings, windowed: bool) -> int:
+def run_gui(settings: AppSettings, windowed: bool, store) -> int:
     from PySide6.QtCore import QLockFile
     from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -188,12 +188,8 @@ def run_gui(settings: AppSettings, windowed: bool) -> int:
         QMessageBox.warning(None, settings.app_title, "Das BK-Scoreboard läuft bereits.")
         return 3
 
-    window = MainWindow(settings, storage)
-    if settings.fullscreen and not windowed:
-        window.showFullScreen()
-    else:
-        window.resize(1280, 800)
-        window.show()
+    window = MainWindow(settings, storage, store)
+    window.show_window(force_windowed=windowed)
     log.info("Oberfläche gestartet (%s)", "Fenster" if windowed or not settings.fullscreen else "Vollbild")
     code = app.exec()
     lock.unlock()
@@ -211,6 +207,12 @@ def main(argv: list[str] | None = None) -> int:
     log_file = setup_logging(settings.logs_dir, retention_days=settings.log_retention_days)
     log.info("=== %s %s startet (%s, Einstellungen: %s, Log: %s) ===", settings.app_title,
              settings.app_version, "exe" if FROZEN else "Python", getattr(config, "__file__", "?"), log_file)
+    # Werte aus dem Einstellungsmenü (einstellungen.json) haben Vorrang vor config.py.
+    # Eine beschädigte Datei verhindert nie den Start (dann gelten Sicherung bzw. Standard).
+    from bk.user_settings import UserSettingsStore
+    store = UserSettingsStore(settings)
+    settings = store.load()
+    log.info("Einstellungen aus dem Menü: %s", store.path)
 
     if not FROZEN:   # in der .exe sind alle Pakete enthalten
         needed = ("reportlab",) if args.pdf else ("PySide6", "reportlab")
@@ -228,7 +230,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.pdf:
         return regenerate_pdf(settings, args.pdf)
     try:
-        return run_gui(settings, args.windowed)
+        return run_gui(settings, args.windowed, store)
     except Exception:
         log.critical("Unerwarteter Fehler – Programm wird beendet", exc_info=True)
         raise

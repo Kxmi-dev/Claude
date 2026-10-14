@@ -52,6 +52,10 @@ class TitleBar(_Painted):
         self._clock.timeout.connect(self.update)
         self._clock.start(1000)
 
+    def set_club(self, club_name: str) -> None:
+        self._club = club_name
+        self.update()
+
     def set_title(self, title: str) -> None:
         if title != self._title:
             self._title = title
@@ -72,14 +76,14 @@ class TitleBar(_Painted):
         text_h = h * 0.58
         center_w = w * 0.30
         side_w = (w - center_w) / 2 - pad
-        p.setPen(theme.TEXT)
+        p.setPen(theme.BAR_TEXT)
         p.setFont(theme.fitted_font(self._title, side_w - (x - pad), text_h))
         p.drawText(QRectF(x, 0, side_w - (x - pad), h), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
                    self._title)
-        p.setPen(theme.TEXT_MUTED)
+        p.setPen(theme.BAR_TEXT_MUTED)
         p.setFont(theme.fitted_font(now, center_w, text_h))
         p.drawText(QRectF((w - center_w) / 2, 0, center_w, h), Qt.AlignmentFlag.AlignCenter, now)
-        p.setPen(theme.TEXT)
+        p.setPen(theme.BAR_TEXT)
         p.setFont(theme.fitted_font(self._club, side_w, text_h))
         p.drawText(QRectF(w - pad - side_w, 0, side_w, h), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight,
                    self._club)
@@ -146,7 +150,8 @@ class FooterBar(_Painted):
             warn = self._flash_is_warning if self._flash_text else True
             font = theme.fitted_font(text, area.width(), h * 0.55, bold=warn)
             p.setFont(font)
-            p.setPen(theme.WARNING if warn else theme.TEXT)
+            p.setPen(theme.WARNING if warn and not theme.is_dark(theme.BAR) else
+                     (QColor("#ffd0c8") if warn else theme.BAR_TEXT))
             p.drawText(area, Qt.AlignmentFlag.AlignCenter, text)
             p.end()
             return
@@ -163,7 +168,7 @@ class FooterBar(_Painted):
                 p.setPen(theme.SEPARATOR)
                 p.drawText(int(x), int(baseline), sep)
                 x += metrics.horizontalAdvance(sep)
-            p.setPen(QColor("#262626"))
+            p.setPen(theme.BAR_TEXT)
             p.drawText(int(x), int(baseline), segment)
             x += metrics.horizontalAdvance(segment)
         p.end()
@@ -295,6 +300,11 @@ class HistoryBox(DisplayBox):
         super().__init__("bezel", parent)
         self._lines = max(1, lines)
         self._entries: list[tuple[int, int]] = []
+
+    def set_lines(self, lines: int) -> None:
+        self._lines = max(1, lines)
+        self._entries = self._entries[-self._lines:]
+        self.update()
 
     def set_entries(self, entries: list[tuple[int, int]]) -> None:
         entries = list(entries)[-self._lines:]

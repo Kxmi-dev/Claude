@@ -40,7 +40,7 @@ from PySide6.QtGui import QColor, QKeyEvent
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QSizePolicy, QSpacerItem, QVBoxLayout, QWidget
 
 from ..game import Game, GameError
-from ..media import SoundPlayer, existing_files, pick_image, resolve_file
+from ..media import SoundPlayer, active_images, pick_image, resolve_file
 from ..input_logic import Action, GameKey, InputResult, ScoreInputController
 from ..models import GameState, GameStatus
 from ..pdf_report import format_duration
@@ -231,7 +231,9 @@ class GameScreen(QWidget):
         self._end_replay()
         self._hide_extras()
         self._game = game
-        self._controller.reset()
+        s = self._settings
+        self._controller = ScoreInputController(s.input_lock_seconds, s.undo_lock_seconds,
+                                                s.abort_confirm_seconds, self._clock)
         self._completion_sent = False
         self._elapsed_base = float(game.state.elapsed_seconds)
         self._session_start = self._clock()
@@ -412,19 +414,20 @@ class GameScreen(QWidget):
         self.halftime_box.set_fill(None)
 
     def _celebrate(self, value: int) -> None:
-        """Bild/GIF bei den in der config.py genannten Wertungen. Fehler stören die Partie nie."""
+        """Bild/GIF bei +6/+7 bzw. −6/−7 (automatisch aus bilder/plus und bilder/minus). Fehler stören nie."""
         self._celebration.dismiss()
         cfg = self._settings
         if not cfg.celebration_enabled:
             return
-        if value in cfg.celebration_minus_values:
-            names = cfg.celebration_minus_images or cfg.celebration_images   # leer -> gleiche Bilder wie bei Plus
-        elif value in cfg.celebration_values:
-            names = cfg.celebration_images
-        else:
-            return
         try:
-            files = existing_files(cfg.images_dir, names)
+            if value in cfg.celebration_minus_values:
+                # Ordner bilder/minus; ist er leer, die Bilder aus bilder/plus
+                files = (active_images(cfg.images_minus_dir, cfg.disabled_images, "minus")
+                         or active_images(cfg.images_plus_dir, cfg.disabled_images, "plus"))
+            elif value in cfg.celebration_values:
+                files = active_images(cfg.images_plus_dir, cfg.disabled_images, "plus")
+            else:
+                return
             image = pick_image(files, self._last_image)
             if image is not None and self._celebration.show_image(image, cfg.celebration_seconds):
                 self._last_image = image
@@ -437,10 +440,30 @@ class GameScreen(QWidget):
         try:
             self.halftime_box.set_fill(HALFTIME_TINT)
             self._flash_timer.start(int(HALFTIME_FLASH_SECONDS * 1000))
-            if cfg.sound_enabled:
-                self._sound.play(resolve_file(cfg.sounds_dir, cfg.halftime_sound))
+            self.play_sound(cfg.halftime_sound)
         except Exception:
             log.exception("Halbzeit-Hinweis fehlgeschlagen")
+
+    def play_sound(self, name: str) -> bool:
+        """Ton aus dem Ordner sounds mit eingestellter Lautstärke (leerer Name = kein Ton)."""
+        cfg = self._settings
+        if not cfg.sound_enabled or not name:
+            return False
+        path = resolve_file(cfg.sounds_dir, name)
+        if path is None:
+            log.warning("Tondatei nicht gefunden: %s", name)
+            return False
+        return self._sound.play(path, cfg.sound_volume)
+
+    def set_settings(self, settings: AppSettings) -> None:
+        """Geänderte Einstellungen übernehmen (Zeiten erst ab der nächsten Partie, falls eine läuft)."""
+        self._settings = settings
+        self._autosave.setInterval(int(settings.autosave_seconds * 1000))
+        self.history_box.set_lines(settings.history_length)
+        if not self.has_live_game:
+            self._controller = ScoreInputController(
+                settings.input_lock_seconds, settings.undo_lock_seconds, settings.abort_confirm_seconds, self._clock)
+        self.footer_changed.emit()
 
     def resizeEvent(self, event) -> None:  # noqa: N802 (Qt-Name)
         super().resizeEvent(event)

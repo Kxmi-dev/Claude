@@ -1,2 +1,3 @@
-Hier liegen die Töne (WAV). Der Dateiname steht in config.py unter HALFTIME_SOUND.
-halbzeit.wav ist nur ein Beispielton und kann ersetzt werden.
+Töne (.wav oder .mp3) hier hineinlegen – sie werden automatisch erkannt.
+Auswahl (Halbzeit, Partie-Ende) und Lautstärke unter Einstellungen -> Töne.
+halbzeit.wav ist nur ein Beispielton.

@@ -42,6 +42,56 @@ CURRENT = QColor("#1f4fb0")        # Markierung des nächsten Stoßes (Blau aus 
 PLUS = QColor("#16803a")           # Grün aus dem Logo
 MINUS = QColor("#c8141e")          # Rot aus dem Logo ("-2")
 WARNING = QColor("#b3261e")
+BAR_TEXT = QColor("#111111")       # Schrift auf Titel-/Fußleiste
+BAR_TEXT_MUTED = QColor("#6d6d6d")
+BACKGROUND_TINT: QColor | None = None   # None = klassischer silbergrauer Hintergrund
+
+# Farben, die das Farbschema verändert (klassische Werte zum Zurückschalten)
+_THEMED = ("BAR", "BAR_LIGHT", "PLATE", "BEZEL", "BUTTON", "BUTTON_SELECTED", "SEPARATOR",
+           "GRID_LINE", "GRID_OUTER", "BAR_TEXT", "BAR_TEXT_MUTED")
+_CLASSIC = {name: QColor(globals()[name]) for name in _THEMED}
+
+
+def _mix(color: QColor, other: QColor, share: float) -> QColor:
+    """``share`` = Anteil von ``other`` (0 … 1)."""
+    return QColor(round(color.red() + (other.red() - color.red()) * share),
+                  round(color.green() + (other.green() - color.green()) * share),
+                  round(color.blue() + (other.blue() - color.blue()) * share))
+
+
+def is_dark(color: QColor) -> bool:
+    """Wahrgenommene Helligkeit – entscheidet über helle oder dunkle Schrift."""
+    return 0.299 * color.red() + 0.587 * color.green() + 0.114 * color.blue() < 140
+
+
+def apply_colors(mode: str, primary: tuple[int, int, int], secondary: tuple[int, int, int]) -> None:
+    """Farbschema setzen: "klassisch" (Vorlage) oder "eigen" mit Primär- und Sekundärfarbe.
+
+    Primär: Titel-/Fußleiste, Hintergrund, gewählter Knopf.
+    Sekundär: Rahmen der Anzeigen, Beschriftungsplatten, Knöpfe, Trennstriche, Rasterlinien.
+    Rot/Grün der Wertung und die Schrift in den weißen Feldern bleiben immer gleich (Lesbarkeit).
+    """
+    global BACKGROUND_TINT
+    g = globals()
+    for name, color in _CLASSIC.items():
+        g[name] = QColor(color)
+    BACKGROUND_TINT = None
+    if mode != "eigen":
+        return
+    white, black = QColor("#ffffff"), QColor("#000000")
+    p, s = QColor(*primary), QColor(*secondary)
+    g["BAR"] = p
+    g["BAR_LIGHT"] = _mix(p, white, 0.35)
+    g["BAR_TEXT"] = QColor("#ffffff") if is_dark(p) else QColor("#111111")
+    g["BAR_TEXT_MUTED"] = _mix(g["BAR_TEXT"], p, 0.35)
+    g["BUTTON_SELECTED"] = _mix(p, white, 0.9)
+    BACKGROUND_TINT = _mix(p, white, 0.45)
+    g["BEZEL"] = s
+    g["PLATE"] = _mix(s, white, 0.7)
+    g["BUTTON"] = _mix(s, white, 0.5)
+    g["SEPARATOR"] = _mix(s, black, 0.35)
+    g["GRID_LINE"] = s
+    g["GRID_OUTER"] = _mix(s, black, 0.45)
 
 
 def ui_unit(width: float, height: float) -> float:
@@ -83,8 +133,10 @@ def rounded_path(rect: QRectF, radius: float) -> QPainterPath:
 
 
 def draw_plate(painter: QPainter, rect: QRectF, text: str, text_ratio: float = 0.62,
-               color: QColor = PLATE, text_color: QColor = TEXT) -> None:
+               color: QColor | None = None, text_color: QColor | None = None) -> None:
     """Hellgraue Beschriftungsplatte (z. B. "Punktestand")."""
+    color = color or PLATE
+    text_color = text_color or TEXT
     radius = max(2.0, rect.height() * 0.14)
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(color)
@@ -188,6 +240,7 @@ def make_background(width: int, height: int, seed: int = 11) -> QPixmap:
 
     pixmap = QPixmap(width, height)
     pixmap.fill(BACKGROUND)
+    tint = BACKGROUND_TINT
     painter = QPainter(pixmap)
     painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
     # grobe, horizontal gestreckte Wolken
@@ -199,5 +252,9 @@ def make_background(width: int, height: int, seed: int = 11) -> QPixmap:
         width, height, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
     painter.setOpacity(0.35)
     painter.drawImage(0, 0, streaks)
+    if tint is not None:   # eigenes Farbschema: Wolken bleiben, werden aber eingefärbt
+        painter.setOpacity(1.0)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Multiply)
+        painter.fillRect(0, 0, width, height, tint.lighter(118))
     painter.end()
     return pixmap

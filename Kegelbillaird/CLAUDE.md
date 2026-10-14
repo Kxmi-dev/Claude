@@ -24,7 +24,8 @@ Kein generisches Standard-GUI-Design einführen. Layout skaliert proportional
 ```
 main.py              Einstieg: CLI (--windowed, --selftest, --pdf FILE), Datei-/Paketprüfung,
                      QLockFile (Einzelinstanz), lädt in der .exe die config.py NEBEN der .exe
-config.py            ALLE Einstellungen (vom Nutzer editierbar)
+config.py            Grundwerte (Nutzer braucht sie normalerweise nicht mehr – Einstellungsmenü)
+einstellungen.json   Werte aus dem Einstellungsmenü (Vorrang vor config.py), atomar + .bak
 build_exe.py/.bat    Selftest + PyInstaller → dist\BK-Scoreboard\ (bricht ab, wenn dort Spieldaten liegen)
 install_windows.bat  .venv anlegen, requirements, Selftest
 bk/models.py         GameMode, GameState (kein Spielername mehr!), GameStatus; strenge Prüfung beim Laden
@@ -43,11 +44,13 @@ bk/ui/archive_screen.py  Archivliste
 bk/ui/report_dialog.py   Statistik-Fenster (PDF-Ansicht, Speichern, Drucken, Schließen)
 bk/ui/overlays.py    Abfrage-Karten (Fortsetzen, Abbruch, Archiv-Auswahl, Fehler)
 bk/ui/celebration.py Bild-/GIF-Einblendung bei CELEBRATION_VALUES
+bk/user_settings.py  UserSettingsStore: einstellungen.json laden/prüfen/speichern, FIELDS = im Menü änderbare Felder
+bk/ui/settings_screen.py Einstellungsmenü (Bereiche → Einträge, [4]/[6] ändern, Enter: Eingabe/Tastenaufnahme)
 bk/keys.py           Tastenbelegung (Qt-frei): Namen prüfen, Doppelbelegung, Legenden-Beschriftung
 bk/media.py          Ton (winsound/Qt, fehlerfrei geschluckt) + Bildauswahl (1 Datei = immer, sonst zufällig)
 bk/ui/widgets.py, theme.py, keymap.py
 sounds/, bilder/     Ton- und Bilddateien neben der .exe (austauschbar, ohne Neubau)
-tests/               122 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
+tests/               137 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
 ```
 Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), `results/` (PDF+JSON), `logs/`.
 
@@ -72,6 +75,20 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   Aktueller Stoß (rot getönt bei Minus-Modus), Letzte Stöße (5), Minus (Summe Minuspunkte),
   Eingabe (BEREIT / MINUS / GESPERRT + Countdown), Spieldauer, 10er-Raster.
 
+## Einstellungsmenü (mit dem Nutzer abgestimmt)
+- Hauptmenü: … Archiv, **Einstellungen**, Ende. Nur außerhalb einer Partie erreichbar.
+- Jede Änderung: `store.set()` prüft (AppSettings.validate) → speichert sofort → `MainWindow.apply_settings()`
+  übernimmt live (keymap, theme.apply_colors, Titelleiste, GameScreen.set_settings, Fenster, NumLock-Guard).
+- Bereiche: Anzeige (Vollbild, Fenstergröße-Presets, Vereinsname per QInputDialog, Letzte Stöße), Design
+  (Klassisch / eigene Primär- + Sekundärfarbe RGB), Eingabe, Tasten (Aufnahme), Töne (Halbzeit/Ende aus sounds/,
+  Lautstärke, probehören), Bilder (bilder/plus, bilder/minus automatisch, einzelne aus = `disabled_images`),
+  Drucken & PDF (Drucker-Auswahl mit Fallback Standard, PDF-Speicherort ohne Nachfrage, eindeutiger Name `_2`),
+  Archiv & Aufräumen, Alles zurücksetzen (2× Enter).
+- Neue Menü-Einstellung = Feld in AppSettings + Eintrag in `user_settings.FIELDS` + Item im settings_screen.
+- Ton: Windows → MCI (`mciSendStringW`, wav+mp3+Lautstärke), Rückfall winsound (nur wav). KEIN QMediaPlayer:
+  der hängt ohne Audiogerät die Ereignisschleife auf (unter Linux nachgewiesen). Linux/Test: QSoundEffect nur wav,
+  nur wenn `QMediaDevices.audioOutputs()` nicht leer.
+
 ## Tastenbelegung (frei wählbar)
 - `KEY_PLUS/MINUS/UNDO/ABORT` (Partie) und `KEY_UP/DOWN/LEFT/RIGHT/ENTER/BACK` (Menüs, Archiv, Statistik, Wiedergabe)
   in `config.py`, je eine Liste; die erste Taste steht in der Legende. Ziffern 0–7 fest. Abbruch-Bestätigung = `KEY_MINUS`.
@@ -80,16 +97,14 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 - Ungültig/doppelt belegt → Fehlermeldung beim Start (wie jeder config.py-Fehler).
 
 ## Ton & Bilder (reine Zugabe, stören die Partie nie)
-- Halbzeit (nach `halftime_after`): Ton `HALFTIME_SOUND` (WAV in `sounds/`) + Halbzeit-Feld leuchtet 4 s gelb
-  (geht auch ohne Tonausgabe). Fehlende Datei/kein Audiogerät → nur Logeintrag.
-- Minus: `CELEBRATION_MINUS_VALUES` (Standard −6/−7) → `CELEBRATION_MINUS_IMAGES` (leer = Plus-Liste).
-- Wertung in `CELEBRATION_VALUES` (Standard +6/+7) → Bild/GIF aus `CELEBRATION_IMAGES` (Ordner `bilder/`),
-  eine Datei = immer diese, mehrere = zufällig. `/` blendet es sofort aus. Ton/Bilder sind unter Windows
-  (winsound, GIF/Bild in der .exe) noch nicht auf dem echten PC geprüft.
+- Halbzeit (nach `halftime_after`): Ton `halftime_sound` + Halbzeit-Feld leuchtet 4 s gelb (auch ohne Tonausgabe).
+  Partie-Ende: `end_sound`. Fehlende Datei/kein Audiogerät → nur Logeintrag.
+- +6/+7 (`CELEBRATION_VALUES`) → alle Bilder in `bilder/plus`; −6/−7 (`CELEBRATION_MINUS_VALUES`) → `bilder/minus`
+  (leer = Plus-Bilder). Eine Datei = immer diese, mehrere = zufällig. `/` blendet es sofort aus.
 
 ## Statistik-Fenster & Archiv
-- Statistik-Fenster zeigt den Bericht wie im PDF: Knöpfe **Als PDF speichern** (Dialog, Vorschlag Dokumente-Ordner),
-  **Drucken** (sofort auf **Windows-Standarddrucker, kein Druckdialog**; ohne Standarddrucker Hinweistext),
+- Statistik-Fenster zeigt den Bericht wie im PDF: Knöpfe **Als PDF speichern** (ohne Nachfrage in `pdf_save_dir`,
+  Standard Dokumente), **Drucken** (sofort auf gewähltem Drucker bzw. **Windows-Standarddrucker, kein Druckdialog**),
   **Schließen**. Bedienung `4`/`6`, Enter, `8`/`2` blättern, `*`/Esc.
 - PDF enthält „**Anzahl je Wertung**“ (wie oft −7…+7 gestoßen) und gleich dicke Tabellenlinien
   (`LINE_WIDTH`, alle Maße ganze Punkte). Bildschirmanzeige: eigene PDF-Variante über
@@ -116,6 +131,7 @@ Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lese
   PDF > responsiv > Optik. Keine unnötigen Features, keine Maussteuerung im Spiel nötig.
 
 ## Offen / nicht verifiziert
-- NumLock-Automatik, Drucken auf echtem Drucker und die .exe wurden nur unter Linux/simuliert getestet –
+- NumLock-Automatik, Drucken auf echtem Drucker, Ton (MCI), Druckerauswahl und die .exe wurden nur unter
+  Linux/simuliert getestet –
   Rückmeldung vom Windows-PC des Nutzers steht aus.
 - Regeln für „2x 50 Stoß“ und „Zweikampf“ fehlen noch.

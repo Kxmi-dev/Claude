@@ -27,7 +27,7 @@ from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QRectF, QSize, QStand
 from PySide6.QtGui import QColor, QGuiApplication, QImage, QKeyEvent, QPageSize, QPainter, QPixmap
 from PySide6.QtPdf import QPdfDocument, QPdfDocumentRenderOptions
 from PySide6.QtPrintSupport import QPrinter, QPrinterInfo
-from PySide6.QtWidgets import (QDialog, QFileDialog, QHBoxLayout, QLabel, QScrollArea, QStyle, QVBoxLayout,
+from PySide6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QScrollArea, QStyle, QVBoxLayout,
                                QWidget)
 
 from ..models import GameState
@@ -124,6 +124,7 @@ class ReportDialog(QDialog):
         super().__init__(parent)
         self._state = state
         self._settings = settings
+        self._printer_note = ""
         started = datetime.fromisoformat(state.started_at)
         self.setWindowTitle(f"Statistik – {state.mode.title} vom {started:%d.%m.%Y}")
         self.setModal(True)
@@ -261,25 +262,28 @@ class ReportDialog(QDialog):
             self.accept()
 
     # -------------------------------------------------------------- Speichern
+    def save_folder(self) -> Path:
+        """Im Einstellungsmenü gewählter PDF-Speicherort (Standard: Ordner „Dokumente“)."""
+        if self._settings.pdf_save_dir:
+            return Path(self._settings.pdf_save_dir)
+        documents = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
+        return Path(documents) if documents else self._settings.results_dir
+
     def _default_save_path(self) -> Path:
-        """results\\<Name>.pdf – liegt dort schon das automatisch gespeicherte PDF,
-        wird der Dokumente-Ordner vorgeschlagen (z. B. zum Speichern auf einen USB-Stick)."""
-        name = report_base_name(self._state) + ".pdf"
-        candidate = self._settings.results_dir / name
-        if candidate.exists():
-            documents = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
-            if documents:
-                return Path(documents) / name
-        return candidate
+        """Freier Dateiname im Speicherort: BK50_2026-10-14_15-42.pdf, sonst …_2.pdf, …_3.pdf"""
+        folder = self.save_folder()
+        base = report_base_name(self._state)
+        target = folder / f"{base}.pdf"
+        number = 2
+        while target.exists():
+            target = folder / f"{base}_{number}.pdf"
+            number += 1
+        return target
 
     def save_pdf(self, target: Path | None = None) -> Path | None:
-        """Speichert den Bericht als PDF. Ohne ``target`` wird ein Speichern-Dialog gezeigt."""
+        """Speichert den Bericht als PDF – ohne ``target`` ohne Nachfrage im eingestellten Speicherort."""
         if target is None:
-            chosen, _ = QFileDialog.getSaveFileName(self, "Spielbericht als PDF speichern",
-                                                    str(self._default_save_path()), "PDF-Dokument (*.pdf)")
-            if not chosen:
-                return None
-            target = Path(chosen)
+            target = self._default_save_path()
         if target.suffix.lower() != ".pdf":
             target = target.with_name(target.name + ".pdf")
         try:
@@ -300,8 +304,17 @@ class ReportDialog(QDialog):
 
     # ---------------------------------------------------------------- Drucken
     def default_printer(self) -> QPrinter | None:
-        """Der unter Windows eingestellte Standarddrucker (None, wenn keiner eingerichtet ist)."""
-        info = QPrinterInfo.defaultPrinter()
+        """Der im Einstellungsmenü gewählte Drucker; fehlt er (oder ist keiner gewählt), der
+        Windows-Standarddrucker. None, wenn keiner eingerichtet ist."""
+        info = QPrinterInfo()
+        wanted = self._settings.printer_name
+        if wanted:
+            info = QPrinterInfo.printerInfo(wanted)
+            if info.isNull():
+                log.warning("Gewählter Drucker „%s“ nicht gefunden – Standarddrucker wird verwendet", wanted)
+                self._printer_note = f"Drucker „{wanted}“ nicht gefunden – Standarddrucker wird verwendet. "
+        if info.isNull():
+            info = QPrinterInfo.defaultPrinter()
         if info.isNull():
             return None
         printer = QPrinter(info, QPrinter.PrinterMode.HighResolution)
@@ -319,7 +332,8 @@ class ReportDialog(QDialog):
                                 "„Drucker und Scanner“ einen Standarddrucker festlegen.", error=True)
                 return False
         name = printer.printerName() or printer.outputFileName()
-        self._show_note(f"Wird gedruckt auf „{name}“ …")
+        prefix, self._printer_note = self._printer_note, ""
+        self._show_note(f"{prefix}Wird gedruckt auf „{name}“ …")
         QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             self._render_to(printer)
@@ -330,7 +344,7 @@ class ReportDialog(QDialog):
         finally:
             QGuiApplication.restoreOverrideCursor()
         log.info("Spielbericht gedruckt auf %s", name)
-        self._show_note(f"Gedruckt auf „{name}“.")
+        self._show_note(f"{prefix}Gedruckt auf „{name}“.")
         return True
 
     def _render_to(self, printer: QPrinter) -> None:

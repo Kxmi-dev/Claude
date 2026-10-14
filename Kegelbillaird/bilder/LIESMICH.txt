@@ -1,2 +1,5 @@
-Hier liegen die Bilder und GIFs (png, jpg, gif ...).
-In config.py unter CELEBRATION_IMAGES die Dateinamen eintragen, z. B. ["bild1.gif", "bild2.png"].
+Bilder und GIFs (png, jpg, gif ...) hier hineinlegen – sie werden automatisch erkannt.
+  plus\   erscheint bei +6 und +7
+  minus\  erscheint bei -6 und -7 (ist der Ordner leer, werden die Plus-Bilder genommen)
+Eine Datei = immer diese, mehrere = zufällig. Einzelne Bilder lassen sich unter
+Einstellungen -> Bilder ausschalten.

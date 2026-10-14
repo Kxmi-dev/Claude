@@ -12,8 +12,8 @@ Ergebnis: dist\\BK-Scoreboard\\
     _internal\\          Python, Qt, ReportLab … (nicht verändern)
     config.py           Einstellungen – editierbar, Programm danach neu starten
     assets\\             Logo und Symbol – austauschbar
-    sounds\\            Töne (WAV), z. B. halbzeit.wav
-    bilder\\            Bilder/GIFs für hohe Wertungen
+    sounds\\            Töne (.wav/.mp3), z. B. halbzeit.wav
+    bilder\\plus, minus Bilder/GIFs für +6/+7 bzw. −6/−7 (werden automatisch erkannt)
     README.md
 
 Dieser Ordner läuft auf jedem Windows-PC (64 Bit) OHNE Python- oder pip-Installation.
@@ -43,7 +43,8 @@ def fail(text: str) -> int:
 
 def has_user_data(folder: Path) -> bool:
     """True, wenn im Ausgabeordner bereits Spielstände, Ergebnisse oder Logs liegen."""
-    return any((folder / name).is_dir() and any((folder / name).iterdir()) for name in USER_DIRS)
+    return (any((folder / name).is_dir() and any((folder / name).iterdir()) for name in USER_DIRS)
+            or (folder / "einstellungen.json").exists())
 
 
 def main() -> int:
@@ -55,7 +56,7 @@ def main() -> int:
 
     # PyInstaller leert den Ausgabeordner vollständig – echte Spieldaten schützen
     if has_user_data(TARGET):
-        return fail(f"In {TARGET} liegen bereits Spielstände/Ergebnisse (data, results oder logs).\n"
+        return fail(f"In {TARGET} liegen bereits Spielstände/Ergebnisse/Einstellungen (data, results, logs, einstellungen.json).\n"
                     "Der Ordner wird beim Erstellen komplett geleert. Bitte das Programm vorher an seinen\n"
                     "endgültigen Ort kopieren (z. B. C:\\BK-Scoreboard) und dist\\BK-Scoreboard löschen.")
 
@@ -103,6 +104,8 @@ def main() -> int:
     for folder in ("sounds", "bilder"):        # Ton und Bilder – austauschbar, bleiben beim Update erhalten
         if (ROOT / folder).is_dir():
             shutil.copytree(ROOT / folder, TARGET / folder, dirs_exist_ok=True)
+    for folder in ("bilder/plus", "bilder/minus"):
+        (TARGET / folder).mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / "README.md", TARGET / "README.md")
 
     size_mb = sum(p.stat().st_size for p in TARGET.rglob("*") if p.is_file() and not p.is_symlink()) / 1_000_000

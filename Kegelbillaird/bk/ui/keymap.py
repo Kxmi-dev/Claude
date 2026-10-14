@@ -136,3 +136,17 @@ def map_menu_key(event: QKeyEvent) -> MenuKey | None:
         if key in _active.by_action[menu_key.value]:
             return menu_key
     return None
+
+
+def _all_names() -> list[str]:
+    from ..keys import NAMED, SYMBOLS
+    return (list(SYMBOLS) + [str(d) for d in range(10)] + [chr(c) for c in range(ord("A"), ord("Z") + 1)]
+            + list(NAMED) + [f"F{i}" for i in range(1, 13)])
+
+
+_NAME_OF_KEY = {code: name for name in _all_names() for code in qt_keys(name)}
+
+
+def event_name(event: QKeyEvent) -> str | None:
+    """Tastenname für die Tastenaufnahme im Einstellungsmenü (None = nicht belegbar)."""
+    return _NAME_OF_KEY.get(int(event.key()))

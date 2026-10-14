@@ -10,7 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from tests.helpers import BK50, TempDir
 
-from bk.media import SoundPlayer, existing_files, pick_image, resolve_file
+from bk.media import SoundPlayer, active_images, list_images, list_sounds, pick_image, resolve_file
 
 try:
     from PySide6.QtCore import QEvent, Qt
@@ -36,12 +36,19 @@ class MediaLogicTests(unittest.TestCase):
         path.write_bytes(b"x")
         return path
 
-    def test_resolve_and_existing_files(self):
+    def test_files_are_detected_automatically(self):
         a = self.touch("a.gif")
+        self.touch("B.PNG")
+        self.touch("notiz.txt")
+        self.touch("ton.mp3")
+        self.touch("ton.wav")
         self.assertEqual(resolve_file(self.tmp.path, "a.gif"), a)
         self.assertIsNone(resolve_file(self.tmp.path, "fehlt.gif"))
         self.assertIsNone(resolve_file(self.tmp.path, ""))
-        self.assertEqual(existing_files(self.tmp.path, ["fehlt.png", "a.gif", "a.gif", ""]), [a])
+        self.assertEqual(list_images(self.tmp.path), ["a.gif", "B.PNG"])
+        self.assertEqual(list_sounds(self.tmp.path), ["ton.mp3", "ton.wav"])
+        self.assertEqual(list_images(self.tmp.path / "gibtsnicht"), [])
+        self.assertEqual(active_images(self.tmp.path, ["plus/a.gif"], "plus"), [self.tmp.path / "B.PNG"])
 
     def test_single_file_is_always_chosen(self):
         a = self.touch("a.gif")
@@ -62,15 +69,17 @@ class MediaLogicTests(unittest.TestCase):
         self.assertIsNone(pick_image([]))
 
     def test_sound_failure_is_swallowed(self):
-        def broken(path):
+        def broken(path, volume):
             raise OSError("kein Audiogerät")
         self.assertFalse(SoundPlayer(broken).play(Path("x.wav")))
         self.assertFalse(SoundPlayer(broken).play(None))
 
     def test_sound_plays(self):
         played = []
-        self.assertTrue(SoundPlayer(played.append).play(Path("x.wav")))
-        self.assertEqual(played, [Path("x.wav")])
+        player = SoundPlayer(lambda path, volume: played.append((path, volume)))
+        self.assertTrue(player.play(Path("x.mp3"), 40))
+        self.assertFalse(player.play(Path("x.mp3"), 0))          # Lautstärke 0 = kein Ton
+        self.assertEqual(played, [(Path("x.mp3"), 40)])
 
 
 @unittest.skipIf(QApplication is None, "PySide6 nicht installiert")
@@ -83,11 +92,12 @@ class MediaUiTests(unittest.TestCase):
 
     def setUp(self):
         self.tmp = TempDir()
-        (self.tmp.path / "bilder").mkdir()
+        (self.tmp.path / "bilder" / "plus").mkdir(parents=True)
+        (self.tmp.path / "bilder" / "minus").mkdir()
         (self.tmp.path / "sounds").mkdir()
         img = QImage(40, 30, QImage.Format.Format_RGB32)
         img.fill(0xFFCC00)
-        img.save(str(self.tmp.path / "bilder" / "a.png"))
+        img.save(str(self.tmp.path / "bilder" / "plus" / "a.png"))
         (self.tmp.path / "sounds" / "h.wav").write_bytes(b"x")
         self.settings = dataclasses.replace(
             AppSettings.from_config(config),
@@ -95,7 +105,7 @@ class MediaUiTests(unittest.TestCase):
             logs_dir=self.tmp.path / "logs", input_lock_seconds=self.LOCK, undo_lock_seconds=0.05,
             auto_enable_numlock=False, fullscreen=False,
             images_dir=self.tmp.path / "bilder", sounds_dir=self.tmp.path / "sounds",
-            celebration_images=("a.png",), halftime_sound="h.wav", celebration_seconds=5.0)
+            halftime_sound="h.wav", end_sound="h.wav", sound_volume=70, celebration_seconds=5.0)
         self.storage = GameStorage(self.settings.data_dir, self.settings.results_dir)
         self.storage.ensure_directories()
         self.windows = []
@@ -115,7 +125,7 @@ class MediaUiTests(unittest.TestCase):
         screen.show()
         self.windows.append(screen)
         played = []
-        screen._sound = SoundPlayer(played.append)
+        screen._sound = SoundPlayer(lambda path, volume: played.append(path))
         screen.played_sounds = played
         screen.start_game(Game(GameState.new(BK50)))
         return screen
@@ -143,9 +153,12 @@ class MediaUiTests(unittest.TestCase):
         self.press(screen, 7)
         self.assertTrue(screen._celebration.isVisible())
 
-    def test_minus_values_use_own_images_or_fall_back(self):
-        QImage(10, 10, QImage.Format.Format_RGB32).save(str(self.tmp.path / "bilder" / "m.png"))
-        own = self.screen(dataclasses.replace(self.settings, celebration_minus_images=("m.png",)))
+    def test_minus_values_use_own_folder_or_fall_back(self):
+        fallback = self.screen()
+        self.press(fallback, -7)                    # bilder/minus leer -> Bilder aus bilder/plus
+        self.assertEqual(fallback._last_image.name, "a.png")
+        QImage(10, 10, QImage.Format.Format_RGB32).save(str(self.tmp.path / "bilder" / "minus" / "m.png"))
+        own = self.screen()
         self.press(own, -7)
         self.assertEqual(own._last_image.name, "m.png")
         self.press(own, 6)
@@ -162,11 +175,14 @@ class MediaUiTests(unittest.TestCase):
                                     "", False))
         self.assertFalse(screen._celebration.isVisible())
 
-    def test_missing_or_broken_images_do_not_disturb(self):
-        broken = self.tmp.path / "bilder" / "kaputt.gif"
-        broken.write_bytes(b"kein gif")
-        for names in ((), ("fehlt.png",), ("kaputt.gif",)):
-            screen = self.screen(dataclasses.replace(self.settings, celebration_images=names))
+    def test_missing_disabled_or_broken_images_do_not_disturb(self):
+        (self.tmp.path / "bilder" / "plus" / "a.png").unlink()
+        empty = self.screen()
+        self.press(empty, 7)
+        self.assertFalse(empty._celebration.isVisible())
+        (self.tmp.path / "bilder" / "plus" / "kaputt.gif").write_bytes(b"kein gif")
+        for disabled in ((), ("plus/kaputt.gif",)):
+            screen = self.screen(dataclasses.replace(self.settings, disabled_images=disabled))
             self.press(screen, 7)
             self.assertFalse(screen._celebration.isVisible())
             self.assertEqual(screen.game.played, 1)
@@ -194,11 +210,13 @@ class MediaUiTests(unittest.TestCase):
         import types
         old = types.SimpleNamespace(**{k: getattr(config, k) for k in dir(config) if k.isupper()})
         for name in ("SOUND_ENABLED", "HALFTIME_SOUND", "CELEBRATION_ENABLED", "CELEBRATION_VALUES",
-                     "CELEBRATION_IMAGES", "CELEBRATION_MINUS_VALUES", "CELEBRATION_MINUS_IMAGES", "CELEBRATION_SECONDS", "SOUNDS_DIR", "IMAGES_DIR"):
-            delattr(old, name)
+                     "CELEBRATION_MINUS_VALUES", "CELEBRATION_SECONDS", "SOUNDS_DIR", "IMAGES_DIR",
+                     "END_SOUND", "SOUND_VOLUME", "WINDOW_SIZE"):
+            if hasattr(old, name):
+                delattr(old, name)
         settings = AppSettings.from_config(old)
         self.assertEqual(settings.celebration_values, (6, 7))
-        self.assertEqual(settings.celebration_images, ())
+        self.assertEqual(settings.sound_volume, 80)
 
 
 if __name__ == "__main__":
