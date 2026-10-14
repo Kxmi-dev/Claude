@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from PySide6.QtCore import QRect, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QKeyEvent, QPaintEvent
+from PySide6.QtGui import QColor, QFontMetricsF, QKeyEvent, QPaintEvent
 from PySide6.QtWidgets import QWidget
 
 from ..game import Game
@@ -25,12 +25,12 @@ CONTENT_W, CONTENT_H = 1024, 702
 
 # Spalten: (Überschrift, Anteil an der Breite, Ausrichtung)
 COLUMNS = (
-    ("Datum", 0.19, Qt.AlignmentFlag.AlignLeft),
-    ("Uhrzeit", 0.12, Qt.AlignmentFlag.AlignLeft),
-    ("Spielart", 0.18, Qt.AlignmentFlag.AlignLeft),
-    ("Status", 0.19, Qt.AlignmentFlag.AlignLeft),
-    ("Stöße", 0.15, Qt.AlignmentFlag.AlignRight),
-    ("Ergebnis", 0.17, Qt.AlignmentFlag.AlignRight),
+    ("Datum", 0.17, Qt.AlignmentFlag.AlignLeft),
+    ("Uhrzeit", 0.10, Qt.AlignmentFlag.AlignLeft),
+    ("Spielart", 0.26, Qt.AlignmentFlag.AlignLeft),
+    ("Status", 0.18, Qt.AlignmentFlag.AlignLeft),
+    ("Stöße", 0.14, Qt.AlignmentFlag.AlignRight),
+    ("Ergebnis", 0.15, Qt.AlignmentFlag.AlignRight),
 )
 STATUS_COLORS = {"beendet": QColor("#16803a"), "abgebrochen": theme.MINUS, "unterbrochen": QColor("#b86e00")}
 
@@ -106,6 +106,20 @@ class ArchiveList(_Painted):
         self.step(-1 if event.angleDelta().y() > 0 else 1)
 
     # ---------------------------------------------------------- Zeichnen
+    def _fit_columns(self, font_px: int, widths: list[float], pad: float) -> int:
+        """Schrift so weit verkleinern, dass in JEDER Spalte der längste Text passt
+        (wichtig bei großer Schriftgröße, z. B. 130 %)."""
+        factor = 1.0
+        for column, ((title, _, _), width) in enumerate(zip(COLUMNS, widths)):
+            avail = (width - 2 * pad) * 0.95          # kleiner Puffer gegen Rundung
+            body = QFontMetricsF(theme.base_font(font_px, bold=(column == 5)))
+            head = QFontMetricsF(theme.base_font(font_px * 0.85, bold=True))
+            needed = max([head.horizontalAdvance(title)]
+                         + [body.horizontalAdvance(row[column]) for row in self._rows])
+            if needed > avail > 0:
+                factor = min(factor, avail / needed)
+        return max(6, int(font_px * factor))
+
     def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802
         p = self._painter()
         theme.draw_bezel(p, QRectF(self.rect()))
@@ -128,6 +142,7 @@ class ArchiveList(_Painted):
         pad = area.width() * 0.02
         widths = [area.width() * share for _, share, _ in COLUMNS]
         font_px = theme.fitted_font("29.09.2026", widths[0] * 0.9, row_h * 0.52).pixelSize()
+        font_px = self._fit_columns(font_px, widths, pad)
 
         # Kopfzeile
         x = area.left()

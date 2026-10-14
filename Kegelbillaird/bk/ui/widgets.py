@@ -560,7 +560,7 @@ class ScoreGrid(_Painted):
         w, h = self.width() - 1, self.height() - 1
         cw, ch = w / self._columns, h / self._rows
         p.fillRect(QRectF(0, 0, w, h), theme.WHITE)
-        value_px = theme.fitted_font("\u22127", cw * 0.8, ch * 0.56).pixelSize()
+        value_px = theme.fitted_font("\u22127", cw * 0.86, ch * 0.8).pixelSize()   # Zahlen füllen die Kästchen
         small_px = max(6, int(ch * 0.25))
         running = 0
         for index in range(self._columns * self._rows):
@@ -579,7 +579,7 @@ class ScoreGrid(_Painted):
                 subtotal = self._has_subtotal(number)
                 value_rect = QRectF(cell.left(), cell.top(), cell.width(),
                                     cell.height() * (0.72 if subtotal else 1.0))
-                p.setFont(theme.base_font(value_px * (0.85 if subtotal else 1.0)))
+                p.setFont(theme.base_font(value_px * (0.72 if subtotal else 1.0)))
                 p.setPen(theme.MINUS if value < 0 else (theme.TEXT_MUTED if value == 0 else theme.TEXT))
                 p.drawText(value_rect, Qt.AlignmentFlag.AlignCenter, format_number(value))
                 if subtotal:

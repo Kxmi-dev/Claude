@@ -144,13 +144,13 @@ class GameScreen(QWidget):
         top.addItem(self._spacer(26, 0))
         top.addWidget(self.panels["score"], 310)
         left.addLayout(top, 240)
-        left.addItem(self._spacer(0, 25))
+        left.addItem(self._spacer(0, 12))
         grid_row = QHBoxLayout()
         grid_row.setSpacing(0)
-        grid_row.addItem(self._spacer(17, 0))
+        grid_row.addItem(self._spacer(6, 0))
         grid_row.addWidget(self.grid, 1)
-        grid_row.addItem(self._spacer(20, 0))
-        left.addLayout(grid_row, 399)
+        grid_row.addItem(self._spacer(6, 0))
+        left.addLayout(grid_row, 412)
 
         self._right = QGridLayout()
         self._right.addWidget(self.panels["prognosis"], 0, 0)
@@ -170,14 +170,14 @@ class GameScreen(QWidget):
         self._right.setColumnStretch(0, 1)
         self._right.setColumnStretch(1, 1)
 
-        self._root.addLayout(left, 616)
-        self._root.addItem(self._spacer(48, 0))
-        self._root.addLayout(self._right, 322)
+        self._root.addLayout(left, 660)        # Raster breiter, rechte Spalte etwas schmaler
+        self._root.addItem(self._spacer(30, 0))
+        self._root.addLayout(self._right, 296)
         self.apply_unit(1.0)
 
     def apply_unit(self, unit: float) -> None:
         """Abstände und Plattenhöhen an die Bildschirmgröße anpassen."""
-        self._root.setContentsMargins(round(16 * unit), round(25 * unit), round(14 * unit), round(13 * unit))
+        self._root.setContentsMargins(round(16 * unit), round(25 * unit), round(14 * unit), round(8 * unit))
         self._root.setSpacing(0)
         self._right.setHorizontalSpacing(round(16 * unit))
         self._right.setVerticalSpacing(round(24 * unit))
