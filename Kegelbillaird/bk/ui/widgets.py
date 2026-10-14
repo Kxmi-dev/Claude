@@ -513,7 +513,7 @@ class ScoreGrid(_Painted):
 
     Rechts neben jeder Reihe steht die Punktzahl dieser Reihe (Spalte „Σ“)."""
 
-    SUM_WIDTH = 1.25          # Breite der Summen-Spalte in Kästchenbreiten
+    SUM_WIDTH = 0.8           # Breite der Summen-Spalte in Kästchenbreiten (bewusst unauffällig)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -557,13 +557,12 @@ class ScoreGrid(_Painted):
 
     def _paint_row_sums(self, p: QPainter, left: float, right: float, ch: float) -> None:
         width = right - left
-        p.fillRect(QRectF(left, 0, width, ch * self._rows), QColor("#f1f1ea"))
-        p.setFont(theme.base_font(theme.fitted_font("\u221270", width * 0.86, ch * 0.62, bold=True).pixelSize(),
-                                  bold=True))
+        p.fillRect(QRectF(left, 0, width, ch * self._rows), QColor("#f6f6f2"))
+        p.setFont(theme.base_font(theme.fitted_font("\u221270", width * 0.8, ch * 0.34).pixelSize()))
         for row, total in enumerate(self.row_sums()):
             if total is None:
                 continue
-            p.setPen(theme.MINUS if total < 0 else theme.TEXT)
+            p.setPen(theme.MINUS if total < 0 else theme.TEXT_MUTED)
             p.drawText(QRectF(left, row * ch, width, ch), Qt.AlignmentFlag.AlignCenter, format_number(total))
 
     def _line_pen(self, color: QColor) -> QPen:
