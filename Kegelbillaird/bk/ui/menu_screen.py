@@ -94,18 +94,19 @@ class MenuScreen(QWidget):
         def place(widget: QWidget, x: float, y: float, w: float, h: float) -> None:
             widget.setGeometry(QRect(round(ox + x * unit), round(oy + y * unit), round(w * unit), round(h * unit)))
 
-        place(self._plate, 64, 62, 463, 47)
-        # Spielarten untereinander, danach abgesetzt "Archiv", "Einstellungen" und "Ende" – alles
-        # passt immer zwischen Überschrift (y = 155) und Unterkante (y = 690)
+        place(self._plate, 40, 30, 520, 56)
+        # Spielarten untereinander, danach abgesetzt "Archiv", "Einstellungen" und "Beenden" – alles
+        # passt immer zwischen Überschrift (y = 112) und Unterkante (y = 694)
         count = len(self._buttons)
-        gap = 24
-        step = min(94.0, (690 - 155 - 64 - gap) / max(1, count - 1))
-        height = min(64.0, step * 0.7)
+        gap = 18
+        top, bottom = 112, 694
+        height = min(84.0, (bottom - top - gap) / max(1, count) * 0.86)
+        step = (bottom - top - gap - height) / max(1, count - 1)
         shadow = height * 0.075
         modes = count - len(EXTRA_ENTRIES)
         for i, button in enumerate(self._buttons):
-            y = 155 + i * step + (gap if i >= modes else 0)
-            place(button, 146, y, 298 + shadow, height + shadow)
+            y = top + i * step + (gap if i >= modes else 0)
+            place(button, 70, y, 460 + shadow, height + shadow)
         if self._club_logo.has_image:
             # BK-Bild kleiner, darunter groß das Vereinslogo
             place(self._logo, 599, 30, 387, 300)
