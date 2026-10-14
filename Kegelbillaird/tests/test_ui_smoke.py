@@ -1,0 +1,340 @@
+"""Oberflächentests: echte Qt-Tastenereignisse an das Hauptfenster (ohne Bildschirm)."""
+
+import dataclasses
+import os
+import unittest
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from tests.helpers import BK50, TempDir
+
+try:
+    from PySide6.QtCore import QEvent, Qt
+    from PySide6.QtGui import QKeyEvent
+    from PySide6.QtTest import QTest
+    from PySide6.QtWidgets import QApplication
+except ImportError:  # pragma: no cover
+    QApplication = None
+
+import config
+from bk.models import GameState
+from bk.settings import AppSettings
+from bk.storage import GameStorage
+
+KP = Qt.KeyboardModifier.KeypadModifier if QApplication else None
+NO = Qt.KeyboardModifier.NoModifier if QApplication else None
+
+
+@unittest.skipIf(QApplication is None, "PySide6 nicht installiert")
+class UiSmokeTests(unittest.TestCase):
+    LOCK = 0.25
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        self.tmp = TempDir()
+        self.settings = dataclasses.replace(
+            AppSettings.from_config(config),
+            data_dir=self.tmp.path / "data", results_dir=self.tmp.path / "results",
+            logs_dir=self.tmp.path / "logs", input_lock_seconds=self.LOCK, undo_lock_seconds=0.1,
+            abort_confirm_seconds=2.0, auto_enable_numlock=False, fullscreen=False)
+        self.storage = GameStorage(self.settings.data_dir, self.settings.results_dir)
+        self.storage.ensure_directories()
+        self.windows = []
+
+    def tearDown(self):
+        for window in self.windows:
+            window.close()
+            window.deleteLater()
+        QTest.qWait(20)
+        self.tmp.cleanup()
+
+    # ------------------------------------------------------------ Hilfen
+    def open_window(self):
+        from bk.ui.main_window import MainWindow
+        window = MainWindow(self.settings, self.storage)
+        window.resize(1280, 800)
+        window.show()
+        QTest.qWait(450)                       # Start-Prüfung (unterbrochene Partie) abwarten
+        self.windows.append(window)
+        return window
+
+    def key(self, window, key, modifier=None, autorepeat=False):
+        event = QKeyEvent(QEvent.Type.KeyPress, key, modifier if modifier is not None else KP, "", autorepeat)
+        QApplication.sendEvent(window, event)
+
+    def score(self, window, value):
+        if value < 0:                                            # Plus ist voreingestellt
+            self.key(window, Qt.Key.Key_Minus)
+        self.key(window, getattr(Qt.Key, f"Key_{abs(value)}"))
+
+    def start_game(self, window, mode_index=1):
+        for _ in range(mode_index):
+            self.key(window, Qt.Key.Key_2)                       # [2] = nach unten
+        self.key(window, Qt.Key.Key_Enter)                       # startet sofort, ohne Spielerdaten
+        self.assertIs(window.stack.currentWidget(), window.game_screen)
+        return window.game_screen.game
+
+    # ------------------------------------------------------------- Tests
+    def test_score_lock_and_undo_via_numpad(self):
+        window = self.open_window()
+        game = self.start_game(window)
+        self.assertEqual(game.state.mode.key, "BK50")
+        self.score(window, 5)
+        self.assertEqual(game.state.strokes, [5])
+        self.score(window, 3)                                    # während Sperre -> ignoriert
+        self.key(window, Qt.Key.Key_5)                           # prellende Taste -> ignoriert
+        self.assertEqual(game.state.strokes, [5])
+        self.assertIn("gesperrt", window.footer.current_text().lower())
+        QTest.qWait(int(self.LOCK * 1000) + 120)
+        self.score(window, -3)
+        self.assertEqual(game.state.strokes, [5, -3])
+        self.assertEqual(window.game_screen.score_box.text(), "2")
+        self.key(window, Qt.Key.Key_Slash)                       # Rücknahme
+        self.assertEqual(game.state.strokes, [5])
+        self.assertEqual(self.storage.load_active().state.strokes, [5])
+        self.assertEqual(window.game_screen.strokes_box.text(), "2 / 50")
+
+    def test_non_numpad_and_autorepeat_keys_are_ignored(self):
+        window = self.open_window()
+        game = self.start_game(window)
+        self.key(window, Qt.Key.Key_Plus, NO)                   # normale Tastatur
+        self.key(window, Qt.Key.Key_4, NO)
+        self.assertEqual(game.played, 0)
+        self.key(window, Qt.Key.Key_Plus)
+        self.key(window, Qt.Key.Key_4, autorepeat=True)          # gehaltene Taste
+        self.assertEqual(game.played, 0)
+        self.key(window, Qt.Key.Key_Return, NO)                  # keine Bestätigungstaste nötig/wirksam
+        self.key(window, Qt.Key.Key_Backspace, NO)               # kein Backspace
+        self.key(window, Qt.Key.Key_4)
+        self.assertEqual(game.state.strokes, [4])
+
+    def test_full_game_finishes_with_pdf(self):
+        window = self.open_window()
+        game = self.start_game(window)
+        for i in range(50):
+            self.score(window, (i % 15) - 7)
+            QTest.qWait(int(self.LOCK * 1000) + 40)
+        self.assertTrue(game.is_complete)
+        total = game.total
+        QTest.qWait(300)
+        dialog = window._report_dialog                            # Statistik-Fenster ist offen
+        self.assertIsNotNone(dialog)
+        self.assertTrue(dialog.isVisible())
+        self.assertIn(f"ENDRESULTAT: {total}", dialog._heading._text)
+        pdfs = list(self.settings.results_dir.glob("BK50_*.pdf"))
+        self.assertEqual(len(pdfs), 1)                            # PDF wurde automatisch gespeichert
+        self.assertFalse(self.storage.has_active_files())
+        self.assertEqual(len(list((self.settings.data_dir / "archive").glob("*_beendet.json"))), 1)
+        QTest.keyClick(dialog, Qt.Key.Key_Enter)                  # "Schließen" ist vorgewählt
+        QTest.qWait(50)
+        self.assertIsNone(window._report_dialog)
+        self.assertIs(window.stack.currentWidget(), window.menu_screen)
+
+    def test_undo_of_last_stroke_during_lock_prevents_finish(self):
+        state = GameState.new(BK50)
+        state.strokes.extend([1] * 49)
+        self.storage.save_active(state)
+        window = self.open_window()
+        self.key(window, Qt.Key.Key_Enter)                       # PARTIE FORTSETZEN
+        game = window.game_screen.game
+        self.assertEqual(game.played, 49)
+        self.score(window, 7)
+        self.assertTrue(game.is_complete)
+        self.key(window, Qt.Key.Key_Slash)                       # Korrektur in der Sperrzeit
+        QTest.qWait(int(self.LOCK * 1000) + 300)
+        self.assertFalse(window.overlay.isVisible())
+        self.assertEqual(game.played, 49)
+        self.score(window, 2)
+        QTest.qWait(int(self.LOCK * 1000) + 300)
+        self.assertIn("ENDRESULTAT: 51", window._report_dialog._heading._text)
+
+    def test_abort_with_star_and_minus(self):
+        window = self.open_window()
+        game = self.start_game(window)
+        self.score(window, 2)
+        self.key(window, Qt.Key.Key_Asterisk)
+        self.assertTrue(window.overlay.isVisible())
+        self.key(window, Qt.Key.Key_5)                           # andere Taste -> kein Abbruch
+        self.assertFalse(window.overlay.isVisible())
+        self.assertIs(window.stack.currentWidget(), window.game_screen)
+        self.assertEqual(game.played, 1)
+        self.key(window, Qt.Key.Key_Asterisk)
+        self.key(window, Qt.Key.Key_Minus)
+        self.assertIs(window.stack.currentWidget(), window.menu_screen)
+        self.assertFalse(self.storage.has_active_files())
+        self.assertEqual(len(list((self.settings.data_dir / "archive").glob("*_abgebrochen.json"))), 1)
+
+    def test_resume_or_new_game_after_crash(self):
+        state = GameState.new(BK50)
+        state.strokes.extend([3, 4, -1])
+        self.storage.save_active(state)
+        window = self.open_window()
+        self.assertTrue(window.overlay.interactive)
+        self.assertEqual(window.overlay.content.title, "Unterbrochene Partie gefunden")
+        self.key(window, Qt.Key.Key_2)                           # NEUE PARTIE wählen
+        self.key(window, Qt.Key.Key_Enter)
+        self.assertIs(window.stack.currentWidget(), window.menu_screen)
+        self.assertFalse(self.storage.has_active_files())
+        self.assertEqual(len(list((self.settings.data_dir / "archive").glob("*_verworfen.json"))), 1)
+        game = self.start_game(window)
+        self.assertEqual(game.played, 0)
+        self.assertNotEqual(game.state.game_id, state.game_id)
+
+    def test_corrupt_save_is_reported(self):
+        self.storage.active_path.write_text("{kaputt", encoding="utf-8")
+        window = self.open_window()
+        self.assertEqual(window.overlay.content.title, "Spielstand beschädigt")
+        self.key(window, Qt.Key.Key_Enter)
+        self.assertIs(window.stack.currentWidget(), window.menu_screen)
+        self.assertEqual(len(list((self.settings.data_dir / "corrupt").iterdir())), 1)
+
+    def test_unavailable_mode_cannot_be_started(self):
+        window = self.open_window()
+        self.key(window, Qt.Key.Key_2)
+        self.key(window, Qt.Key.Key_2)                           # "2x 50 Stoß"
+        self.key(window, Qt.Key.Key_Enter)
+        self.assertIs(window.stack.currentWidget(), window.menu_screen)
+        self.assertIn("nicht", window.footer.current_text())
+
+    def test_minus_mode_applies_to_one_stroke_only(self):
+        window = self.open_window()
+        game = self.start_game(window)
+        self.key(window, Qt.Key.Key_Minus)
+        self.assertTrue(window.game_screen.controller.minus_selected)
+        self.assertEqual(window.game_screen.status_box.text(), "MINUS")
+        self.key(window, Qt.Key.Key_3)
+        self.assertEqual(game.state.strokes, [-3])
+        self.assertFalse(window.game_screen.controller.minus_selected)
+        QTest.qWait(int(self.LOCK * 1000) + 120)
+        self.assertEqual(window.game_screen.status_box.text(), "BEREIT")
+        self.key(window, Qt.Key.Key_3)                           # ohne Vorzeichen -> Plus
+        self.assertEqual(game.state.strokes, [-3, 3])
+        QTest.qWait(int(self.LOCK * 1000) + 120)
+        self.key(window, Qt.Key.Key_Minus)
+        self.key(window, Qt.Key.Key_Plus)                        # Minus wieder aufgehoben
+        self.key(window, Qt.Key.Key_2)
+        self.assertEqual(game.state.strokes, [-3, 3, 2])
+        self.assertEqual(window.title_bar._title, "Partie: 50 Stoß")
+
+    # ------------------------------------------------ Archiv, Statistik, Wiedergabe
+    def _archive_two_games(self):
+        """Eine beendete und eine abgebrochene Partie ins Archiv legen."""
+        from bk.game import Game
+        finished = GameState.new(BK50, started_at="2026-09-28T19:00:00")
+        game = Game(finished)
+        for i in range(50):
+            game.record((i % 8) - 1)
+        game.finish()
+        self.storage.archive_active(finished, "beendet")
+        aborted = GameState.new(BK50, started_at="2026-09-29T10:00:00")
+        game = Game(aborted)
+        for value in (3, 4, -2):
+            game.record(value)
+        game.abort()
+        self.storage.archive_active(aborted, "abgebrochen")
+        return finished, aborted
+
+    def open_archive(self, window):
+        for _ in range(4):
+            self.key(window, Qt.Key.Key_2)                       # bis "Archiv" nach unten
+        self.key(window, Qt.Key.Key_Enter)
+        self.assertIs(window.stack.currentWidget(), window.archive_screen)
+
+    def test_archive_lists_games_newest_first(self):
+        finished, aborted = self._archive_two_games()
+        window = self.open_window()
+        self.open_archive(window)
+        entries = window.archive_screen._entries
+        self.assertEqual([e.state.game_id for e in entries], [aborted.game_id, finished.game_id])
+        self.assertEqual([e.status_label for e in entries], ["abgebrochen", "beendet"])
+        self.key(window, Qt.Key.Key_Asterisk)                    # [*] = zurück
+        self.assertIs(window.stack.currentWidget(), window.menu_screen)
+
+    def test_statistics_window_save_and_print(self):
+        from PySide6.QtPrintSupport import QPrinter
+        finished, _ = self._archive_two_games()
+        window = self.open_window()
+        self.open_archive(window)
+        self.key(window, Qt.Key.Key_2)                           # beendete Partie
+        self.key(window, Qt.Key.Key_Enter)
+        self.assertEqual(window.overlay.content.choices, ["STATISTIK ANZEIGEN", "WIEDERGABE", "ZURÜCK"])
+        self.key(window, Qt.Key.Key_Enter)                       # STATISTIK ANZEIGEN
+        dialog = window._report_dialog
+        self.assertTrue(dialog.isVisible())
+        self.assertEqual(dialog._document.pageCount(), 1)
+        saved = dialog.save_pdf(self.tmp.path / "usb" / "bericht")    # ohne Dialog, Endung wird ergänzt
+        self.assertEqual(saved.name, "bericht.pdf")
+        self.assertTrue(saved.read_bytes().startswith(b"%PDF"))
+        self.assertFalse(dialog.page_view_pixmap_is_null())          # Seite wurde gezeichnet
+        if dialog.default_printer() is None:                        # hier kein Drucker vorhanden:
+            self.assertFalse(dialog.print_report())                 # klare Meldung, kein Dialog
+            self.assertIn("Standarddrucker", dialog._note.text())
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+        printer.setOutputFileName(str(self.tmp.path / "druck.pdf"))
+        self.assertTrue(dialog.print_report(printer))
+        self.assertGreater((self.tmp.path / "druck.pdf").stat().st_size, 10_000)
+        QTest.keyClick(dialog, Qt.Key.Key_Asterisk)              # schließen
+        QTest.qWait(50)
+        self.assertIsNone(window._report_dialog)
+        self.assertIs(window.stack.currentWidget(), window.archive_screen)
+
+    def test_replay_shows_game_without_saving(self):
+        finished, _ = self._archive_two_games()
+        window = self.open_window()
+        self.open_archive(window)
+        self.key(window, Qt.Key.Key_2)
+        self.key(window, Qt.Key.Key_Enter)
+        self.key(window, Qt.Key.Key_2)                           # WIEDERGABE
+        self.key(window, Qt.Key.Key_Enter)
+        screen = window.game_screen
+        self.assertIs(window.stack.currentWidget(), screen)
+        self.assertTrue(screen.is_replay)
+        self.assertIn("Wiedergabe", window.title_bar._title)
+        for _ in range(6):
+            self.key(window, Qt.Key.Key_Plus)                    # schnellstes Tempo
+        self.key(window, Qt.Key.Key_5)                           # Wertungstasten wirken nicht
+        QTest.qWait(700)
+        self.assertGreater(screen.game.played, 1)
+        self.key(window, Qt.Key.Key_Enter)                       # Pause
+        paused_at = screen.game.played
+        QTest.qWait(400)
+        self.assertEqual(screen.game.played, paused_at)
+        self.key(window, Qt.Key.Key_Enter)                       # weiter
+        QTest.qWait(50 * 150 + 500)
+        self.assertEqual(screen.game.state.strokes, finished.strokes)
+        self.assertFalse(self.storage.has_active_files())        # nichts gespeichert
+        self.assertFalse(screen.has_live_game)
+        self.key(window, Qt.Key.Key_Enter)                       # am Ende: Statistik
+        self.assertIsNotNone(window._report_dialog)
+        QTest.keyClick(window._report_dialog, Qt.Key.Key_Escape)
+        QTest.qWait(50)
+        self.key(window, Qt.Key.Key_Escape)                      # Wiedergabe verlassen
+        self.assertIs(window.stack.currentWidget(), window.archive_screen)
+        window.close()
+        self.assertFalse(self.storage.has_active_files())        # Schließen speichert keine Wiedergabe
+
+    def test_continue_aborted_game_from_archive(self):
+        _, aborted = self._archive_two_games()
+        window = self.open_window()
+        self.open_archive(window)
+        self.key(window, Qt.Key.Key_Enter)                       # abgebrochene Partie (neueste)
+        self.assertEqual(window.overlay.content.choices[2], "WEITERSPIELEN")
+        self.key(window, Qt.Key.Key_2)
+        self.key(window, Qt.Key.Key_2)
+        self.key(window, Qt.Key.Key_Enter)
+        game = window.game_screen.game
+        self.assertFalse(window.game_screen.is_replay)
+        self.assertEqual(game.state.strokes, [3, 4, -2])
+        self.assertTrue(game.is_running)
+        self.assertEqual(self.storage.load_active().state.game_id, aborted.game_id)
+        self.assertEqual(len(list((self.settings.data_dir / "archive").glob("*_abgebrochen.json"))), 0)
+        self.score(window, 6)
+        self.assertEqual(self.storage.load_active().state.strokes, [3, 4, -2, 6])
+
+
+if __name__ == "__main__":
+    unittest.main()
