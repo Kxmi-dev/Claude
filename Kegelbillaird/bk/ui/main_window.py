@@ -22,7 +22,7 @@ from PySide6.QtCore import QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QIcon, QKeyEvent, QPainter, QPixmap
 from PySide6.QtWidgets import QStackedWidget, QVBoxLayout, QWidget
 
-from .. import numlock
+from .. import numlock, power
 from ..game import Game, GameError
 from ..maintenance import run_cleanup
 from ..models import GameMode, GameState, GameStatus
@@ -169,6 +169,7 @@ class MainWindow(QWidget):
 
         self.menu_screen.mode_chosen.connect(self._start_new_game)
         self.menu_screen.quit_requested.connect(self.close)
+        self.menu_screen.shutdown_requested.connect(self.quit_and_shutdown)
         self.menu_screen.archive_requested.connect(self.show_archive)
         self.menu_screen.settings_requested.connect(self.show_settings)
         self.result_screen.closed.connect(self._close_result)
@@ -223,6 +224,27 @@ class MainWindow(QWidget):
 
     def focusNextPrevChild(self, next_child: bool) -> bool:  # noqa: N802
         return False  # Tab wechselt keinen Fokus
+
+    def quit_and_shutdown(self) -> None:
+        """„Beenden & Herunterfahren“: alles sichern, Windows sofort herunterfahren, Programm schließen.
+        Schlägt das Herunterfahren fehl, bleibt das Programm offen und zeigt einen Hinweis.
+        Außerhalb von Windows wird nur beendet."""
+        if self.game_screen.has_live_game:
+            self.game_screen.stop()
+            self.game_screen.persist_now()
+        if not self.shutdown_supported():
+            log.info("Herunterfahren nur unter Windows – Programm wird nur beendet")
+            self.close()
+            return
+        ok, message = self.shutdown_computer()
+        if ok:
+            self.close()
+        else:
+            self._flash(message, True)
+
+    # austauschbar für Tests
+    shutdown_supported = staticmethod(power.shutdown_supported)
+    shutdown_computer = staticmethod(power.shutdown)
 
     def closeEvent(self, event) -> None:  # noqa: N802
         if self.game_screen.has_live_game:      # nie bei einer Wiedergabe

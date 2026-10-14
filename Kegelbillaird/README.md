@@ -55,8 +55,14 @@ python -m pip install -r requirements.txt
 | `python main.py --selftest`         | Testmodus: alle automatischen Tests ausführen       |
 | `python main.py --pdf results\X.json` | PDF aus einer Ergebnisdatei neu erzeugen          |
 
-Beenden: im Hauptmenü **„Ende“**. Wird das Programm während einer Partie geschlossen
+Beenden: im Hauptmenü **„Beenden“**. Wird das Programm während einer Partie geschlossen
 (z. B. Alt+F4), wird der Spielstand gesichert und beim nächsten Start angeboten.
+
+**„Beenden & Herunterfahren“** (Hauptmenü): zweimal `Enter` drücken (der erste Druck gilt 5 Sekunden, der
+Knopf zeigt dann „Zum Herunterfahren nochmal [Enter]“). Das Programm sichert alles, schließt sich und Windows
+fährt sofort herunter – ohne Countdown und ohne Windows-Meldung. Andere noch offene Programme werden dabei
+zwangsweise geschlossen. Klappt das Herunterfahren nicht (z. B. fehlende Berechtigung), bleibt das Programm
+offen und zeigt unten einen Hinweis.
 
 Tipp für den Vereins-PC: Eine Verknüpfung auf `start_bk_scoreboard.bat` in den
 Autostart-Ordner legen (Windows-Taste + R → `shell:startup`).

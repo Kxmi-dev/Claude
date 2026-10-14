@@ -38,7 +38,8 @@ bk/numlock.py        Windows: GetKeyState + SendInput (Fallback keybd_event)
 bk/settings.py       AppSettings aus config.py (neue Einträge per getattr mit Default → alte config.py bleibt gültig)
 bk/logging_setup.py  logs/application.log (täglich neu), crash.log (faulthandler)
 bk/ui/main_window.py Bildschirmwechsel, Startprüfung, Abschluss, Archiv-Aktionen, NumLockGuard, Cleanup-Timer
-bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, Billiard vs Fußball (25 Stoß), Archiv, Einstellungen, Ende
+bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, Billiard vs Fußball (25 Stoß), Archiv, Einstellungen,
+                     Beenden, Beenden & Herunterfahren (2× Enter innerhalb 5 s)
 bk/ui/game_screen.py Zählansicht + Wiedergabe-Modus
 bk/ui/archive_screen.py  Archivliste
 bk/ui/result_screen.py   Auswertung im Hauptfenster (Kennzahlen, Raster, Anzahl je Wertung, Knöpfe)
@@ -48,6 +49,7 @@ bk/ui/celebration.py Bild-/GIF-Einblendung bei CELEBRATION_VALUES
 bk/user_settings.py  UserSettingsStore: einstellungen.json laden/prüfen/speichern, FIELDS = im Menü änderbare Felder
 bk/ui/settings_screen.py Einstellungsmenü (Bereiche → Einträge, [4]/[6] ändern, Enter: Eingabe/Tastenaufnahme)
 bk/keys.py           Tastenbelegung (Qt-frei): Namen prüfen, Doppelbelegung, Legenden-Beschriftung
+bk/power.py          Herunterfahren: `shutdown /s /t 0 /f`, CREATE_NO_WINDOW, nur Windows (sonst nur beenden)
 bk/media.py          Ton (winsound/Qt, fehlerfrei geschluckt) + Bildauswahl (1 Datei = immer, sonst zufällig)
 bk/ui/widgets.py, theme.py, keymap.py
 sounds/, bilder/     Ton- und Bilddateien neben der .exe (austauschbar, ohne Neubau)
@@ -78,7 +80,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   Eingabe (BEREIT / MINUS / GESPERRT + Countdown), Spieldauer, 10er-Raster.
 
 ## Einstellungsmenü (mit dem Nutzer abgestimmt)
-- Hauptmenü: … Archiv, **Einstellungen**, Ende. Nur außerhalb einer Partie erreichbar.
+- Hauptmenü: … Archiv, **Einstellungen**, Beenden, Beenden & Herunterfahren. Nur außerhalb einer Partie erreichbar.
 - Jede Änderung: `store.set()` prüft (AppSettings.validate) → speichert sofort → `MainWindow.apply_settings()`
   übernimmt live (keymap, theme.apply_colors, Titelleiste, GameScreen.set_settings, Fenster, NumLock-Guard).
 - Bereiche: Anzeige (Vollbild, Fenstergröße-Presets, Schriftgröße 80–130 % (`theme.FONT_SCALE` wirkt in
