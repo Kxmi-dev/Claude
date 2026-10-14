@@ -23,6 +23,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent
 
 from ..input_logic import GameKey
+from ..keys import ACTIONS, KeyBindings
 
 K = Qt.Key
 
@@ -42,12 +43,58 @@ _NUMPAD_NAVIGATION = {
     int(K.Key_PageUp): 9,
 }
 
-_SYMBOLS = {
-    int(K.Key_Plus): GameKey.PLUS,
-    int(K.Key_Minus): GameKey.MINUS,
-    int(K.Key_Slash): GameKey.UNDO,
-    int(K.Key_Asterisk): GameKey.ABORT,
-}
+# Tasten, die es auf dem Nummernblock gibt (nur sie unterliegen NUMPAD_ONLY)
+_NUMPAD_NAMES = set("0123456789") | {"+", "-", "/", "*", ".", ",", "Enter"}
+
+_ACTION_TO_GAMEKEY = {"plus": GameKey.PLUS, "minus": GameKey.MINUS, "undo": GameKey.UNDO, "abort": GameKey.ABORT}
+
+
+def qt_keys(name: str) -> set[int]:
+    """Qt-Tastencodes zu einem (normalisierten) Tastennamen."""
+    named = {"+": "Plus", "-": "Minus", "/": "Slash", "*": "Asterisk", ".": "Period", ",": "Comma",
+             "Esc": "Escape", "Backspace": "Backspace", "Delete": "Delete", "Space": "Space"}
+    if name == "Enter":
+        return {int(K.Key_Enter), int(K.Key_Return)}
+    attr = named.get(name, name)
+    return {int(getattr(K, attr if hasattr(K, attr) else f"Key_{attr}"))}
+
+
+class _Active:
+    """Die in config.py gewählte Tastenbelegung (einmal beim Start gesetzt)."""
+
+    def __init__(self) -> None:
+        self.configure(KeyBindings())
+
+    def configure(self, bindings: KeyBindings) -> None:
+        self.bindings = bindings
+        self.by_action = {a: {k for n in bindings.keys(a) for k in qt_keys(n)} for a in ACTIONS}
+        self.numpad_keys = {k for a in ("plus", "minus", "undo", "abort") for n in bindings.keys(a)
+                            if n in _NUMPAD_NAMES for k in qt_keys(n)}
+
+
+_active = _Active()
+
+
+def configure(bindings: KeyBindings) -> None:
+    """Tastenbelegung aus den Einstellungen übernehmen."""
+    _active.configure(bindings)
+
+
+def bindings() -> KeyBindings:
+    return _active.bindings
+
+
+def label(action: str) -> str:
+    """Hauptbelegung einer Aktion für die Legende (z. B. „Enter“)."""
+    return _active.bindings.label(action)
+
+
+def label_all(action: str) -> str:
+    return _active.bindings.label_all(action)
+
+
+def matches(event: QKeyEvent, action: str) -> bool:
+    return int(event.key()) in _active.by_action[action]
 
 
 def is_keypad(event: QKeyEvent) -> bool:
@@ -58,10 +105,13 @@ def map_game_key(event: QKeyEvent, numpad_only: bool) -> tuple[GameKey, int | No
     """Liefert (Taste, Ziffer) oder None, wenn die Taste im Spiel keine Bedeutung hat."""
     key = int(event.key())
     keypad = is_keypad(event)
+    for action, game_key in _ACTION_TO_GAMEKEY.items():
+        if key in _active.by_action[action]:
+            if numpad_only and not keypad and key in _active.numpad_keys:
+                return None
+            return game_key, None
     if numpad_only and not keypad:
         return None
-    if key in _SYMBOLS:
-        return _SYMBOLS[key], None
     if key in _DIGITS:
         return GameKey.DIGIT, _DIGITS[key]
     if keypad and key in _NUMPAD_NAVIGATION:
@@ -79,19 +129,10 @@ class MenuKey(Enum):
 
 
 def map_menu_key(event: QKeyEvent) -> MenuKey | None:
-    """Menüsteuerung: [8]/[2]/[4]/[6] (Nummernblock oder Ziffernreihe), Pfeiltasten,
-    Enter, Zurück mit Esc oder [*] (damit auch reine Nummernblock-Bedienung möglich ist)."""
+    """Menüsteuerung mit den in config.py gewählten Tasten (Standard: [8]/[2]/[4]/[6] und
+    Pfeiltasten, Enter, Zurück mit [*] oder Esc, damit auch reine Nummernblock-Bedienung möglich ist)."""
     key = int(event.key())
-    if key in (int(K.Key_8), int(K.Key_Up)):
-        return MenuKey.UP
-    if key in (int(K.Key_2), int(K.Key_Down)):
-        return MenuKey.DOWN
-    if key in (int(K.Key_4), int(K.Key_Left)):
-        return MenuKey.LEFT
-    if key in (int(K.Key_6), int(K.Key_Right)):
-        return MenuKey.RIGHT
-    if key in (int(K.Key_Enter), int(K.Key_Return)):
-        return MenuKey.ENTER
-    if key in (int(K.Key_Escape), int(K.Key_Asterisk)):
-        return MenuKey.BACK
+    for menu_key in MenuKey:
+        if key in _active.by_action[menu_key.value]:
+            return menu_key
     return None

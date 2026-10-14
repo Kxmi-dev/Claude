@@ -17,6 +17,7 @@ from ..game import Game
 from ..settings import AppSettings
 from ..storage import ArchiveEntry, GameStorage
 from . import theme
+from . import keymap
 from .keymap import MenuKey, map_menu_key
 from .widgets import Plate, _Painted, format_number
 
@@ -191,7 +192,9 @@ class ArchiveScreen(QWidget):
         return "Archiv"
 
     def footer_segments(self) -> list[str]:
-        return ["Wählen mit  [2]  &  [8]", "Öffnen mit  [Enter]", "Zurück mit  [*]  oder  [Esc]"]
+        return [f"Wählen mit  [{keymap.label('down')}]  &  [{keymap.label('up')}]",
+                f"Öffnen mit  [{keymap.label('enter')}]",
+                f"Zurück mit  [{keymap.label_all('back')}]"]
 
     def reload(self) -> None:
         """Archiv neu einlesen; die bisherige Auswahl bleibt nach Möglichkeit erhalten."""

@@ -43,10 +43,11 @@ bk/ui/archive_screen.py  Archivliste
 bk/ui/report_dialog.py   Statistik-Fenster (PDF-Ansicht, Speichern, Drucken, Schließen)
 bk/ui/overlays.py    Abfrage-Karten (Fortsetzen, Abbruch, Archiv-Auswahl, Fehler)
 bk/ui/celebration.py Bild-/GIF-Einblendung bei CELEBRATION_VALUES
+bk/keys.py           Tastenbelegung (Qt-frei): Namen prüfen, Doppelbelegung, Legenden-Beschriftung
 bk/media.py          Ton (winsound/Qt, fehlerfrei geschluckt) + Bildauswahl (1 Datei = immer, sonst zufällig)
 bk/ui/widgets.py, theme.py, keymap.py
 sounds/, bilder/     Ton- und Bilddateien neben der .exe (austauschbar, ohne Neubau)
-tests/               114 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
+tests/               122 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
 ```
 Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), `results/` (PDF+JSON), `logs/`.
 
@@ -71,6 +72,13 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   Aktueller Stoß (rot getönt bei Minus-Modus), Letzte Stöße (5), Minus (Summe Minuspunkte),
   Eingabe (BEREIT / MINUS / GESPERRT + Countdown), Spieldauer, 10er-Raster.
 
+## Tastenbelegung (frei wählbar)
+- `KEY_PLUS/MINUS/UNDO/ABORT` (Partie) und `KEY_UP/DOWN/LEFT/RIGHT/ENTER/BACK` (Menüs, Archiv, Statistik, Wiedergabe)
+  in `config.py`, je eine Liste; die erste Taste steht in der Legende. Ziffern 0–7 fest. Abbruch-Bestätigung = `KEY_MINUS`.
+- `bk/ui/keymap.py` hält die aktive Belegung (`keymap.configure` im MainWindow); ALLE Legenden/Hinweise nutzen
+  `keymap.label(...)` / `label_all(...)` – nie wieder feste Tastennamen in Texte schreiben.
+- Ungültig/doppelt belegt → Fehlermeldung beim Start (wie jeder config.py-Fehler).
+
 ## Ton & Bilder (reine Zugabe, stören die Partie nie)
 - Halbzeit (nach `halftime_after`): Ton `HALFTIME_SOUND` (WAV in `sounds/`) + Halbzeit-Feld leuchtet 4 s gelb
   (geht auch ohne Tonausgabe). Fehlende Datei/kein Audiogerät → nur Logeintrag.
@@ -92,7 +100,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   `RESULTS_RETENTION_DAYS = 0` (PDFs nie löschen). Aktive Partie / aktuelles Log nie.
 
 ## Wichtige config.py-Schalter
-SOUND_ENABLED, HALFTIME_SOUND, CELEBRATION_*, INPUT_LOCK_SECONDS, UNDO_LOCK_SECONDS, ABORT_CONFIRM_SECONDS, NUMPAD_ONLY, FULLSCREEN, HISTORY_LENGTH,
+KEY_*, SOUND_ENABLED, HALFTIME_SOUND, CELEBRATION_*, INPUT_LOCK_SECONDS, UNDO_LOCK_SECONDS, ABORT_CONFIRM_SECONDS, NUMPAD_ONLY, FULLSCREEN, HISTORY_LENGTH,
 APP_TITLE, APP_VERSION, CLUB_NAME, AUTO_ENABLE_NUMLOCK, NUMLOCK_CHECK_SECONDS, AUTOSAVE_SECONDS,
 GAME_MODES, SHOW_UNAVAILABLE_MODES, PDF_ROWS_PER_BLOCK/BLOCKS_PER_ROW, SHOW_REPORT_AFTER_GAME,
 OPEN_PDF_AFTER_GAME, REPLAY_SECONDS_PER_STROKE, *_RETENTION_DAYS, Ordnerpfade (exe-aware).

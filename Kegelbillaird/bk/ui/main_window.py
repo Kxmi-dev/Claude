@@ -29,7 +29,7 @@ from ..models import GameMode, GameState, GameStatus
 from ..pdf_report import PdfError, report_base_name, write_report
 from ..settings import AppSettings
 from ..storage import ArchiveEntry, GameStorage, LoadStatus, StorageError
-from . import theme
+from . import keymap, theme
 from .archive_screen import ArchiveScreen
 from .game_screen import GameScreen
 from .menu_screen import MenuScreen
@@ -113,6 +113,7 @@ class NumLockGuard(QObject):
 class MainWindow(QWidget):
     def __init__(self, settings: AppSettings, storage: GameStorage) -> None:
         super().__init__()
+        keymap.configure(settings.key_bindings)   # Tastenbelegung aus config.py
         self._settings = settings
         self._storage = storage
         self._background: QPixmap | None = None
@@ -376,7 +377,7 @@ class MainWindow(QWidget):
         lines.append("Möchtest du die letzte Partie fortsetzen?")
         self._ask(OverlayContent("Unterbrochene Partie gefunden", lines,
                                  choices=["PARTIE FORTSETZEN", "NEUE PARTIE"],
-                                 hint="Wählen mit [2] & [8]   |   Bestätigen mit [Enter]"),
+                                 hint=f"Wählen mit [{keymap.label('down')}] & [{keymap.label('up')}]   |   Bestätigen mit [{keymap.label('enter')}]"),
                   lambda choice: self._resume_choice(choice, state))
 
     def _resume_choice(self, choice: int, state: GameState) -> None:
@@ -471,20 +472,20 @@ class MainWindow(QWidget):
             note = f"PDF automatisch gespeichert: {pdf_path.parent.name}\\{pdf_path.name}"
             if recovered:
                 note += "   (Abschluss nach Programmneustart nachgeholt)"
-            self.footer.set_segments(["Statistik-Fenster geöffnet", "Schließen mit  [Enter]  oder  [*]"])
+            self.footer.set_segments(["Statistik-Fenster geöffnet", f"Schließen mit  [{keymap.label('enter')}]  oder  [{keymap.label_all('back')}]"])
             if self.show_report(state, f"Partie beendet  –  ENDRESULTAT: {game.total}", note,
                                 on_close=self.show_menu):
                 return
-        self.footer.set_segments(["Weiter mit  [Enter]"])
+        self.footer.set_segments([f"Weiter mit  [{keymap.label('enter')}]"])
         self._ask(OverlayContent("Partie beendet", lines, big=f"ENDRESULTAT: {game.total}",
-                                 choices=["Weiter zum Hauptmenü"], hint="Weiter mit [Enter]",
+                                 choices=["Weiter zum Hauptmenü"], hint=f"Weiter mit [{keymap.label('enter')}]",
                                  warning=not pdf_ok),
                   lambda _i: self.show_menu())
 
     # ============================================================= Abbruch
     def _on_abort_prompt(self, visible: bool, remaining: float) -> None:
         if visible:
-            lines = ["[−]   =   Ja, Partie abbrechen",
+            lines = [f"[{keymap.label('minus')}]   =   Ja, Partie abbrechen",
                      "jede andere Taste   =   Nein, weiterspielen",
                      f"Automatisch weiter in {max(1, int(remaining + 0.99))} s"]
             if self.overlay.isVisible() and not self.overlay.interactive:
@@ -526,8 +527,10 @@ class MainWindow(QWidget):
         self._overlay_handler = handler
         self.footer.clear_flash()
         self.overlay.show_content(content)
-        self.footer.set_segments(["Wählen mit  [2]  &  [8]", "Bestätigen mit  [Enter]"]
-                                 if len(content.choices) > 1 else ["Weiter mit  [Enter]"])
+        self.footer.set_segments(
+            [f"Wählen mit  [{keymap.label('down')}]  &  [{keymap.label('up')}]",
+             f"Bestätigen mit  [{keymap.label('enter')}]"]
+            if len(content.choices) > 1 else [f"Weiter mit  [{keymap.label('enter')}]"])
 
     def _on_overlay_choice(self, index: int) -> None:
         handler = self._overlay_handler

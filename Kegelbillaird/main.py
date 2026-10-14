@@ -39,7 +39,7 @@ REQUIRED_FILES = (
     "config.py",
     "bk/__init__.py", "bk/models.py", "bk/game.py", "bk/input_logic.py", "bk/storage.py",
     "bk/pdf_report.py", "bk/numlock.py", "bk/settings.py", "bk/logging_setup.py", "bk/maintenance.py",
-    "bk/media.py", "bk/ui/celebration.py",
+    "bk/media.py", "bk/keys.py", "bk/ui/celebration.py",
     "bk/ui/__init__.py", "bk/ui/theme.py", "bk/ui/widgets.py", "bk/ui/keymap.py",
     "bk/ui/menu_screen.py", "bk/ui/game_screen.py", "bk/ui/archive_screen.py",
     "bk/ui/report_dialog.py", "bk/ui/overlays.py", "bk/ui/main_window.py",

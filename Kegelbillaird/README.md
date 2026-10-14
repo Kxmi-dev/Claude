@@ -152,6 +152,8 @@ Alle Einstellungen stehen zentral in `config.py`. Nach einer Änderung das Progr
 | `FULLSCREEN` | `True` | Start im Vollbild |
 | `HISTORY_LENGTH` | `5` | Einträge unter „Letzte Stöße“ |
 | `APP_TITLE`, `APP_VERSION`, `CLUB_NAME` | | Texte in Titelleiste und PDF |
+| `KEY_PLUS`, `KEY_MINUS`, `KEY_UNDO`, `KEY_ABORT` | `+` `-` `/` `*` | Tasten in der Partie: Plus, Minus (auch „Ja“ bei der Abbruch-Frage), Rücknahme, Partie abbrechen |
+| `KEY_UP`, `KEY_DOWN`, `KEY_LEFT`, `KEY_RIGHT`, `KEY_ENTER`, `KEY_BACK` | `8` `2` `4` `6` `Enter` `*`/`Esc` | Tasten in Menüs, Archiv, Statistik-Fenster und Wiedergabe |
 | `SOUND_ENABLED`, `HALFTIME_SOUND` | `True`, `"halbzeit.wav"` | Ton zur Halbzeit (WAV im Ordner `sounds`). Leerer Name = kein Ton. Ohne Tonausgabe läuft alles weiter, das Halbzeit-Feld leuchtet zusätzlich ca. 4 s gelb auf |
 | `CELEBRATION_ENABLED`, `CELEBRATION_VALUES` | `True`, `(6, 7)` | bei diesen Wertungen erscheint ein Bild/GIF (`(6, 7, -6, -7)` = auch bei Minus) |
 | `CELEBRATION_IMAGES` | `[]` | Liste der Dateien im Ordner `bilder`. Eine Datei = immer diese, mehrere = zufällig (nie zweimal hintereinander dieselbe). Leer = keine Bilder |
@@ -429,6 +431,13 @@ BK-Scoreboard\
   nicht nach `C:\Programme`, dort darf das Programm keine Spielstände speichern
 * Verknüpfung auf `BK-Scoreboard.exe` auf den Desktop bzw. in den Autostart (`shell:startup`) legen
 * Optionen funktionieren wie bei Python, z. B. Verknüpfung mit Ziel `BK-Scoreboard.exe --windowed`
+
+**Tasten ändern:** In `config.py` steht pro Aktion eine Liste, z. B. `KEY_UNDO = ["U", "Backspace"]`.
+Die erste Taste erscheint in der Legende (Fußleiste, Hinweise, Abbruch-Frage), weitere sind zusätzliche Möglichkeiten.
+Erlaubt sind `+ - / * . ,`, Ziffern, Buchstaben, `Enter Esc Space Tab Backspace Delete Insert Home End PageUp PageDown`,
+`Up Down Left Right` und `F1` bis `F12`. Die Wertungsziffern `0`–`7` sind fest. Doppelt belegte Tasten oder unbekannte
+Namen meldet das Programm beim Start mit einer Fehlermeldung. Buchstaben, F-Tasten und `Esc` gibt es nicht auf dem
+Nummernblock; sie funktionieren in der Partie trotzdem auch bei `NUMPAD_ONLY = True`.
 
 **Ton und Bilder ändern:** Datei in `sounds` bzw. `bilder` legen, den Dateinamen in `config.py` eintragen,
 Programm neu starten – ein Neubau der .exe ist dafür nicht nötig.

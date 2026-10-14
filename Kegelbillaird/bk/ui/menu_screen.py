@@ -17,6 +17,7 @@ from PySide6.QtWidgets import QWidget
 
 from ..models import GameMode
 from ..settings import AppSettings
+from . import keymap
 from .keymap import MenuKey, map_menu_key
 from .widgets import LogoWidget, MenuButton, Plate
 
@@ -59,7 +60,8 @@ class MenuScreen(QWidget):
         return "BK-Scoreboard"
 
     def footer_segments(self) -> list[str]:
-        return ["Wählen mit Richtungstasten  [2]  &  [8]", "Bestätigen mit  [Enter]"]
+        return [f"Wählen mit Richtungstasten  [{keymap.label('down')}]  &  [{keymap.label('up')}]",
+                f"Bestätigen mit  [{keymap.label('enter')}]"]
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         self._layout()

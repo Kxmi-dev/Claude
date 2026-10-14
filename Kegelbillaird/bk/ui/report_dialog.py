@@ -35,6 +35,7 @@ from ..pdf_report import PAGE_SIZE, build_report_bytes, report_base_name, screen
 from ..settings import AppSettings
 from ..storage import atomic_write_bytes
 from . import theme
+from . import keymap
 from .keymap import MenuKey, map_menu_key
 from .widgets import MenuButton, Plate
 
@@ -159,8 +160,10 @@ class ReportDialog(QDialog):
         self._layout.addWidget(self._note)
         self._layout.addWidget(self._view, 1)
         self._layout.addLayout(self._button_row)
-        self._hint = QLabel("[4] / [6] wählen   ·   [Enter] ausführen   ·   [8] / [2] blättern   ·   "
-                            "[*] oder [Esc] schließen")
+        self._hint = QLabel(f"[{keymap.label('left')}] / [{keymap.label('right')}] wählen   ·   "
+                            f"[{keymap.label('enter')}] ausführen   ·   "
+                            f"[{keymap.label('up')}] / [{keymap.label('down')}] blättern   ·   "
+                            f"[{keymap.label_all('back')}] schließen")
         self._hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._hint.setStyleSheet("color: #555555;")
         self._layout.addWidget(self._hint)

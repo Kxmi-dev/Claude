@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 
+from .keys import KeyBindings
 from .models import GameMode
 
 
@@ -52,6 +53,7 @@ class AppSettings:
     celebration_seconds: float = 3.0
     sounds_dir: Path = Path("sounds")
     images_dir: Path = Path("bilder")
+    key_bindings: KeyBindings = KeyBindings()
 
     @property
     def logo_path(self) -> Path:
@@ -105,6 +107,7 @@ class AppSettings:
             celebration_seconds=float(getattr(cfg, "CELEBRATION_SECONDS", 3)),
             sounds_dir=Path(getattr(cfg, "SOUNDS_DIR", Path(cfg.ASSETS_DIR).parent / "sounds")),
             images_dir=Path(getattr(cfg, "IMAGES_DIR", Path(cfg.ASSETS_DIR).parent / "bilder")),
+            key_bindings=KeyBindings.from_config(cfg),
         )
         settings.validate()
         return settings

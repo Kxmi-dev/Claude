@@ -35,7 +35,7 @@ import logging
 import time
 from datetime import datetime
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtGui import QColor, QKeyEvent
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QSizePolicy, QSpacerItem, QVBoxLayout, QWidget
 
@@ -46,7 +46,7 @@ from ..models import GameState, GameStatus
 from ..pdf_report import format_duration
 from ..settings import AppSettings
 from ..storage import GameStorage, StorageError
-from . import theme
+from . import keymap, theme
 from .celebration import CelebrationOverlay
 from .keymap import MenuKey, map_game_key, map_menu_key
 from .widgets import DisplayBox, HistoryBox, Panel, ScoreGrid, format_number, format_points
@@ -216,12 +216,15 @@ class GameScreen(QWidget):
     def footer_segments(self) -> list[str]:
         if self.is_replay:
             if self._replay_done():
-                return ["Wiedergabe beendet", "Statistik mit  [Enter]", "Zurück mit  [*]  oder  [Esc]"]
-            return ["Pause / Weiter mit  [Enter]", "Tempo mit  [+]  /  [−]", "Beenden mit  [*]  oder  [Esc]"]
+                return ["Wiedergabe beendet", f"Statistik mit  [{keymap.label('enter')}]",
+                        f"Zurück mit  [{keymap.label_all('back')}]"]
+            return [f"Pause / Weiter mit  [{keymap.label('enter')}]",
+                    f"Tempo mit  [{keymap.label('plus')}]  /  [{keymap.label('minus')}]",
+                    f"Beenden mit  [{keymap.label_all('back')}]"]
         return ["Plus:  [0] bis [7]",
-                "Minus:  [−]  und dann  [0] bis [7]",
-                "Korrektur mit  [/]",
-                "Partie-Abbruch mit  [*]  &  [−]"]
+                f"Minus:  [{keymap.label('minus')}]  und dann  [0] bis [7]",
+                f"Korrektur mit  [{keymap.label('undo')}]",
+                f"Partie-Abbruch mit  [{keymap.label('abort')}]  &  [{keymap.label('minus')}]"]
 
     def start_game(self, game: Game) -> None:
         """Neue oder fortgesetzte Partie anzeigen und Eingabe freigeben."""
@@ -296,7 +299,6 @@ class GameScreen(QWidget):
     def _handle_replay_key(self, event: QKeyEvent) -> bool:
         if event.isAutoRepeat():
             return True
-        key = int(event.key())
         menu_key = map_menu_key(event)
         if menu_key is MenuKey.BACK:
             self._replay_timer.stop()
@@ -310,8 +312,8 @@ class GameScreen(QWidget):
                     self._replay_timer.stop()
                 else:
                     self._replay_timer.start()
-        elif key in (int(Qt.Key.Key_Plus), int(Qt.Key.Key_Minus)):
-            faster = key == int(Qt.Key.Key_Plus)
+        elif keymap.matches(event, "plus") or keymap.matches(event, "minus"):
+            faster = keymap.matches(event, "plus")
             self._replay_speed = max(0, min(len(REPLAY_SPEEDS) - 1, self._replay_speed + (1 if faster else -1)))
             self._replay_timer.setInterval(int(REPLAY_SPEEDS[self._replay_speed] * 1000))
             self.message.emit(f"Tempo: {REPLAY_SPEEDS[self._replay_speed]:.2f} s pro Stoß".replace(".", ","),
@@ -371,7 +373,7 @@ class GameScreen(QWidget):
             if game.played == game.state.mode.halftime_after:
                 self._halftime_alert()
             if game.is_complete:
-                self.message.emit("Letzter Stoß gewertet – Korrektur mit [/] noch während der Sperrzeit möglich.",
+                self.message.emit(f"Letzter Stoß gewertet – Korrektur mit [{keymap.label('undo')}] noch während der Sperrzeit möglich.",
                                   False)
         elif action is Action.UNDO:
             try:

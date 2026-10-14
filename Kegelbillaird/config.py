@@ -41,6 +41,37 @@ APP_VERSION = "2.0"
 CLUB_NAME = "SG Grün-Weiß Schlepzig e.V."
 
 # ---------------------------------------------------------------------
+#  TASTENBELEGUNG
+# ---------------------------------------------------------------------
+# Hier legst du fest, mit welchen Tasten das Programm bedient wird. Die
+# Legende in der Fußleiste und alle Hinweise im Programm passen sich an.
+# Pro Aktion eine Liste: Die ERSTE Taste steht in der Legende, weitere sind
+# zusätzliche Möglichkeiten.
+#
+# Erlaubte Namen:
+#   Zeichen        +  -  /  *  .  ,        Ziffern 0-9        Buchstaben A-Z
+#   Sondertasten   Enter  Esc  Space  Tab  Backspace  Delete  Insert  Home  End
+#                  PageUp  PageDown  Up  Down  Left  Right      F1 ... F12
+# Die Ziffern 0-7 für die Wertung selbst sind fest und nicht änderbar.
+# Eine Taste darf nicht doppelt belegt sein (das Programm meldet das beim Start).
+# Tasten, die es nicht auf dem Nummernblock gibt (Buchstaben, F-Tasten, Esc ...),
+# funktionieren in der Partie auch bei NUMPAD_ONLY = True.
+
+# --- In der Partie ---
+KEY_PLUS = ["+"]             # Plus wählen (Plus ist ohnehin voreingestellt; hebt ein gewähltes Minus auf)
+KEY_MINUS = ["-"]            # Minus wählen; ist auch das „Ja“ bei der Abbruch-Frage
+KEY_UNDO = ["/"]             # letzte Wertung zurücknehmen
+KEY_ABORT = ["*"]            # Partie beenden/abbrechen (danach mit KEY_MINUS bestätigen)
+
+# --- In Menüs, Archiv, Statistik-Fenster und Wiedergabe ---
+KEY_UP = ["8", "Up"]         # nach oben (im Bericht: hoch blättern)
+KEY_DOWN = ["2", "Down"]     # nach unten (im Bericht: runter blättern)
+KEY_LEFT = ["4", "Left"]     # Statistik-Fenster: Knopf links
+KEY_RIGHT = ["6", "Right"]   # Statistik-Fenster: Knopf rechts
+KEY_ENTER = ["Enter"]        # bestätigen; in der Wiedergabe Pause/Weiter
+KEY_BACK = ["*", "Esc"]      # zurück / Fenster schließen / Wiedergabe beenden
+
+# ---------------------------------------------------------------------
 #  TON UND BILDER (reine Zugabe – fehlt etwas, läuft die Partie normal weiter)
 # ---------------------------------------------------------------------
 
