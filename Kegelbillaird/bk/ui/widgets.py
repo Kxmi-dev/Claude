@@ -454,12 +454,29 @@ class Plate(_Painted):
 
 # ================================================================== Logo
 class LogoWidget(_Painted):
-    """Zeigt das Logo seitenverhältnistreu und zentriert."""
+    """Zeigt das Logo seitenverhältnistreu und zentriert.
 
-    def __init__(self, logo_path: Path, parent: QWidget | None = None) -> None:
+    ``placeholder=False``: ohne (lesbares) Bild bleibt die Fläche leer."""
+
+    def __init__(self, logo_path: Path | None, parent: QWidget | None = None,
+                 placeholder: bool = True) -> None:
         super().__init__(parent)
-        self._pixmap = QPixmap(str(logo_path)) if Path(logo_path).is_file() else QPixmap()
+        self._placeholder = placeholder
+        self._pixmap = QPixmap()
         self._cache: QPixmap | None = None
+        self.set_path(logo_path)
+
+    def set_path(self, logo_path: Path | None) -> bool:
+        """Neues Bild laden. False, wenn die Datei fehlt oder nicht lesbar ist."""
+        path = Path(logo_path) if logo_path else None
+        self._pixmap = QPixmap(str(path)) if path is not None and path.is_file() else QPixmap()
+        self._cache = None
+        self.update()
+        return not self._pixmap.isNull()
+
+    @property
+    def has_image(self) -> bool:
+        return not self._pixmap.isNull()
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         self._cache = None
@@ -468,6 +485,9 @@ class LogoWidget(_Painted):
     def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802
         p = self._painter()
         if self._pixmap.isNull():
+            if not self._placeholder:
+                p.end()
+                return
             rect = QRectF(self.rect()).adjusted(4, 4, -4, -4)
             theme.draw_bezel(p, rect, QColor("#d9d9d9"))
             p.setPen(theme.TEXT_MUTED)

@@ -123,6 +123,7 @@ class MainWindow(QWidget):
         super().__init__()
         keymap.configure(settings.key_bindings)   # Tastenbelegung
         theme.apply_colors(settings.theme_mode, settings.primary_color, settings.secondary_color)
+        theme.set_font_scale(settings.font_scale)
         # Ohne Angabe: Speicher ohne Laden (Tests); main.py übergibt den geladenen Speicher
         self._store = store if store is not None else UserSettingsStore(settings)
         self._force_windowed = False
@@ -300,9 +301,12 @@ class MainWindow(QWidget):
         self._settings = settings
         keymap.configure(settings.key_bindings)
         theme.apply_colors(settings.theme_mode, settings.primary_color, settings.secondary_color)
+        theme.set_font_scale(settings.font_scale)
         self.title_bar.set_club(settings.club_name)
         self.game_screen.set_settings(settings)
         self.result_screen.set_settings(settings)
+        if old.club_logo_path != settings.club_logo_path:
+            self._load_club_logo()
         self.numlock_guard.update_settings(settings.auto_enable_numlock, settings.numlock_check_seconds)
         if (old.fullscreen, old.window_size) != (settings.fullscreen, settings.window_size) and self.isVisible():
             self._apply_window_mode()
@@ -404,7 +408,18 @@ class MainWindow(QWidget):
         self._cleanup_timer.start()
         for text in self._store.warnings:      # z. B. beschädigte einstellungen.json
             self.footer.flash(text, True, seconds=6)
+        if self._settings.club_logo_path is not None and not self.menu_screen.set_club_logo(
+                self._settings.club_logo_path):
+            self._club_logo_warning()
         self._check_unfinished_game()
+
+    def _load_club_logo(self) -> None:
+        if not self.menu_screen.set_club_logo(self._settings.club_logo_path):
+            self._club_logo_warning()
+
+    def _club_logo_warning(self) -> None:
+        log.warning("Vereinslogo nicht lesbar: %s", self._settings.club_logo_path)
+        self.footer.flash(f"Vereinslogo „{self._settings.club_logo}“ fehlt oder ist nicht lesbar.", True, seconds=6)
 
     def run_cleanup(self) -> None:
         """Löscht Archiv-, Log- (und ggf. Ergebnis-)Dateien, die älter als eingestellt sind."""

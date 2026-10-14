@@ -44,6 +44,13 @@ APP_TITLE = "BK-Scoreboard"
 APP_VERSION = "2.0"
 CLUB_NAME = "SG Grün-Weiß Schlepzig e.V."
 
+# Vereinslogo im Hauptmenü (unter dem BK-Bild): Dateiname im Ordner „vereinslogo“,
+# "" = kein Logo. Bequemer: im Einstellungsmenü unter „Anzeige“ auswählen.
+CLUB_LOGO = ""
+
+# Schriftgröße in Prozent: 80, 90, 100, 110, 120 oder 130
+FONT_SCALE = 100
+
 # ---------------------------------------------------------------------
 #  TASTENBELEGUNG
 # ---------------------------------------------------------------------
@@ -184,3 +191,4 @@ ASSETS_DIR = BASE_DIR / "assets"    # logo.png, icon.png
 SOUNDS_DIR = BASE_DIR / "sounds"    # Töne (WAV)
 IMAGES_DIR = BASE_DIR / "bilder"    # Bilder und GIFs (Unterordner plus und minus)
 SETTINGS_FILE = BASE_DIR / "einstellungen.json"   # Werte aus dem Einstellungsmenü
+CLUB_LOGO_DIR = BASE_DIR / "vereinslogo"   # Vereinslogo (Bild hineinziehen, in den Einstellungen wählen)

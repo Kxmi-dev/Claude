@@ -25,8 +25,8 @@ from PySide6.QtGui import QColor, QKeyEvent, QPaintEvent
 from PySide6.QtWidgets import QFileDialog, QInputDialog, QWidget
 
 from ..keys import ACTIONS, DEFAULT_NAMES, KeyBindings
-from ..media import list_images, list_sounds
-from ..settings import AppSettings
+from ..media import list_images, list_logos, list_sounds
+from ..settings import FONT_SCALES, AppSettings
 from ..user_settings import UserSettingsStore
 from . import keymap, theme
 from .keymap import MenuKey, map_menu_key
@@ -316,7 +316,7 @@ class SettingsScreen(QWidget):
     # ============================================================ Seiten
     def _overview(self) -> list[Item]:
         pages = [
-            ("Anzeige", self._page_display, "Vollbild, Fenstergröße, Vereinsname, „Letzte Stöße“"),
+            ("Anzeige", self._page_display, "Vollbild, Fenstergröße, Schriftgröße, Vereinsname und -logo"),
             ("Design", self._page_design, "Farbschema: Klassisch oder eigene Primär- und Sekundärfarbe"),
             ("Eingabe", self._page_input, "Sperrzeiten, Nummernblock, NumLock"),
             ("Tasten", self._page_keys, "Welche Taste was macht – die Legende passt sich an"),
@@ -344,6 +344,18 @@ class SettingsScreen(QWidget):
                 options.sort()
             self.set_value("window_size", _cycle(options, tuple(self.settings.window_size), delta))
 
+        def change_logo(delta: int) -> None:
+            options = [""] + list_logos(self.settings.club_logo_dir)
+            if self.settings.club_logo and self.settings.club_logo not in options:
+                options.append(self.settings.club_logo)
+            self.set_value("club_logo", _cycle(options, self.settings.club_logo, delta))
+
+        def logo_value() -> str:
+            name = self.settings.club_logo
+            if not name:
+                return "(kein Logo)" if list_logos(self.settings.club_logo_dir) else "(kein Bild im Ordner)"
+            return name if (self.settings.club_logo_dir / name).is_file() else f"{name} (fehlt)"
+
         def edit_club() -> None:
             text = self.ask_text("Vereinsname", "Vereinsname (Titelleiste und PDF):", self.settings.club_name)
             if text is not None and text.strip():
@@ -354,8 +366,14 @@ class SettingsScreen(QWidget):
                             "Aus = Fenster in der unten gewählten Größe."),
             Item("Fenstergröße", lambda: "{} × {}".format(*self.settings.window_size), change_size, None,
                  "Gilt, wenn Vollbild aus ist."),
+            Item("Schriftgröße", lambda: f"{self.settings.font_scale} %",
+                 lambda d: self.set_value("font_scale", _cycle(list(FONT_SCALES), self.settings.font_scale, d)),
+                 None, "Große Zahlen füllen ihr Feld immer aus; Texte werden nie abgeschnitten."),
             Item("Vereinsname", lambda: self.settings.club_name, None, edit_club,
                  "Mit [Enter] ändern (normale Tastatur nötig)."),
+            Item("Vereinslogo", logo_value, change_logo, None,
+                 f"Bild in den Ordner „{self.settings.club_logo_dir.name}“ ziehen, dann hier auswählen "
+                 "(PNG, JPG, GIF, BMP, WEBP, SVG, ICO …). Erscheint im Hauptmenü unter dem BK-Bild."),
             self._number_item("Anzahl „Letzte Stöße“", "history_length", 1, 1, 10, str, integer=True),
         ]
 

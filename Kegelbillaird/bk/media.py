@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 IMAGE_SUFFIXES = (".gif", ".png", ".jpg", ".jpeg", ".bmp", ".webp")
 SOUND_SUFFIXES = (".wav", ".mp3")
+LOGO_SUFFIXES = IMAGE_SUFFIXES + (".svg", ".ico", ".tif", ".tiff")
 
 
 def list_files(folder: Path, suffixes: Sequence[str]) -> list[str]:
@@ -39,6 +40,10 @@ def list_sounds(folder: Path) -> list[str]:
 
 def list_images(folder: Path) -> list[str]:
     return list_files(folder, IMAGE_SUFFIXES)
+
+
+def list_logos(folder: Path) -> list[str]:
+    return list_files(folder, LOGO_SUFFIXES)
 
 
 def resolve_file(folder: Path, name: str) -> Path | None:

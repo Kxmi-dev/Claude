@@ -65,6 +65,9 @@ class AppSettings:
     pdf_save_dir: str = ""                               # "" = Ordner „Dokumente“
     disabled_images: tuple[str, ...] = ()                # z. B. "plus/bild.gif" – ausgeschaltete Bilder
     settings_file: Path = Path("einstellungen.json")
+    club_logo_dir: Path = Path("vereinslogo")
+    club_logo: str = ""                                  # Dateiname im Ordner „vereinslogo“, "" = kein Logo
+    font_scale: int = 100                                # Schriftgröße in % (80 … 130)
 
     @property
     def logo_path(self) -> Path:
@@ -123,6 +126,9 @@ class AppSettings:
             end_sound=str(getattr(cfg, "END_SOUND", "") or ""),
             sound_volume=int(getattr(cfg, "SOUND_VOLUME", 80)),
             settings_file=Path(getattr(cfg, "SETTINGS_FILE", Path(cfg.DATA_DIR).parent / "einstellungen.json")),
+            club_logo_dir=Path(getattr(cfg, "CLUB_LOGO_DIR", Path(cfg.ASSETS_DIR).parent / "vereinslogo")),
+            club_logo=str(getattr(cfg, "CLUB_LOGO", "") or ""),
+            font_scale=int(getattr(cfg, "FONT_SCALE", 100)),
         )
         settings.validate()
         return settings
@@ -160,6 +166,8 @@ class AppSettings:
         for color in (self.primary_color, self.secondary_color):
             if len(color) != 3 or any(not 0 <= int(c) <= 255 for c in color):
                 raise ValueError("Farben bestehen aus drei Werten von 0 bis 255 (R, G, B).")
+        if self.font_scale not in FONT_SCALES:
+            raise ValueError(f"FONT_SCALE muss einer dieser Werte sein: {', '.join(map(str, FONT_SCALES))}.")
         if self.history_length < 1 or self.history_length > 10:
             raise ValueError("HISTORY_LENGTH muss zwischen 1 und 10 liegen.")
         self.key_bindings.validate()
@@ -172,8 +180,14 @@ class AppSettings:
     def images_minus_dir(self) -> Path:
         return self.images_dir / "minus"
 
+    @property
+    def club_logo_path(self) -> Path | None:
+        """Gewähltes Vereinslogo oder None (keins gewählt)."""
+        return self.club_logo_dir / self.club_logo if self.club_logo else None
+
 
 THEME_MODES = ("klassisch", "eigen")
+FONT_SCALES = (80, 90, 100, 110, 120, 130)
 
 
 def _size(value) -> tuple[int, int]:

@@ -90,6 +90,8 @@ FIELDS: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]]] = {
     "fullscreen": (_bool, bool),
     "window_size": (_ints(2), list),
     "club_name": (_str, str),
+    "club_logo": (_str, str),
+    "font_scale": (_int, int),
     "history_length": (_int, int),
     "input_lock_seconds": (_float, float),
     "undo_lock_seconds": (_float, float),

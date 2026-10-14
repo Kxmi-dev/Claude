@@ -154,7 +154,7 @@ Taste aufnehmen / Ton probehören · `*`/`Esc` zurück (bzw. die eingestellten T
 
 | Bereich | Einstellungen |
 |---------|---------------|
-| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), Vereinsname (normale Tastatur), Anzahl „Letzte Stöße“ |
+| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Schriftgröße** (80–130 %), Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`), Anzahl „Letzte Stöße“ |
 | Design | Farbschema **Klassisch** (Vorlage) oder **Eigene Farben**: Primärfarbe (Leisten, Hintergrund, gewählter Knopf) und Sekundärfarbe (Rahmen, Beschriftungen, Knöpfe, Linien) als R/G/B 0–255. Rot/Grün der Wertung bleiben immer gleich; auf dunklen Leisten wird die Schrift automatisch weiß |
 | Eingabe | Sperrzeit nach Wertung, Sperre nach Korrektur, Wartezeit der Abbruch-Frage, Nur Nummernblock, NumLock automatisch |
 | Tasten | jede Aktion: `Enter`, dann die neue Taste drücken (doppelt belegte Tasten werden abgelehnt); `4`/`6` = Standard. Legende passt sich sofort an |
@@ -171,6 +171,13 @@ Fehlt die Tonausgabe (z. B. Monitor ohne Lautsprecher), läuft alles normal weit
 
 **Bilder:** Bilder/GIFs einfach in `bilder\plus` (für +6/+7) bzw. `bilder\minus` (für −6/−7) legen – sie werden
 automatisch erkannt. Ist `minus` leer, werden die Plus-Bilder genommen. Eine Datei = immer diese, mehrere = zufällig.
+
+**Vereinslogo:** Logo in den Ordner `vereinslogo` ziehen (PNG, JPG, GIF, BMP, WEBP, SVG, ICO, TIF) und unter
+Einstellungen → Anzeige → „Vereinslogo“ auswählen. Es erscheint im Hauptmenü unter dem BK-Bild. Fehlt die Datei,
+erscheint ein Hinweis in der Fußzeile. Das PDF bleibt unverändert.
+
+**Schriftgröße:** gilt für Beschriftungen, Menüs, Legende, Titelleiste, Einstellungen, Archiv und Auswertung.
+Die großen Zahlen füllen ihr Feld immer aus; zu lange Texte werden automatisch verkleinert, nie abgeschnitten.
 
 ### Grundwerte (`config.py`)
 
@@ -191,6 +198,7 @@ Werte aus dem Einstellungsmenü haben Vorrang. Nach einer Änderung hier das Pro
 | `SOUND_ENABLED`, `HALFTIME_SOUND` | `True`, `"halbzeit.wav"` | Ton zur Halbzeit (WAV im Ordner `sounds`). Leerer Name = kein Ton. Ohne Tonausgabe läuft alles weiter, das Halbzeit-Feld leuchtet zusätzlich ca. 4 s gelb auf |
 | `CELEBRATION_ENABLED`, `CELEBRATION_VALUES`, `CELEBRATION_MINUS_VALUES` | `True`, `(6, 7)`, `(-6, -7)` | bei diesen Wertungen erscheint ein Bild aus `bilder\plus` bzw. `bilder\minus`; `()` = aus |
 | `END_SOUND`, `SOUND_VOLUME`, `WINDOW_SIZE` | `""`, `80`, `(1280, 800)` | Ende-Ton, Lautstärke, Fenstergröße (alles auch im Menü) |
+| `CLUB_LOGO`, `FONT_SCALE` | `""`, `100` | Vereinslogo (Dateiname im Ordner `vereinslogo`), Schriftgröße in % (auch im Menü) |
 | `CELEBRATION_SECONDS` | `3` | Anzeigedauer des Bildes; verschwindet auch bei `/` und der nächsten Wertung |
 | `AUTO_ENABLE_NUMLOCK` | `True` | NumLock prüfen und automatisch einschalten (`False` = nur warnen) |
 | `NUMLOCK_CHECK_SECONDS` | `2` | Prüfintervall für NumLock |
@@ -455,6 +463,7 @@ BK-Scoreboard\
 ├── assets\             ← Logo und Symbol – austauschbar
 ├── sounds\             ← Töne (WAV), z. B. halbzeit.wav – austauschbar
 ├── bilder\plus, minus  ← Bilder/GIFs für +6/+7 bzw. −6/−7 – werden automatisch erkannt
+├── vereinslogo        ← Vereinslogo (in den Einstellungen auswählen)
 ├── einstellungen.json  ← Werte aus dem Einstellungsmenü (legt das Programm an)
 └── README.md
 ```
@@ -481,7 +490,7 @@ erkannt; Töne im Menü unter „Einstellungen → Töne“ auswählen. Ein Neub
 Enthält die Datei einen Fehler, meldet das Programm beim Start die Zeile.
 
 **Neue Programmversion einspielen:** neue .exe erstellen und im installierten Ordner nur
-`BK-Scoreboard.exe` und `_internal` ersetzen. `config.py`, `einstellungen.json`, `sounds`, `bilder`, `data`, `results` und `logs`
+`BK-Scoreboard.exe` und `_internal` ersetzen. `config.py`, `einstellungen.json`, `sounds`, `bilder`, `vereinslogo`, `data`, `results` und `logs`
 bleiben erhalten.
 
 **Schutz beim Neubau:** PyInstaller leert `dist\BK-Scoreboard` vollständig. Liegen dort

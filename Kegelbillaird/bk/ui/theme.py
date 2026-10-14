@@ -108,10 +108,21 @@ def base_font(pixel_size: float, bold: bool = False) -> QFont:
     return font
 
 
+FONT_SCALE = 1.0       # Schriftgröße aus dem Einstellungsmenü (1.0 = 100 %)
+
+
+def set_font_scale(percent: int) -> None:
+    global FONT_SCALE
+    FONT_SCALE = max(0.5, min(2.0, percent / 100))
+
+
 def fitted_font(text: str, width: float, height: float, bold: bool = False,
                 min_px: int = 6) -> QFont:
-    """Größte Schrift, bei der ``text`` in ``width`` × ``height`` passt."""
-    px = max(min_px, int(height))
+    """Größte Schrift, bei der ``text`` in ``width`` × ``height`` passt.
+
+    Die eingestellte Schriftgröße vergrößert/verkleinert die Höhe; die Breite bleibt
+    die Grenze – ein Text wird also nie abgeschnitten, sondern höchstens kleiner."""
+    px = max(min_px, int(height * FONT_SCALE))
     font = base_font(px, bold)
     if not text:
         return font

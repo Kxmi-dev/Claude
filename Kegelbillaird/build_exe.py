@@ -14,6 +14,7 @@ Ergebnis: dist\\BK-Scoreboard\\
     assets\\             Logo und Symbol – austauschbar
     sounds\\            Töne (.wav/.mp3), z. B. halbzeit.wav
     bilder\\plus, minus Bilder/GIFs für +6/+7 bzw. −6/−7 (werden automatisch erkannt)
+    vereinslogo\\       Vereinslogo fürs Hauptmenü (in den Einstellungen auswählen)
     README.md
 
 Dieser Ordner läuft auf jedem Windows-PC (64 Bit) OHNE Python- oder pip-Installation.
@@ -81,6 +82,7 @@ def main() -> int:
         "--specpath", str(WORK),
         "--paths", str(ROOT),
         "--hidden-import", "config",     # eingebaute Standard-Einstellungen
+        "--hidden-import", "PySide6.QtSvg",   # Vereinslogo als .svg
     ]
     # Nicht benötigte Pakete ausschließen (sonst würden sie unnötig mitgepackt)
     # QtMultimedia: unter Windows spielt das Programm Töne über Windows selbst (MCI) – spart ca. 30 MB
@@ -103,7 +105,7 @@ def main() -> int:
     # Editierbare Dateien neben die .exe legen
     shutil.copy2(ROOT / "config.py", TARGET / "config.py")
     shutil.copytree(ROOT / "assets", TARGET / "assets", dirs_exist_ok=True)
-    for folder in ("sounds", "bilder"):        # Ton und Bilder – austauschbar, bleiben beim Update erhalten
+    for folder in ("sounds", "bilder", "vereinslogo"):   # Ton, Bilder, Logo – austauschbar, bleiben beim Update erhalten
         if (ROOT / folder).is_dir():
             shutil.copytree(ROOT / folder, TARGET / folder, dirs_exist_ok=True)
     for folder in ("bilder/plus", "bilder/minus"):

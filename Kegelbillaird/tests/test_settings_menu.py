@@ -31,6 +31,7 @@ def base_settings(tmp):
         AppSettings.from_config(config),
         data_dir=tmp / "data", results_dir=tmp / "results", logs_dir=tmp / "logs",
         sounds_dir=tmp / "sounds", images_dir=tmp / "bilder", settings_file=tmp / "einstellungen.json",
+        club_logo_dir=tmp / "vereinslogo",
         input_lock_seconds=0.1, undo_lock_seconds=0.05, auto_enable_numlock=False, fullscreen=False)
 
 
@@ -124,6 +125,7 @@ class SettingsMenuTests(unittest.TestCase):
     def tearDown(self):
         self.keymap.configure(KeyBindings())
         self.theme.apply_colors("klassisch", (0, 0, 0), (0, 0, 0))
+        self.theme.set_font_scale(100)
         self.window.close()
         self.window.deleteLater()
         QTest.qWait(20)
@@ -181,6 +183,57 @@ class SettingsMenuTests(unittest.TestCase):
         self.key(Qt.Key.Key_Enter)
         self.assertEqual(self.window.title_bar._club, "Neuer Verein")
         self.assertEqual(UserSettingsStore(self.base).load().club_name, "Neuer Verein")
+
+    def test_font_scale_is_saved_and_applied(self):
+        self.open_section("Anzeige")
+        self.select("Schriftgröße")
+        before = self.theme.fitted_font("Text", 1000, 20).pixelSize()
+        self.key(Qt.Key.Key_6)
+        self.key(Qt.Key.Key_6)
+        self.assertEqual(self.window._settings.font_scale, 120)
+        self.assertEqual(self.saved()["font_scale"], 120)
+        self.assertGreater(self.theme.fitted_font("Text", 1000, 20).pixelSize(), before)
+        narrow = self.theme.fitted_font("Ein langer Text", 60, 20)       # Breite bleibt die Grenze
+        from PySide6.QtGui import QFontMetricsF
+        self.assertLessEqual(QFontMetricsF(narrow).horizontalAdvance("Ein langer Text"), 60)
+        for _ in range(4):
+            self.key(Qt.Key.Key_4)
+        self.assertEqual(self.window._settings.font_scale, 80)       # 120 -> 110 -> … -> 80
+        with self.assertRaises(ValueError):
+            self.store.set("font_scale", 95)
+
+    def test_club_logo_from_folder(self):
+        from PySide6.QtGui import QImage
+        folder = self.tmp.path / "vereinslogo"
+        folder.mkdir()
+        (folder / "LIESMICH.txt").write_text("x", encoding="utf-8")
+        QImage(20, 10, QImage.Format.Format_RGB32).save(str(folder / "verein.png"))
+        menu = self.window.menu_screen
+        self.assertFalse(menu._club_logo.isVisible())
+        self.open_section("Anzeige")
+        self.select("Vereinslogo")
+        self.assertEqual(self.screen._list.current().value(), "(kein Logo)")
+        self.key(Qt.Key.Key_6)
+        self.assertEqual(self.window._settings.club_logo, "verein.png")
+        self.assertEqual(self.saved()["club_logo"], "verein.png")
+        self.assertTrue(menu._club_logo.has_image)
+        self.key(Qt.Key.Key_Escape)
+        self.key(Qt.Key.Key_Escape)
+        self.assertIs(self.window.stack.currentWidget(), menu)
+        self.assertTrue(menu._club_logo.isVisible())
+        self.assertLess(menu._logo.height(), menu.height() * 0.75)   # BK-Bild kleiner, Logo darunter
+        self.assertGreater(menu._club_logo.y(), menu._logo.y() + menu._logo.height() - 1)
+        # Datei verschwindet -> Hinweis, Programm läuft weiter
+        (folder / "verein.png").unlink()
+        self.window._load_club_logo()
+        self.assertFalse(menu._club_logo.isVisible())
+        self.assertIn("Vereinslogo", self.window.footer.current_text())
+        self.window.show_settings()
+        self.open_section("Anzeige")
+        self.select("Vereinslogo")
+        self.assertEqual(self.screen._list.current().value(), "verein.png (fehlt)")
+        self.key(Qt.Key.Key_6)                                     # zurück auf „kein Logo“
+        self.assertEqual(self.window._settings.club_logo, "")
 
     def test_key_capture_changes_legend(self):
         self.open_section("Tasten")

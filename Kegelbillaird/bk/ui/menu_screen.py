@@ -11,6 +11,8 @@ zur verfügbaren Fläche skaliert und zentriert (``_layout``).
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import QRect, Signal
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QWidget
@@ -55,6 +57,8 @@ class MenuScreen(QWidget):
             button.clicked.connect(lambda i=index: self._click(i))
             self._buttons.append(button)
         self._logo = LogoWidget(settings.logo_path, self)
+        self._club_logo = LogoWidget(None, self, placeholder=False)
+        self.set_club_logo(settings.club_logo_path)
         self.reset_selection()
 
     def _first_playable(self) -> int:
@@ -92,7 +96,19 @@ class MenuScreen(QWidget):
         for i, button in enumerate(self._buttons):
             y = 155 + i * step + (gap if i >= modes else 0)
             place(button, 146, y, 298 + shadow, height + shadow)
-        place(self._logo, 599, 50, 387, 595)
+        if self._club_logo.has_image:
+            # BK-Bild etwas kleiner, darunter das Vereinslogo
+            place(self._logo, 599, 40, 387, 450)
+            place(self._club_logo, 599, 505, 387, 175)
+        else:
+            place(self._logo, 599, 50, 387, 595)
+
+    def set_club_logo(self, path: Path | None) -> bool:
+        """Vereinslogo setzen (None = keins). False, wenn die Datei fehlt oder nicht lesbar ist."""
+        ok = self._club_logo.set_path(path)
+        self._club_logo.setVisible(ok)
+        self._layout()
+        return ok or path is None
 
     # ------------------------------------------------------------- Auswahl
     def reset_selection(self) -> None:
