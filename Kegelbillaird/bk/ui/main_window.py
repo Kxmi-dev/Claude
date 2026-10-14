@@ -419,6 +419,7 @@ class MainWindow(QWidget):
 
     # ======================================================= Programmstart
     def _startup(self) -> None:
+        self.settings_screen.autostart.refresh()   # Programmordner verschoben -> Autostart-Pfad korrigieren
         self.activateWindow()
         self.setFocus(Qt.FocusReason.OtherFocusReason)
         if self.numlock_guard.supported:

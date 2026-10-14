@@ -24,6 +24,7 @@ from PySide6.QtCore import QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QKeyEvent, QPaintEvent
 from PySide6.QtWidgets import QFileDialog, QInputDialog, QWidget
 
+from ..autostart import Autostart, AutostartError
 from ..keys import ACTIONS, DEFAULT_NAMES, KeyBindings
 from ..media import list_images, list_logos, list_sounds
 from ..settings import FONT_SCALES, AppSettings
@@ -230,6 +231,7 @@ class SettingsScreen(QWidget):
         self.ask_int: Callable[[str, str, int, int, int], int | None] = self._ask_int
         self.ask_folder: Callable[[str, str], str | None] = self._ask_folder
         self.printer_names: Callable[[], list[str]] = _printer_names
+        self.autostart = Autostart()
         self.open_page()
 
     @property
@@ -316,7 +318,7 @@ class SettingsScreen(QWidget):
     # ============================================================ Seiten
     def _overview(self) -> list[Item]:
         pages = [
-            ("Anzeige", self._page_display, "Vollbild, Fenstergröße, Schriftgröße, Vereinsname und -logo"),
+            ("Anzeige", self._page_display, "Vollbild, Fenstergröße, Schriftgröße, Vereinsname und -logo, Autostart"),
             ("Design", self._page_design, "Farbschema: Klassisch oder eigene Primär- und Sekundärfarbe"),
             ("Eingabe", self._page_input, "Sperrzeiten, Nummernblock, NumLock"),
             ("Tasten", self._page_keys, "Welche Taste was macht – die Legende passt sich an"),
@@ -356,6 +358,20 @@ class SettingsScreen(QWidget):
                 return "(kein Logo)" if list_logos(self.settings.club_logo_dir) else "(kein Bild im Ordner)"
             return name if (self.settings.club_logo_dir / name).is_file() else f"{name} (fehlt)"
 
+        def autostart_value() -> str:
+            return _on_off(self.autostart.is_enabled()) if self.autostart.available else "nur unter Windows"
+
+        def toggle_autostart(_delta: int = 1) -> None:
+            try:
+                self.autostart.set_enabled(not self.autostart.is_enabled())
+            except AutostartError as exc:
+                self.notice.emit(str(exc), True)
+                return
+            on = self.autostart.is_enabled()
+            self.notice.emit("Startet ab jetzt automatisch nach der Windows-Anmeldung." if on
+                             else "Autostart ausgeschaltet.", False)
+            self._refresh()
+
         def edit_club() -> None:
             text = self.ask_text("Vereinsname", "Vereinsname (Titelleiste und PDF):", self.settings.club_name)
             if text is not None and text.strip():
@@ -375,6 +391,8 @@ class SettingsScreen(QWidget):
                  f"Bild in den Ordner „{self.settings.club_logo_dir.name}“ ziehen, dann hier auswählen "
                  "(PNG, JPG, GIF, BMP, WEBP, SVG, ICO …). Erscheint im Hauptmenü unter dem BK-Bild."),
             self._number_item("Anzahl „Letzte Stöße“", "history_length", 1, 1, 10, str, integer=True),
+            Item("Beim Windows-Start öffnen", autostart_value, toggle_autostart, lambda: toggle_autostart(),
+                 "An = Programm startet automatisch nach der Windows-Anmeldung (Autostart)."),
         ]
 
     def _page_design(self) -> list[Item]:

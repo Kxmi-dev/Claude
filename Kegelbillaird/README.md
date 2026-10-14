@@ -64,8 +64,21 @@ fährt sofort herunter – ohne Countdown und ohne Windows-Meldung. Andere noch 
 zwangsweise geschlossen. Klappt das Herunterfahren nicht (z. B. fehlende Berechtigung), bleibt das Programm
 offen und zeigt unten einen Hinweis.
 
-Tipp für den Vereins-PC: Eine Verknüpfung auf `start_bk_scoreboard.bat` in den
-Autostart-Ordner legen (Windows-Taste + R → `shell:startup`).
+**Automatisch beim Hochfahren starten:** Einstellungen → Anzeige → **„Beim Windows-Start öffnen“** auf „An“.
+Das Programm trägt sich dann in den Windows-Autostart des angemeldeten Benutzers ein (ohne Administratorrechte;
+sichtbar und abschaltbar auch im Task-Manager unter „Autostart“). Wird der Programmordner verschoben, korrigiert
+das Programm den Eintrag beim nächsten Start selbst.
+
+Windows startet Autostart-Programme erst **nach der Anmeldung**. Soll der Vereins-PC ohne jede Eingabe bis ins
+Scoreboard durchstarten, die automatische Anmeldung einrichten (einmalig, mit dem Windows-Konto des Vereins-PCs):
+
+1. Windows 11: Einstellungen → Konten → Anmeldeoptionen → „Für mehr Sicherheit nur die Windows Hello-Anmeldung …
+   zulassen“ auf **Aus** stellen (sonst fehlt der Haken in Schritt 3).
+2. Windows-Taste + R → `netplwiz` → Enter.
+3. Benutzer auswählen, Haken bei „Benutzer müssen Benutzernamen und Kennwort eingeben“ **entfernen** → OK.
+4. Kennwort zweimal eingeben → OK. Ab dem nächsten Neustart meldet sich Windows selbst an.
+
+Achtung: Damit kann jeder, der den PC einschaltet, ihn ohne Kennwort benutzen.
 
 ## 3. Bedienung
 
@@ -160,7 +173,7 @@ Taste aufnehmen / Ton probehören · `*`/`Esc` zurück (bzw. die eingestellten T
 
 | Bereich | Einstellungen |
 |---------|---------------|
-| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Schriftgröße** (80–130 %), Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`), Anzahl „Letzte Stöße“ |
+| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Schriftgröße** (80–130 %), Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`), Anzahl „Letzte Stöße“, **Beim Windows-Start öffnen** (Autostart) |
 | Design | Farbschema **Klassisch** (Vorlage) oder **Eigene Farben**: Primärfarbe (Leisten, Hintergrund, gewählter Knopf) und Sekundärfarbe (Rahmen, Beschriftungen, Knöpfe, Linien) als R/G/B 0–255. Rot/Grün der Wertung bleiben immer gleich; auf dunklen Leisten wird die Schrift automatisch weiß |
 | Eingabe | Sperrzeit nach Wertung, Sperre nach Korrektur, Wartezeit der Abbruch-Frage, Nur Nummernblock, NumLock automatisch |
 | Tasten | jede Aktion: `Enter`, dann die neue Taste drücken (doppelt belegte Tasten werden abgelehnt); `4`/`6` = Standard. Legende passt sich sofort an |

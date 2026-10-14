@@ -49,12 +49,13 @@ bk/ui/celebration.py Bild-/GIF-Einblendung bei CELEBRATION_VALUES
 bk/user_settings.py  UserSettingsStore: einstellungen.json laden/prüfen/speichern, FIELDS = im Menü änderbare Felder
 bk/ui/settings_screen.py Einstellungsmenü (Bereiche → Einträge, [4]/[6] ändern, Enter: Eingabe/Tastenaufnahme)
 bk/keys.py           Tastenbelegung (Qt-frei): Namen prüfen, Doppelbelegung, Legenden-Beschriftung
+bk/autostart.py      Autostart: HKCU\...\Run „BK-Scoreboard“ (winreg), Zustand immer aus Registry, refresh() beim Start
 bk/power.py          Herunterfahren: `shutdown /s /t 0 /f`, CREATE_NO_WINDOW, nur Windows (sonst nur beenden)
 bk/media.py          Ton (winsound/Qt, fehlerfrei geschluckt) + Bildauswahl (1 Datei = immer, sonst zufällig)
 bk/ui/widgets.py, theme.py, keymap.py
 sounds/, bilder/     Ton- und Bilddateien neben der .exe (austauschbar, ohne Neubau)
 vereinslogo/         Vereinslogo (beliebiges Bildformat), Auswahl im Einstellungsmenü
-tests/               148 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
+tests/               153 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
 ```
 Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), `results/` (PDF+JSON), `logs/`.
 
@@ -85,7 +86,8 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   übernimmt live (keymap, theme.apply_colors, Titelleiste, GameScreen.set_settings, Fenster, NumLock-Guard).
 - Bereiche: Anzeige (Vollbild, Fenstergröße-Presets, Schriftgröße 80–130 % (`theme.FONT_SCALE` wirkt in
   `fitted_font` auf die Höhe, Breite bleibt Grenze; große Zahlen per `base_font` unverändert), Vereinsname per
-  QInputDialog, Vereinslogo aus `vereinslogo/` (Hauptmenü unter dem BK-Bild, NICHT im PDF), Letzte Stöße), Design
+  QInputDialog, Vereinslogo aus `vereinslogo/` (Hauptmenü unter dem BK-Bild, NICHT im PDF), Letzte Stöße,
+  Beim Windows-Start öffnen (NICHT in einstellungen.json, sondern Registry)), Design
   (Klassisch / eigene Primär- + Sekundärfarbe RGB), Eingabe, Tasten (Aufnahme), Töne (Halbzeit/Ende aus sounds/,
   Lautstärke, probehören), Bilder (bilder/plus, bilder/minus automatisch, einzelne aus = `disabled_images`),
   Drucken & PDF (Drucker-Auswahl mit Fallback Standard, PDF-Speicherort ohne Nachfrage, eindeutiger Name `_2`),
