@@ -55,7 +55,7 @@ bk/media.py          Ton (winsound/Qt, fehlerfrei geschluckt) + Bildauswahl (1 D
 bk/ui/widgets.py, theme.py, keymap.py
 sounds/, bilder/     Ton- und Bilddateien neben der .exe (austauschbar, ohne Neubau)
 vereinslogo/         Vereinslogo (beliebiges Bildformat), Auswahl im Einstellungsmenü
-tests/               157 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
+tests/               158 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
 ```
 Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), `results/` (PDF+JSON), `logs/`.
 
@@ -89,7 +89,8 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 - Bereiche: Anzeige (Vollbild, Fenstergröße-Presets, Schriftgröße 80–130 % (`theme.FONT_SCALE` wirkt in
   `fitted_font` auf die Höhe, Breite bleibt Grenze; große Zahlen per `base_font` unverändert), Vereinsname per
   QInputDialog, Vereinslogo aus `vereinslogo/` (Hauptmenü rechts groß, automatisch freigestellt per
-  `media.cut_out_background` (Pillow-Flutfüllung vom Rand); BK-Scoreboard-Bild im Menü ENTFERNT, ohne Logo Menü mittig; NICHT im PDF), Letzte Stöße,
+  `media.cut_out_background` (Pillow-Flutfüllung vom Rand); BK-Scoreboard-Bild im Menü UND im PDF ENTFERNT, ohne Logo Menü mittig; im PDF-Kopf nur das Vereinslogo,
+  max. 74×84 pt, Transparenz → weiß), Letzte Stöße,
   Felder „Letzte Stöße“/„Eingabe“ ausblendbar (`show_history`/`show_input_status`, Nachbar spannt dann 2 Spalten),
   Beim Windows-Start öffnen (NICHT in einstellungen.json, sondern Registry)), Design
   (Klassisch / eigene Primär- + Sekundärfarbe RGB), Eingabe, Tasten (Aufnahme), Töne (Halbzeit/Ende aus sounds/,
@@ -120,6 +121,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   Knöpfe **Als PDF speichern** (ohne Nachfrage in `pdf_save_dir`, Standard Dokumente) / **Drucken** (gewählter
   bzw. Standarddrucker, kein Dialog) / **Weiter** (Archiv: „Zurück“). `4`/`6`, Enter, `*`/Esc.
 - **Das PDF bleibt unverändert** (Nutzer: „so wie es jetzt ist“) – Formatierung nur auf ausdrücklichen Wunsch ändern.
+  Einzige gewünschte Änderung bisher: Logo oben rechts = Vereinslogo statt BK-Scoreboard-Bild.
 - PDF enthält „**Anzahl je Wertung**“ (wie oft −7…+7 gestoßen) und gleich dicke Tabellenlinien
   (`LINE_WIDTH`, alle Maße ganze Punkte). Druck mit 4 px/pt. Zählansicht-Raster nutzt kosmetische Stifte.
 - Archiv (Hauptmenü): Liste aller Partien → AUSWERTUNG ANZEIGEN / WIEDERGABE (Stoß für Stoß,

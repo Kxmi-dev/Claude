@@ -152,7 +152,7 @@ def regenerate_pdf(settings: AppSettings, result_file: str) -> int:
     try:
         state = decode_state(Path(result_file).read_bytes())
         path = write_report(state, settings.results_dir, settings.club_name, settings.app_title,
-                            settings.logo_path, settings.pdf_rows_per_block, settings.pdf_blocks_per_row)
+                            settings.club_logo_path, settings.pdf_rows_per_block, settings.pdf_blocks_per_row)
     except (OSError, ValueError, PdfError) as exc:
         show_message(f"PDF konnte nicht erstellt werden:\n{exc}", error=True)
         return 1

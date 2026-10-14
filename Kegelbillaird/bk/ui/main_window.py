@@ -559,7 +559,7 @@ class MainWindow(QWidget):
         pdf_ok = False
         try:
             pdf_path = write_report(state, self._settings.results_dir, self._settings.club_name,
-                                    self._settings.app_title, self._settings.logo_path,
+                                    self._settings.app_title, self._settings.club_logo_path,   # im PDF nur das Vereinslogo
                                     self._settings.pdf_rows_per_block, self._settings.pdf_blocks_per_row)
             pdf_ok = True
             self._last_result_path = str(pdf_path)

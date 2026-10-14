@@ -89,6 +89,17 @@ class PdfTests(unittest.TestCase):
         data = build_report_bytes(state, "Verein", "BK", self.tmp.path / "fehlt.png")
         self.assertTrue(data.startswith(b"%PDF"))
 
+    def test_wide_transparent_club_logo_fits_and_turns_white(self):
+        from PIL import Image as PilImage
+        from bk.pdf_report import _logo_image
+        logo = self.tmp.path / "verein.png"
+        PilImage.new("RGBA", (600, 200), (0, 0, 0, 0)).save(logo)
+        image = _logo_image(logo, 84, max_width=74)
+        self.assertLessEqual(image.drawWidth, 74.01)
+        self.assertLessEqual(image.drawHeight, 84.01)
+        data = build_report_bytes(finished_state(BK50, [1] * 50), "Verein", "BK", logo)
+        self.assertTrue(data.startswith(b"%PDF"))
+
     def test_special_characters_in_club_name(self):
         state = finished_state(BK50, [1] * 50)
         data = build_report_bytes(state, "SG <Grün> & Weiß", "BK", None)

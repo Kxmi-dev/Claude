@@ -36,7 +36,7 @@ class OutputError(Exception):
 
 
 def report_bytes(state: GameState, settings: AppSettings) -> bytes:
-    return build_report_bytes(state, settings.club_name, settings.app_title, settings.logo_path,
+    return build_report_bytes(state, settings.club_name, settings.app_title, settings.club_logo_path,   # nur das Vereinslogo
                               settings.pdf_rows_per_block, settings.pdf_blocks_per_row)
 
 

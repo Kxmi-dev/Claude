@@ -192,16 +192,22 @@ def _stroke_tables(game: Game, rows_per_block: int, blocks_per_row: int, line_wi
     return flowables
 
 
-def _logo_image(path: Path, height: float) -> Image:
-    """Logo als JPEG einbetten – hält das PDF klein (ca. 60 statt 360 KB)."""
+def _logo_image(path: Path, height: float, max_width: float | None = None) -> Image:
+    """Logo als JPEG einbetten – hält das PDF klein. Durchsichtiges wird weiß,
+    das Logo passt immer in height × max_width (Seitenverhältnis bleibt)."""
     from PIL import Image as PilImage
 
     with PilImage.open(path) as source:
-        rgb = source.convert("RGB")
+        rgba = source.convert("RGBA")
+    rgb = PilImage.new("RGB", rgba.size, "white")
+    rgb.paste(rgba, mask=rgba.getchannel("A"))
     data = io.BytesIO()
     rgb.save(data, "JPEG", quality=88, optimize=True)
     data.seek(0)
-    return Image(data, width=height * rgb.width / rgb.height, height=height)
+    width = height * rgb.width / rgb.height
+    if max_width is not None and width > max_width:
+        width, height = max_width, max_width * rgb.height / rgb.width
+    return Image(data, width=width, height=height)
 
 
 def _distribution_table(game: Game, line_width: float) -> Table:
@@ -313,7 +319,7 @@ def build_report_bytes(
     logo_cell: object = ""
     if logo_path is not None and Path(logo_path).is_file():
         try:
-            logo_cell = _logo_image(Path(logo_path), 84)
+            logo_cell = _logo_image(Path(logo_path), 84, max_width=74)
         except Exception:  # Logo ist optional – PDF nie daran scheitern lassen
             log.warning("Logo konnte nicht in das PDF eingebunden werden", exc_info=True)
     header = Table([[title_block, logo_cell]], colWidths=[CONTENT_WIDTH - 74, 74], rowHeights=[84],

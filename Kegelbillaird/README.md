@@ -195,7 +195,8 @@ automatisch erkannt. Ist `minus` leer, werden die Plus-Bilder genommen. Eine Dat
 Einstellungen → Anzeige → „Vereinslogo“ auswählen. Es erscheint groß rechts im Hauptmenü (ohne Logo steht das
 Menü mittig). Ein einfarbiger Hintergrund (z. B. weiß bei JPG) wird automatisch **freigestellt**, damit das Logo
 zum Hintergrund passt – gleichfarbige Flächen innerhalb des Logos bleiben erhalten. Fehlt die Datei,
-erscheint ein Hinweis in der Fußzeile. Das PDF bleibt unverändert.
+erscheint ein Hinweis in der Fußzeile. Im PDF-Spielbericht steht oben rechts ebenfalls nur das Vereinslogo
+(ohne gewähltes Logo: kein Bild).
 
 **Schriftgröße:** gilt für Beschriftungen, Menüs, Legende, Titelleiste, Einstellungen, Archiv und Auswertung.
 Die großen Zahlen füllen ihr Feld immer aus; zu lange Texte werden automatisch verkleinert, nie abgeschnitten.
