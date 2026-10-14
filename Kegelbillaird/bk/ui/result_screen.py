@@ -140,7 +140,7 @@ class ResultScreen(QWidget):
         labels = {"total": "Endresultat", "halftime": "Halbzeit", "minus": "Minuspunkte",
                   "average": "Schnitt je Stoß", "strokes": "Stöße", "duration": "Spieldauer"}
         self.panels = {key: Panel(labels[key], box, 30, parent=self) for key, box in self.boxes.items()}
-        self.boxes["total"].text_ratio = 0.66
+        self.boxes["total"].text_ratio = 0.88
         self.grid = ScoreGrid(self)
         self._grid_plate = Plate("Stoßliste", self)
         self.distribution = DistributionBox(self)

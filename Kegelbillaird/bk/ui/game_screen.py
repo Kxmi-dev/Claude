@@ -118,9 +118,9 @@ class GameScreen(QWidget):
         self.minus_box = DisplayBox()
         self.status_box = DisplayBox()
         self.duration_box = DisplayBox("flat")
-        self.score_box.text_ratio = 0.66
-        self.strokes_box.text_ratio = 0.66
-        self.current_box.text_ratio = 0.58
+        self.score_box.text_ratio = 0.88
+        self.strokes_box.text_ratio = 0.88
+        self.current_box.text_ratio = 0.8
         self.grid = ScoreGrid()
 
         self.panels = {
