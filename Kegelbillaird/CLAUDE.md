@@ -54,7 +54,7 @@ bk/media.py          Ton (winsound/Qt, fehlerfrei geschluckt) + Bildauswahl (1 D
 bk/ui/widgets.py, theme.py, keymap.py
 sounds/, bilder/     Ton- und Bilddateien neben der .exe (austauschbar, ohne Neubau)
 vereinslogo/         Vereinslogo (beliebiges Bildformat), Auswahl im Einstellungsmenü
-tests/               139 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
+tests/               148 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
 ```
 Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), `results/` (PDF+JSON), `logs/`.
 
@@ -104,7 +104,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 
 ## Ton & Bilder (reine Zugabe, stören die Partie nie)
 - Halbzeit (nach `halftime_after`): Ton `halftime_sound` + Halbzeit-Feld leuchtet 4 s gelb (auch ohne Tonausgabe).
-  Partie-Ende: `end_sound`. Fehlende Datei/kein Audiogerät → nur Logeintrag.
+  Partie-Ende: `end_sound`. +6/+7 (`CELEBRATION_VALUES`): `celebration_sound` (auch wenn Bilder aus). Fehlende Datei/kein Audiogerät → nur Logeintrag.
 - +6/+7 (`CELEBRATION_VALUES`) → alle Bilder in `bilder/plus`; −6/−7 (`CELEBRATION_MINUS_VALUES`) → `bilder/minus`
   (leer = Plus-Bilder). Eine Datei = immer diese, mehrere = zufällig. `/` blendet es sofort aus.
 

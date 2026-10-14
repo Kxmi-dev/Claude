@@ -198,6 +198,28 @@ class MediaUiTests(unittest.TestCase):
         self.press(screen, 1)
         self.assertEqual(len(screen.played_sounds), 1)
 
+    def test_sound_on_plus_six_and_seven(self):
+        (self.tmp.path / "sounds" / "jubel.mp3").write_bytes(b"x")
+        jubel = self.tmp.path / "sounds" / "jubel.mp3"
+        screen = self.screen(dataclasses.replace(self.settings, celebration_sound="jubel.mp3"))
+        for value in (5, -6, -7, 0):
+            self.press(screen, value)
+        self.assertEqual(screen.played_sounds, [])
+        self.press(screen, 6)
+        self.press(screen, 7)
+        self.assertEqual(screen.played_sounds, [jubel, jubel])
+        # auch wenn Bilder ausgeschaltet sind; ohne Ton / Töne aus -> nichts
+        no_images = self.screen(dataclasses.replace(self.settings, celebration_sound="jubel.mp3",
+                                                    celebration_enabled=False))
+        self.press(no_images, 7)
+        self.assertEqual(no_images.played_sounds, [jubel])
+        for kw in ({}, {"celebration_sound": "jubel.mp3", "sound_enabled": False},
+                   {"celebration_sound": "fehlt.wav"}):
+            quiet = self.screen(dataclasses.replace(self.settings, **kw))
+            self.press(quiet, 7)
+            self.assertEqual(quiet.played_sounds, [])
+            self.assertEqual(quiet.game.played, 1)
+
     def test_halftime_without_sound_file_or_disabled_still_works(self):
         for kw in ({"halftime_sound": "fehlt.wav"}, {"halftime_sound": ""}, {"sound_enabled": False}):
             screen = self.screen(dataclasses.replace(self.settings, **kw))

@@ -60,6 +60,7 @@ class AppSettings:
     primary_color: tuple[int, int, int] = (223, 222, 202)
     secondary_color: tuple[int, int, int] = (192, 192, 192)
     end_sound: str = ""
+    celebration_sound: str = ""                          # Ton bei +6 / +7 (CELEBRATION_VALUES)
     sound_volume: int = 80                               # 0 … 100 %
     printer_name: str = ""                               # "" = Windows-Standarddrucker
     pdf_save_dir: str = ""                               # "" = Ordner „Dokumente“
@@ -124,6 +125,7 @@ class AppSettings:
             key_bindings=KeyBindings.from_config(cfg),
             window_size=_size(getattr(cfg, "WINDOW_SIZE", (1280, 800))),
             end_sound=str(getattr(cfg, "END_SOUND", "") or ""),
+            celebration_sound=str(getattr(cfg, "CELEBRATION_SOUND", "") or ""),
             sound_volume=int(getattr(cfg, "SOUND_VOLUME", 80)),
             settings_file=Path(getattr(cfg, "SETTINGS_FILE", Path(cfg.DATA_DIR).parent / "einstellungen.json")),
             club_logo_dir=Path(getattr(cfg, "CLUB_LOGO_DIR", Path(cfg.ASSETS_DIR).parent / "vereinslogo")),

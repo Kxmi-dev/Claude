@@ -320,7 +320,7 @@ class SettingsScreen(QWidget):
             ("Design", self._page_design, "Farbschema: Klassisch oder eigene Primär- und Sekundärfarbe"),
             ("Eingabe", self._page_input, "Sperrzeiten, Nummernblock, NumLock"),
             ("Tasten", self._page_keys, "Welche Taste was macht – die Legende passt sich an"),
-            ("Töne", self._page_sounds, "Halbzeit- und Ende-Ton, Lautstärke"),
+            ("Töne", self._page_sounds, "Ton zur Halbzeit, am Ende und bei +6 / +7, Lautstärke"),
             ("Bilder", self._page_images, "Bilder/GIFs bei +6/+7 und −6/−7"),
             ("Drucken & PDF", self._page_print, "Drucker, PDF-Speicherort, Auswertung nach der Partie"),
             ("Archiv & Aufräumen", self._page_archive, "Wiedergabe-Tempo, Aufbewahrungsdauer"),
@@ -466,6 +466,7 @@ class SettingsScreen(QWidget):
             self._number_item("Lautstärke", "sound_volume", 10, 0, 100, lambda v: f"{v} %", integer=True),
             sound_item("Ton zur Halbzeit", "halftime_sound"),
             sound_item("Ton am Partie-Ende", "end_sound"),
+            sound_item("Ton bei +6 / +7", "celebration_sound"),
         ]
 
     def _page_images(self) -> list[Item]:

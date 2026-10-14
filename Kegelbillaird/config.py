@@ -92,6 +92,7 @@ KEY_BACK = ["*", "Esc"]      # zurück / Fenster schließen / Wiedergabe beenden
 SOUND_ENABLED = True
 HALFTIME_SOUND = "halbzeit.wav"
 END_SOUND = ""               # Ton am Partie-Ende
+CELEBRATION_SOUND = ""       # Ton bei +6 / +7 (Datei im Ordner sounds), "" = kein Ton
 SOUND_VOLUME = 80            # Lautstärke 0 … 100 %
 
 # Bilder/GIFs: ALLE Bilder in "bilder\\plus" erscheinen bei CELEBRATION_VALUES,

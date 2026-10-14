@@ -414,9 +414,15 @@ class GameScreen(QWidget):
         self.halftime_box.set_fill(None)
 
     def _celebrate(self, value: int) -> None:
-        """Bild/GIF bei +6/+7 bzw. −6/−7 (automatisch aus bilder/plus und bilder/minus). Fehler stören nie."""
+        """Ton bei +6/+7, Bild/GIF bei +6/+7 bzw. −6/−7 (automatisch aus bilder/plus und bilder/minus).
+        Fehler stören nie."""
         self._celebration.dismiss()
         cfg = self._settings
+        if value in cfg.celebration_values:
+            try:
+                self.play_sound(cfg.celebration_sound)
+            except Exception:
+                log.exception("Ton bei %s fehlgeschlagen", value)
         if not cfg.celebration_enabled:
             return
         try:

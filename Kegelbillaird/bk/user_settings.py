@@ -105,6 +105,7 @@ FIELDS: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]]] = {
     "sound_enabled": (_bool, bool),
     "halftime_sound": (_str, str),
     "end_sound": (_str, str),
+    "celebration_sound": (_str, str),
     "sound_volume": (_int, int),
     "celebration_enabled": (_bool, bool),
     "celebration_seconds": (_float, float),
