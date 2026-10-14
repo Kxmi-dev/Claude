@@ -126,8 +126,8 @@ class GameScreen(QWidget):
         self.panels = {
             "strokes": Panel("Stoß - Anzahl", self.strokes_box, 40, 0.71),
             "score": Panel("Punktestand", self.score_box, 40, 0.70),
-            "prognosis": Panel("Prognose", self.prognosis_box, 32),
-            "halftime": Panel("Halbzeit", self.halftime_box, 32),
+            "prognosis": Panel("Prognose", self.prognosis_box, 34),
+            "halftime": Panel("Halbzeit", self.halftime_box, 34),
             "current": Panel("Aktueller Stoß", self.current_box, 30),
             "history": Panel("Letzte Stöße", self.history_box, 30),
             "minus": Panel("Minus", self.minus_box, 32),
@@ -143,14 +143,14 @@ class GameScreen(QWidget):
         top.addWidget(self.panels["strokes"], 280)
         top.addItem(self._spacer(26, 0))
         top.addWidget(self.panels["score"], 310)
-        left.addLayout(top, 200)
+        left.addLayout(top, 240)
         left.addItem(self._spacer(0, 25))
         grid_row = QHBoxLayout()
         grid_row.setSpacing(0)
         grid_row.addItem(self._spacer(17, 0))
         grid_row.addWidget(self.grid, 1)
         grid_row.addItem(self._spacer(20, 0))
-        left.addLayout(grid_row, 439)
+        left.addLayout(grid_row, 399)
 
         self._right = QGridLayout()
         self._right.addWidget(self.panels["prognosis"], 0, 0)
@@ -165,7 +165,7 @@ class GameScreen(QWidget):
         duration_row.addWidget(self.panels["duration"], 200)
         duration_row.addStretch(61)
         self._right.addLayout(duration_row, 3, 0, 1, 2)
-        for row, stretch in enumerate((112, 232, 112, 88)):
+        for row, stretch in enumerate((150, 214, 104, 76)):
             self._right.setRowStretch(row, stretch)
         self._right.setColumnStretch(0, 1)
         self._right.setColumnStretch(1, 1)
