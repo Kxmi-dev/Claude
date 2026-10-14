@@ -51,6 +51,10 @@ CLUB_LOGO = ""
 # Schriftgröße in Prozent: 80, 90, 100, 110, 120 oder 130
 FONT_SCALE = 100
 
+# Felder in der Zählansicht ein-/ausblenden (auch im Einstellungsmenü unter „Anzeige“)
+SHOW_HISTORY = True          # „Letzte Stöße“
+SHOW_INPUT_STATUS = True     # „Eingabe“ (BEREIT / MINUS / GESPERRT)
+
 # ---------------------------------------------------------------------
 #  TASTENBELEGUNG
 # ---------------------------------------------------------------------

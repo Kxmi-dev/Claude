@@ -155,10 +155,7 @@ class GameScreen(QWidget):
         self._right = QGridLayout()
         self._right.addWidget(self.panels["prognosis"], 0, 0)
         self._right.addWidget(self.panels["halftime"], 0, 1)
-        self._right.addWidget(self.panels["current"], 1, 0)
-        self._right.addWidget(self.panels["history"], 1, 1)
-        self._right.addWidget(self.panels["minus"], 2, 0)
-        self._right.addWidget(self.panels["status"], 2, 1)
+        self._arrange_optional()
         duration_row = QHBoxLayout()
         duration_row.setSpacing(0)
         duration_row.addStretch(61)
@@ -174,6 +171,18 @@ class GameScreen(QWidget):
         self._root.addItem(self._spacer(30, 0))
         self._root.addLayout(self._right, 296)
         self.apply_unit(1.0)
+
+    def _arrange_optional(self) -> None:
+        """„Letzte Stöße“ und „Eingabe“ sind abschaltbar; der Nachbar nimmt dann die ganze Zeile ein."""
+        for row, (left, right, show) in enumerate(
+                (("current", "history", self._settings.show_history),
+                 ("minus", "status", self._settings.show_input_status)), start=1):
+            for name in (left, right):
+                self._right.removeWidget(self.panels[name])
+            self._right.addWidget(self.panels[left], row, 0, 1, 1 if show else 2)
+            if show:
+                self._right.addWidget(self.panels[right], row, 1)
+            self.panels[right].setVisible(show)
 
     def apply_unit(self, unit: float) -> None:
         """Abstände und Plattenhöhen an die Bildschirmgröße anpassen."""
@@ -466,6 +475,7 @@ class GameScreen(QWidget):
         self._settings = settings
         self._autosave.setInterval(int(settings.autosave_seconds * 1000))
         self.history_box.set_lines(settings.history_length)
+        self._arrange_optional()
         if not self.has_live_game:
             self._controller = ScoreInputController(
                 settings.input_lock_seconds, settings.undo_lock_seconds, settings.abort_confirm_seconds, self._clock)

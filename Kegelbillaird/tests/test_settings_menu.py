@@ -176,6 +176,24 @@ class SettingsMenuTests(unittest.TestCase):
         self.key(Qt.Key.Key_6)                                     # Sperrzeit +0,5 s
         self.assertAlmostEqual(self.window.game_screen._settings.input_lock_seconds, 0.6)
 
+    def test_history_and_input_fields_can_be_hidden(self):
+        panels = self.window.game_screen.panels
+        self.assertFalse(panels["history"].isHidden())
+        self.assertFalse(panels["status"].isHidden())
+        self.open_section("Anzeige")
+        self.select("Feld „Letzte Stöße“ anzeigen")
+        self.key(Qt.Key.Key_Enter)
+        self.select("Feld „Eingabe“ anzeigen")
+        self.key(Qt.Key.Key_6)
+        self.assertTrue(panels["history"].isHidden())
+        self.assertTrue(panels["status"].isHidden())
+        self.assertEqual(self.saved()["show_history"], False)
+        self.assertEqual(self.saved()["show_input_status"], False)
+        loaded = UserSettingsStore(self.base).load()
+        self.assertFalse(loaded.show_history or loaded.show_input_status)
+        self.key(Qt.Key.Key_6)                                     # Eingabe wieder an
+        self.assertFalse(panels["status"].isHidden())
+
     def test_club_name_text_input(self):
         self.open_section("Anzeige")
         self.screen.ask_text = lambda title, label, current: "Neuer Verein"

@@ -69,6 +69,8 @@ class AppSettings:
     club_logo_dir: Path = Path("vereinslogo")
     club_logo: str = ""                                  # Dateiname im Ordner „vereinslogo“, "" = kein Logo
     font_scale: int = 100                                # Schriftgröße in % (80 … 130)
+    show_history: bool = True                            # Feld „Letzte Stöße“ anzeigen
+    show_input_status: bool = True                       # Feld „Eingabe“ anzeigen
 
     @property
     def logo_path(self) -> Path:
@@ -131,6 +133,8 @@ class AppSettings:
             club_logo_dir=Path(getattr(cfg, "CLUB_LOGO_DIR", Path(cfg.ASSETS_DIR).parent / "vereinslogo")),
             club_logo=str(getattr(cfg, "CLUB_LOGO", "") or ""),
             font_scale=int(getattr(cfg, "FONT_SCALE", 100)),
+            show_history=bool(getattr(cfg, "SHOW_HISTORY", True)),
+            show_input_status=bool(getattr(cfg, "SHOW_INPUT_STATUS", True)),
         )
         settings.validate()
         return settings

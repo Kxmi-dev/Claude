@@ -390,7 +390,11 @@ class SettingsScreen(QWidget):
             Item("Vereinslogo", logo_value, change_logo, None,
                  f"Bild in den Ordner „{self.settings.club_logo_dir.name}“ ziehen, dann hier auswählen "
                  "(PNG, JPG, GIF, BMP, WEBP, SVG, ICO …). Erscheint im Hauptmenü unter dem BK-Bild."),
+            self._bool_item("Feld „Letzte Stöße“ anzeigen", "show_history",
+                            "Aus = „Aktueller Stoß“ wird dafür breiter."),
             self._number_item("Anzahl „Letzte Stöße“", "history_length", 1, 1, 10, str, integer=True),
+            self._bool_item("Feld „Eingabe“ anzeigen", "show_input_status",
+                            "BEREIT / MINUS / GESPERRT. Aus = „Minus“ wird dafür breiter."),
             Item("Beim Windows-Start öffnen", autostart_value, toggle_autostart, lambda: toggle_autostart(),
                  "An = Programm startet automatisch nach der Windows-Anmeldung (Autostart)."),
         ]

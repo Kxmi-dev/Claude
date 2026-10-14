@@ -173,7 +173,7 @@ Taste aufnehmen / Ton probehören · `*`/`Esc` zurück (bzw. die eingestellten T
 
 | Bereich | Einstellungen |
 |---------|---------------|
-| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Schriftgröße** (80–130 %), Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`), Anzahl „Letzte Stöße“, **Beim Windows-Start öffnen** (Autostart) |
+| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Schriftgröße** (80–130 %), Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`), Anzahl „Letzte Stöße“, Felder **„Letzte Stöße“** und **„Eingabe“** ein-/ausblenden (der Nachbar wird dann breiter), **Beim Windows-Start öffnen** (Autostart) |
 | Design | Farbschema **Klassisch** (Vorlage) oder **Eigene Farben**: Primärfarbe (Leisten, Hintergrund, gewählter Knopf) und Sekundärfarbe (Rahmen, Beschriftungen, Knöpfe, Linien) als R/G/B 0–255. Rot/Grün der Wertung bleiben immer gleich; auf dunklen Leisten wird die Schrift automatisch weiß |
 | Eingabe | Sperrzeit nach Wertung, Sperre nach Korrektur, Wartezeit der Abbruch-Frage, Nur Nummernblock, NumLock automatisch |
 | Tasten | jede Aktion: `Enter`, dann die neue Taste drücken (doppelt belegte Tasten werden abgelehnt); `4`/`6` = Standard. Legende passt sich sofort an |

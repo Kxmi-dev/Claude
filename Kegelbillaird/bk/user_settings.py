@@ -93,6 +93,8 @@ FIELDS: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]]] = {
     "club_logo": (_str, str),
     "font_scale": (_int, int),
     "history_length": (_int, int),
+    "show_history": (_bool, bool),
+    "show_input_status": (_bool, bool),
     "input_lock_seconds": (_float, float),
     "undo_lock_seconds": (_float, float),
     "abort_confirm_seconds": (_float, float),
