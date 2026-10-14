@@ -141,6 +141,7 @@ class MainWindow(QWidget):
         self.setMinimumSize(640, 480)
 
         self.title_bar = TitleBar(settings.icon_path, settings.club_name)
+        self.title_bar.set_logo(settings.club_logo_path)
         self.footer = FooterBar()
         self.stack = QStackedWidget()
         self.menu_screen = MenuScreen(settings)
@@ -431,13 +432,15 @@ class MainWindow(QWidget):
         self._cleanup_timer.start()
         for text in self._store.warnings:      # z. B. beschädigte einstellungen.json
             self.footer.flash(text, True, seconds=6)
-        if self._settings.club_logo_path is not None and not self.menu_screen.set_club_logo(
-                self._settings.club_logo_path):
-            self._club_logo_warning()
+        self._load_club_logo()
         self._check_unfinished_game()
 
     def _load_club_logo(self) -> None:
-        if not self.menu_screen.set_club_logo(self._settings.club_logo_path):
+        """Vereinslogo im Hauptmenü und klein in der Titelleiste."""
+        path = self._settings.club_logo_path
+        ok = self.menu_screen.set_club_logo(path)
+        self.title_bar.set_logo(path if ok else None)
+        if not ok:
             self._club_logo_warning()
 
     def _club_logo_warning(self) -> None:

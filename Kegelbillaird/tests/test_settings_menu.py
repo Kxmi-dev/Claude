@@ -233,24 +233,25 @@ class SettingsMenuTests(unittest.TestCase):
         (folder / "LIESMICH.txt").write_text("x", encoding="utf-8")
         QImage(20, 10, QImage.Format.Format_RGB32).save(str(folder / "verein.png"))
         menu = self.window.menu_screen
-        self.assertFalse(menu._club_logo.isVisible())
+        self.assertFalse(menu.brand.has_logo)
         self.open_section("Anzeige")
         self.select("Vereinslogo")
         self.assertEqual(self.screen._list.current().value(), "(kein Logo)")
         self.key(Qt.Key.Key_6)
         self.assertEqual(self.window._settings.club_logo, "verein.png")
         self.assertEqual(self.saved()["club_logo"], "verein.png")
-        self.assertTrue(menu._club_logo.has_image)
+        self.assertTrue(menu.brand.has_logo)
+        self.assertFalse(self.window.title_bar._logo.isNull())        # klein in der Titelleiste
         self.key(Qt.Key.Key_Escape)
         self.key(Qt.Key.Key_Escape)
         self.assertIs(self.window.stack.currentWidget(), menu)
-        self.assertTrue(menu._club_logo.isVisible())
-        self.assertFalse(hasattr(menu, "_logo"))                      # BK-Scoreboard-Bild entfällt
-        self.assertGreater(menu._club_logo.height(), menu.height() * 0.8)
+        self.assertTrue(menu.brand.isVisible())                       # Tafel mit Logo, Grafik, Version
+        self.assertFalse(hasattr(menu, "_logo"))                      # altes BK-Scoreboard-Bild entfällt
         # Datei verschwindet -> Hinweis, Programm läuft weiter
         (folder / "verein.png").unlink()
         self.window._load_club_logo()
-        self.assertFalse(menu._club_logo.isVisible())
+        self.assertFalse(menu.brand.has_logo)
+        self.assertTrue(self.window.title_bar._logo.isNull())
         self.assertIn("Vereinslogo", self.window.footer.current_text())
         self.window.show_settings()
         self.open_section("Anzeige")

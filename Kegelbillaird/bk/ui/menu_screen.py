@@ -21,7 +21,7 @@ from ..models import GameMode
 from ..settings import AppSettings
 from . import keymap
 from .keymap import MenuKey, map_menu_key
-from .widgets import LogoWidget, MenuButton, Plate
+from .widgets import BrandPanel, MenuButton, Plate
 
 # Referenzmaße (Inhaltsbereich 1024 × 702 zwischen Titel- und Fußleiste)
 CONTENT_W, CONTENT_H = 1024, 702
@@ -62,8 +62,8 @@ class MenuScreen(QWidget):
                                     "" if mode.available else "in Vorbereitung", parent=self)
             button.clicked.connect(lambda i=index: self._click(i))
             self._buttons.append(button)
-        # Rechts nur noch das Vereinslogo (so wie die Datei ist); das BK-Scoreboard-Bild entfällt
-        self._club_logo = LogoWidget(None, self, placeholder=False)
+        # Rechts: Tafel mit Vereinslogo, Billard-Grafik und „BK-Scoreboard / Version …“
+        self.brand = BrandPanel(settings.app_version, self)
         self._shutdown_armed = False
         self._disarm_timer = QTimer(self)
         self._disarm_timer.setSingleShot(True)
@@ -94,9 +94,7 @@ class MenuScreen(QWidget):
         def place(widget: QWidget, x: float, y: float, w: float, h: float) -> None:
             widget.setGeometry(QRect(round(ox + x * unit), round(oy + y * unit), round(w * unit), round(h * unit)))
 
-        # Mit Vereinslogo: Menü links, Logo rechts. Ohne Logo: Menü mittig.
-        left = 70 if self._club_logo.has_image else (CONTENT_W - 460) / 2
-        place(self._plate, left - 30, 30, 520, 56)
+        place(self._plate, 40, 30, 520, 56)
         # Spielarten untereinander, danach abgesetzt "Archiv", "Einstellungen" und "Beenden" – alles
         # passt immer zwischen Überschrift (y = 112) und Unterkante (y = 694)
         count = len(self._buttons)
@@ -108,16 +106,12 @@ class MenuScreen(QWidget):
         modes = count - len(EXTRA_ENTRIES)
         for i, button in enumerate(self._buttons):
             y = top + i * step + (gap if i >= modes else 0)
-            place(button, left, y, 460 + shadow, height + shadow)
-        if self._club_logo.has_image:
-            place(self._club_logo, 580, 40, 420, 640)
+            place(button, 70, y, 460 + shadow, height + shadow)
+        place(self.brand, 590, 30, 400, 664)
 
     def set_club_logo(self, path: Path | None) -> bool:
         """Vereinslogo setzen (None = keins). False, wenn die Datei fehlt oder nicht lesbar ist."""
-        ok = self._club_logo.set_path(path)
-        self._club_logo.setVisible(ok)
-        self._layout()
-        return ok or path is None
+        return self.brand.set_logo(path) or path is None
 
     # ------------------------------------------------------------- Auswahl
     def reset_selection(self) -> None:

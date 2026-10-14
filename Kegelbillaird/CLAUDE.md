@@ -40,6 +40,9 @@ bk/logging_setup.py  logs/application.log (täglich neu), crash.log (faulthandle
 bk/ui/main_window.py Bildschirmwechsel, Startprüfung, Abschluss, Archiv-Aktionen, NumLockGuard, Cleanup-Timer
 bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, Billiard vs Fußball (25 Stoß), Archiv, Einstellungen,
                      Beenden, Beenden & Herunterfahren (2× Enter innerhalb 5 s)
+                     Rechts `BrandPanel` (widgets): Vereinslogo im weißen Kasten, gezeichneter grüner Billardtisch
+                     mit Mini-Zähltafel/Kegeln/3 Kugeln, „BK-Scoreboard / Version {APP_VERSION}“ (3.0.0, Nutzer-Foto).
+                     Vereinslogo zusätzlich klein rechts in der Titelleiste (`TitleBar.set_logo`).
 bk/ui/game_screen.py Zählansicht + Wiedergabe-Modus
 bk/ui/archive_screen.py  Archivliste
 bk/ui/result_screen.py   Auswertung im Hauptfenster (Kennzahlen, Raster, Anzahl je Wertung, Knöpfe)

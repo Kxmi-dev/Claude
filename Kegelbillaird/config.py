@@ -41,7 +41,7 @@ WINDOW_SIZE = (1280, 800)    # Fenstergröße, wenn FULLSCREEN = False
 HISTORY_LENGTH = 5           # Anzahl der Einträge unter "Letzte Stöße"
 
 APP_TITLE = "BK-Scoreboard"
-APP_VERSION = "3.0"
+APP_VERSION = "3.0.0"
 CLUB_NAME = "SG Grün-Weiß Schlepzig e.V."
 
 # Vereinslogo im Hauptmenü (unter dem BK-Bild): Dateiname im Ordner „vereinslogo“,

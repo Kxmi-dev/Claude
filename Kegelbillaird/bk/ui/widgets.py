@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QRectF, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFontMetricsF, QPainter, QPaintEvent, QPen, QPixmap
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
@@ -48,12 +48,17 @@ class TitleBar(_Painted):
         self._title = ""
         self._club = club_name
         self._icon = QPixmap(str(icon_path)) if Path(icon_path).is_file() else QPixmap()
+        self._logo = QPixmap()             # kleines Vereinslogo ganz rechts (optional)
         self._clock = QTimer(self)
         self._clock.timeout.connect(self.update)
         self._clock.start(1000)
 
     def set_club(self, club_name: str) -> None:
         self._club = club_name
+        self.update()
+
+    def set_logo(self, path: Path | None) -> None:
+        self._logo = QPixmap(str(path)) if path is not None and Path(path).is_file() else QPixmap()
         self.update()
 
     def set_title(self, title: str) -> None:
@@ -83,9 +88,16 @@ class TitleBar(_Painted):
         p.setPen(theme.BAR_TEXT_MUTED)
         p.setFont(theme.fitted_font(now, center_w, text_h))
         p.drawText(QRectF((w - center_w) / 2, 0, center_w, h), Qt.AlignmentFlag.AlignCenter, now)
+        right = w - pad
+        if not self._logo.isNull():
+            logo = self._logo.scaled(QSize(int(h * 2.2), int(h * 0.84)), Qt.AspectRatioMode.KeepAspectRatio,
+                                     Qt.TransformationMode.SmoothTransformation)
+            p.drawPixmap(int(right - logo.width()), int((h - logo.height()) / 2), logo)
+            right -= logo.width() + h * 0.3
+        club_w = side_w - (w - pad - right)
         p.setPen(theme.BAR_TEXT)
-        p.setFont(theme.fitted_font(self._club, side_w, text_h))
-        p.drawText(QRectF(w - pad - side_w, 0, side_w, h), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight,
+        p.setFont(theme.fitted_font(self._club, club_w, text_h))
+        p.drawText(QRectF(right - club_w, 0, club_w, h), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight,
                    self._club)
         p.end()
 
@@ -456,6 +468,121 @@ class Plate(_Painted):
 
 
 # ================================================================== Logo
+class BrandPanel(_Painted):
+    """Rechte Tafel im Hauptmenü: Vereinslogo, Billard-Grafik, „BK-Scoreboard / Version …“."""
+
+    GREEN = QColor("#1f6b33")
+    GREEN_DARK = QColor("#174f26")
+
+    def __init__(self, version: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._version = version
+        self._logo = QPixmap()
+
+    def set_logo(self, path: Path | None) -> bool:
+        """Vereinslogo setzen. False, wenn die Datei fehlt oder nicht lesbar ist."""
+        self._logo = QPixmap(str(path)) if path is not None and Path(path).is_file() else QPixmap()
+        self.update()
+        return not self._logo.isNull()
+
+    @property
+    def has_logo(self) -> bool:
+        return not self._logo.isNull()
+
+    def set_version(self, version: str) -> None:
+        self._version = version
+        self.update()
+
+    def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802
+        p = self._painter()
+        w, h = float(self.width()), float(self.height())
+        radius = w * 0.04
+        p.setPen(QPen(QColor("#c9c9c9"), 1))
+        p.setBrush(QColor(236, 236, 236, 215))
+        p.drawRoundedRect(QRectF(0.5, 0.5, w - 1, h - 1), radius, radius)
+        pad = w * 0.05
+        inner_w = w - 2 * pad
+        y = pad
+        text_h = h * 0.17
+        if self.has_logo:
+            logo_h = (h - 2 * pad - text_h) * 0.5
+            box = QRectF(pad, y, inner_w, logo_h)
+            p.setPen(QPen(QColor("#d6d6d6"), 1))
+            p.setBrush(theme.WHITE)
+            p.drawRoundedRect(box, radius, radius)
+            target = box.adjusted(box.width() * 0.05, box.height() * 0.06, -box.width() * 0.05, -box.height() * 0.06)
+            pix = self._logo.scaled(target.size().toSize(), Qt.AspectRatioMode.KeepAspectRatio,
+                                    Qt.TransformationMode.SmoothTransformation)
+            p.drawPixmap(int(target.center().x() - pix.width() / 2), int(target.center().y() - pix.height() / 2), pix)
+            y += logo_h + pad * 0.6
+        space = h - y - text_h - pad * 0.6 - pad
+        table_h = min(space, inner_w * 0.64)          # Seitenverhältnis wie ein Tisch
+        self._draw_table(p, QRectF(pad, y + (space - table_h) / 2, inner_w, table_h))
+        y += space + pad * 0.6
+        title_rect = QRectF(pad, y, inner_w, text_h * 0.62)
+        p.setPen(self.GREEN_DARK)
+        p.setFont(theme.fitted_font("BK-Scoreboard", inner_w, title_rect.height() * 0.95, bold=True))
+        p.drawText(title_rect, Qt.AlignmentFlag.AlignCenter, "BK-Scoreboard")
+        version = f"Version {self._version}"
+        p.setPen(theme.TEXT_MUTED)
+        p.setFont(theme.fitted_font(version, inner_w * 0.6, text_h * 0.3))
+        p.drawText(QRectF(pad, y + text_h * 0.6, inner_w, text_h * 0.4), Qt.AlignmentFlag.AlignCenter, version)
+        p.end()
+
+    def _draw_table(self, p: QPainter, rect: QRectF) -> None:
+        """Gezeichneter Billardtisch mit kleiner Zähltafel, Kegeln und drei Kugeln."""
+        from PySide6.QtGui import QLinearGradient, QRadialGradient
+        radius = rect.width() * 0.04
+        cloth = QLinearGradient(rect.topLeft(), rect.bottomLeft())
+        cloth.setColorAt(0, QColor("#2f8a40"))
+        cloth.setColorAt(1, QColor("#1d5e2b"))
+        p.setPen(QPen(self.GREEN_DARK, max(1.0, rect.width() * 0.006)))
+        p.setBrush(cloth)
+        p.drawRoundedRect(rect, radius, radius)
+        # Zähltafel (4 × 2)
+        card = QRectF(rect.left() + rect.width() * 0.08, rect.top() + rect.height() * 0.1,
+                      rect.width() * 0.45, rect.height() * 0.48)
+        p.setPen(QPen(QColor("#b5b5b5"), 1))
+        p.setBrush(theme.WHITE)
+        p.drawRect(card)
+        values = ((5, 2, 0, 7), (3, -2, 4, 6))
+        cw, ch = card.width() / 4, card.height() / 2
+        p.setFont(theme.base_font(min(cw, ch) * 0.62))
+        for r, row in enumerate(values):
+            for c, value in enumerate(row):
+                p.setPen(theme.MINUS if value < 0 else theme.TEXT)
+                p.drawText(QRectF(card.left() + c * cw, card.top() + r * ch, cw, ch), Qt.AlignmentFlag.AlignCenter,
+                           format_number(value))
+        p.setPen(QPen(QColor("#d0d0d0"), 1))
+        for c in range(1, 4):
+            p.drawLine(int(card.left() + c * cw), int(card.top()), int(card.left() + c * cw), int(card.bottom()))
+        p.drawLine(int(card.left()), int(card.top() + ch), int(card.right()), int(card.top() + ch))
+        # Kegel-Kreuz
+        cx, cy = rect.left() + rect.width() * 0.76, card.center().y()
+        unit = rect.height() * 0.05
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor("#f4f4f4"))
+        for dx, dy in ((0, -2.2), (0, -1.1), (0, 1.1), (0, 2.2), (-1.4, 0), (1.4, 0)):
+            p.drawEllipse(QRectF(cx + dx * unit - unit * 0.32, cy + dy * unit - unit * 0.32, unit * 0.64, unit * 0.64))
+        p.setBrush(QColor("#c62828"))
+        p.drawEllipse(QRectF(cx - unit * 0.38, cy - unit * 0.38, unit * 0.76, unit * 0.76))
+        # drei Kugeln
+        ball = rect.height() * 0.17
+        by = rect.top() + rect.height() * 0.72
+        for fx, color in ((0.24, "#b3261e"), (0.5, "#f5f5f0"), (0.76, "#e0b21a")):
+            center = QPointF(rect.left() + rect.width() * fx, by + ball / 2)
+            shadow = QColor(0, 0, 0, 70)
+            p.setBrush(shadow)
+            p.drawEllipse(QRectF(center.x() - ball / 2 + ball * 0.08, center.y() - ball / 2 + ball * 0.1, ball, ball))
+            gradient = QRadialGradient(center.x() - ball * 0.18, center.y() - ball * 0.2, ball * 0.7)
+            base = QColor(color)
+            gradient.setColorAt(0, base.lighter(165))
+            gradient.setColorAt(0.45, base)
+            gradient.setColorAt(1, base.darker(150))
+            p.setBrush(gradient)
+            p.drawEllipse(QRectF(center.x() - ball / 2, center.y() - ball / 2, ball, ball))
+
+
 class LogoWidget(_Painted):
     """Zeigt das Logo seitenverhältnistreu und zentriert.
 
