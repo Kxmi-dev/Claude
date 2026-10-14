@@ -76,10 +76,10 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   PARTIE FORTSETZEN / NEUE PARTIE (alte wird archiviert, nie gelöscht).
 - „2x 50 Stoß“ und „Zweikampf“ wurden auf Wunsch des Nutzers entfernt. Dafür gibt es
   **„Billiard vs Fußball“** (Schlüssel BK25): 25 Stoß, keine Halbzeit, Raster 5 × 5.
-- Anzeigen: Stoß-Anzahl (nächster Stoß / max), Punktestand, Prognose, Halbzeit (nach 50 bzw. 25),
+- Anzeigen: Stoß-Anzahl (gespielte Stöße, Start 0), Punktestand, Prognose, Halbzeit (nach 50 bzw. 25),
   Aktueller Stoß (rot getönt bei Minus-Modus), Letzte Stöße (5), Minus (Summe Minuspunkte),
   Eingabe (BEREIT / MINUS / GESPERRT + Countdown), Spieldauer, 10er-Raster mit Reihensumme rechts (Spalte Σ,
-  auch in der Auswertung). Stoß-Anzahl zeigt NUR die Nummer (kein „/ 100“), Aktueller Stoß ohne „+“
+  auch in der Auswertung). Stoß-Anzahl = Zahl der GESPIELTEN Stöße (Start 0, kein „/ 100“), Aktueller Stoß ohne „+“
   (nur Minus mit Vorzeichen). Logo: „Version 3.0“, APP_VERSION 3.0.
 
 ## Einstellungsmenü (mit dem Nutzer abgestimmt)

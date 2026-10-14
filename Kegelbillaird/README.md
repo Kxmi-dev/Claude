@@ -116,7 +116,7 @@ Datum und Uhrzeit werden automatisch erfasst und stehen im PDF.
 ### Anzeigen der Zählansicht
 | Anzeige         | Bedeutung |
 |-----------------|-----------|
-| Stoß - Anzahl   | Nummer des nächsten Stoßes / Gesamtzahl (z. B. `26 / 100`) |
+| Stoß - Anzahl   | Zahl der bereits gespielten Stöße (am Anfang `0`, nach dem 1. Stoß `1` …) |
 | Punktestand     | aktueller Gesamtstand |
 | Prognose        | aktueller Schnitt hochgerechnet auf die volle Stoßzahl |
 | Halbzeit        | Stand nach Stoß 50 (BK 100) bzw. 25 (BK 50) |

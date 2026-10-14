@@ -557,9 +557,9 @@ class GameScreen(QWidget):
         if game is None:
             return
         state = game.state
-        # Stoß-Anzahl: Nummer des nächsten Stoßes / Gesamtzahl
-        # nur die Nummer des Stoßes (ohne „/ 100“ – auf Wunsch des Vereins)
-        self.strokes_box.set_value(str(game.current_stroke_number if not game.is_complete else game.max_strokes))
+        # Stoß-Anzahl: Zahl der GESPIELTEN Stöße – am Anfang 0, nach dem 1. Stoß 1 …
+        # (ohne „/ 100“ – auf Wunsch des Vereins)
+        self.strokes_box.set_value(str(game.played))
         total = game.total
         self.score_box.set_value(format_number(total), theme.MINUS if total < 0 else theme.TEXT)
         prog = game.prognosis

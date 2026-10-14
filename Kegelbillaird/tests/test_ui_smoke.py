@@ -95,7 +95,7 @@ class UiSmokeTests(unittest.TestCase):
         self.key(window, Qt.Key.Key_Slash)                       # Rücknahme
         self.assertEqual(game.state.strokes, [5])
         self.assertEqual(self.storage.load_active().state.strokes, [5])
-        self.assertEqual(window.game_screen.strokes_box.text(), "2")
+        self.assertEqual(window.game_screen.strokes_box.text(), "1")         # gespielte Stöße
 
     def test_non_numpad_and_autorepeat_keys_are_ignored(self):
         window = self.open_window()
