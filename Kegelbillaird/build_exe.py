@@ -83,7 +83,9 @@ def main() -> int:
         "--hidden-import", "config",     # eingebaute Standard-Einstellungen
     ]
     # Nicht benötigte Pakete ausschließen (sonst würden sie unnötig mitgepackt)
-    for module in ("tkinter", "numpy", "yaml", "PIL.ImageQt", "PIL.ImageTk"):
+    # QtMultimedia: unter Windows spielt das Programm Töne über Windows selbst (MCI) – spart ca. 30 MB
+    for module in ("tkinter", "numpy", "yaml", "PIL.ImageQt", "PIL.ImageTk", "PySide6.QtMultimedia",
+                   "PySide6.QtMultimediaWidgets", "PySide6.QtQml", "PySide6.QtQuick"):
         args += ["--exclude-module", module]
     icon = ROOT / "assets" / "app.ico"
     if icon.is_file():

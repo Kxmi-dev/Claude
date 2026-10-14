@@ -1,0 +1,2 @@
+Hier legt GitHub automatisch das fertige Windows-Programm ab (BK-Scoreboard-Windows.zip).
+Der Bau dauert nach jeder Änderung ein paar Minuten.
