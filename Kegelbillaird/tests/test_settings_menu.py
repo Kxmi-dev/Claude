@@ -193,9 +193,15 @@ class SettingsMenuTests(unittest.TestCase):
         self.assertEqual(self.window._settings.font_scale, 120)
         self.assertEqual(self.saved()["font_scale"], 120)
         self.assertGreater(self.theme.fitted_font("Text", 1000, 20).pixelSize(), before)
-        narrow = self.theme.fitted_font("Ein langer Text", 60, 20)       # Breite bleibt die Grenze
+        # Breite bleibt die Grenze: ein schmales Feld verkleinert die Schrift trotz 120 %
+        # (Breite großzügig gewählt – Schriftbreiten unterscheiden sich zwischen Windows und Linux)
         from PySide6.QtGui import QFontMetricsF
-        self.assertLessEqual(QFontMetricsF(narrow).horizontalAdvance("Ein langer Text"), 60)
+        text = "Ein langer Text"
+        wide = self.theme.fitted_font(text, 10000, 40)
+        width = QFontMetricsF(wide).horizontalAdvance(text) / 2
+        narrow = self.theme.fitted_font(text, width, 40)
+        self.assertLess(narrow.pixelSize(), wide.pixelSize())
+        self.assertLessEqual(QFontMetricsF(narrow).horizontalAdvance(text), width + 1)
         for _ in range(4):
             self.key(Qt.Key.Key_4)
         self.assertEqual(self.window._settings.font_scale, 80)       # 120 -> 110 -> … -> 80
