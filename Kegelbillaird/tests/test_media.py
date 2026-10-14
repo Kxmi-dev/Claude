@@ -136,10 +136,23 @@ class MediaUiTests(unittest.TestCase):
         self.assertTrue(screen._celebration.isVisible())
         self.press(screen, 3)
         self.assertFalse(screen._celebration.isVisible())
-        self.press(screen, -6)                       # nur +6/+7 sind eingestellt
+        self.press(screen, -5)                       # nur -6/-7 lösen bei Minus aus
         self.assertFalse(screen._celebration.isVisible())
+        self.press(screen, -6)
+        self.assertTrue(screen._celebration.isVisible())
         self.press(screen, 7)
         self.assertTrue(screen._celebration.isVisible())
+
+    def test_minus_values_use_own_images_or_fall_back(self):
+        QImage(10, 10, QImage.Format.Format_RGB32).save(str(self.tmp.path / "bilder" / "m.png"))
+        own = self.screen(dataclasses.replace(self.settings, celebration_minus_images=("m.png",)))
+        self.press(own, -7)
+        self.assertEqual(own._last_image.name, "m.png")
+        self.press(own, 6)
+        self.assertEqual(own._last_image.name, "a.png")
+        off = self.screen(dataclasses.replace(self.settings, celebration_minus_values=()))
+        self.press(off, -7)
+        self.assertFalse(off._celebration.isVisible())
 
     def test_undo_hides_image(self):
         screen = self.screen()
@@ -181,7 +194,7 @@ class MediaUiTests(unittest.TestCase):
         import types
         old = types.SimpleNamespace(**{k: getattr(config, k) for k in dir(config) if k.isupper()})
         for name in ("SOUND_ENABLED", "HALFTIME_SOUND", "CELEBRATION_ENABLED", "CELEBRATION_VALUES",
-                     "CELEBRATION_IMAGES", "CELEBRATION_SECONDS", "SOUNDS_DIR", "IMAGES_DIR"):
+                     "CELEBRATION_IMAGES", "CELEBRATION_MINUS_VALUES", "CELEBRATION_MINUS_IMAGES", "CELEBRATION_SECONDS", "SOUNDS_DIR", "IMAGES_DIR"):
             delattr(old, name)
         settings = AppSettings.from_config(old)
         self.assertEqual(settings.celebration_values, (6, 7))

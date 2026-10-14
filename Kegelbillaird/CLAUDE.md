@@ -82,6 +82,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 ## Ton & Bilder (reine Zugabe, stören die Partie nie)
 - Halbzeit (nach `halftime_after`): Ton `HALFTIME_SOUND` (WAV in `sounds/`) + Halbzeit-Feld leuchtet 4 s gelb
   (geht auch ohne Tonausgabe). Fehlende Datei/kein Audiogerät → nur Logeintrag.
+- Minus: `CELEBRATION_MINUS_VALUES` (Standard −6/−7) → `CELEBRATION_MINUS_IMAGES` (leer = Plus-Liste).
 - Wertung in `CELEBRATION_VALUES` (Standard +6/+7) → Bild/GIF aus `CELEBRATION_IMAGES` (Ordner `bilder/`),
   eine Datei = immer diese, mehrere = zufällig. `/` blendet es sofort aus. Ton/Bilder sind unter Windows
   (winsound, GIF/Bild in der .exe) noch nicht auf dem echten PC geprüft.

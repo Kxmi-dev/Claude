@@ -157,6 +157,7 @@ Alle Einstellungen stehen zentral in `config.py`. Nach einer Änderung das Progr
 | `SOUND_ENABLED`, `HALFTIME_SOUND` | `True`, `"halbzeit.wav"` | Ton zur Halbzeit (WAV im Ordner `sounds`). Leerer Name = kein Ton. Ohne Tonausgabe läuft alles weiter, das Halbzeit-Feld leuchtet zusätzlich ca. 4 s gelb auf |
 | `CELEBRATION_ENABLED`, `CELEBRATION_VALUES` | `True`, `(6, 7)` | bei diesen Wertungen erscheint ein Bild/GIF (`(6, 7, -6, -7)` = auch bei Minus) |
 | `CELEBRATION_IMAGES` | `[]` | Liste der Dateien im Ordner `bilder`. Eine Datei = immer diese, mehrere = zufällig (nie zweimal hintereinander dieselbe). Leer = keine Bilder |
+| `CELEBRATION_MINUS_VALUES`, `CELEBRATION_MINUS_IMAGES` | `(-6, -7)`, `[]` | dasselbe für Minus-Wertungen mit eigener Bilderliste; leer = die Bilder von `CELEBRATION_IMAGES`; `()` bei den Werten = aus |
 | `CELEBRATION_SECONDS` | `3` | Anzeigedauer des Bildes; verschwindet auch bei `/` und der nächsten Wertung |
 | `AUTO_ENABLE_NUMLOCK` | `True` | NumLock prüfen und automatisch einschalten (`False` = nur warnen) |
 | `NUMLOCK_CHECK_SECONDS` | `2` | Prüfintervall für NumLock |

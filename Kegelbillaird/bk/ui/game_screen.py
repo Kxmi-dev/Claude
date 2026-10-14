@@ -415,10 +415,16 @@ class GameScreen(QWidget):
         """Bild/GIF bei den in der config.py genannten Wertungen. Fehler stören die Partie nie."""
         self._celebration.dismiss()
         cfg = self._settings
-        if not cfg.celebration_enabled or value not in cfg.celebration_values:
+        if not cfg.celebration_enabled:
+            return
+        if value in cfg.celebration_minus_values:
+            names = cfg.celebration_minus_images or cfg.celebration_images   # leer -> gleiche Bilder wie bei Plus
+        elif value in cfg.celebration_values:
+            names = cfg.celebration_images
+        else:
             return
         try:
-            files = existing_files(cfg.images_dir, cfg.celebration_images)
+            files = existing_files(cfg.images_dir, names)
             image = pick_image(files, self._last_image)
             if image is not None and self._celebration.show_image(image, cfg.celebration_seconds):
                 self._last_image = image

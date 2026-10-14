@@ -83,7 +83,7 @@ HALFTIME_SOUND = "halbzeit.wav"
 
 # Bilder/GIFs bei bestimmten Wertungen (Ordner "bilder" neben der .exe).
 #   CELEBRATION_VALUES  bei diesen Wertungen erscheint ein Bild
-#                       (6, 7 = nur +6 und +7; für auch -6/-7:  (6, 7, -6, -7))
+#                       (6, 7 = nur +6 und +7)
 #   CELEBRATION_IMAGES  Liste der verfügbaren Dateien. Steht nur eine drin,
 #                       kommt immer diese, sonst zufällig (nie zweimal hintereinander dieselbe).
 #   Leere Liste = keine Bilder.
@@ -92,6 +92,13 @@ CELEBRATION_VALUES = (6, 7)
 CELEBRATION_IMAGES = [
     # "bild1.gif",
     # "bild2.png",
+]
+#   CELEBRATION_MINUS_VALUES / CELEBRATION_MINUS_IMAGES  dasselbe für Minus-Wertungen
+#                       (-6, -7). Bleibt die Minus-Liste leer, werden die Bilder von
+#                       CELEBRATION_IMAGES verwendet. CELEBRATION_MINUS_VALUES = () schaltet es ab.
+CELEBRATION_MINUS_VALUES = (-6, -7)
+CELEBRATION_MINUS_IMAGES = [
+    # "minus1.gif",
 ]
 CELEBRATION_SECONDS = 3      # So lange bleibt das Bild stehen
 

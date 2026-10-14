@@ -50,6 +50,8 @@ class AppSettings:
     celebration_enabled: bool = True
     celebration_values: tuple[int, ...] = (6, 7)
     celebration_images: tuple[str, ...] = ()
+    celebration_minus_values: tuple[int, ...] = (-6, -7)
+    celebration_minus_images: tuple[str, ...] = ()
     celebration_seconds: float = 3.0
     sounds_dir: Path = Path("sounds")
     images_dir: Path = Path("bilder")
@@ -104,6 +106,8 @@ class AppSettings:
             celebration_enabled=bool(getattr(cfg, "CELEBRATION_ENABLED", True)),
             celebration_values=tuple(int(v) for v in getattr(cfg, "CELEBRATION_VALUES", (6, 7))),
             celebration_images=tuple(str(n) for n in (getattr(cfg, "CELEBRATION_IMAGES", ()) or ())),
+            celebration_minus_values=tuple(int(v) for v in getattr(cfg, "CELEBRATION_MINUS_VALUES", (-6, -7))),
+            celebration_minus_images=tuple(str(n) for n in (getattr(cfg, "CELEBRATION_MINUS_IMAGES", ()) or ())),
             celebration_seconds=float(getattr(cfg, "CELEBRATION_SECONDS", 3)),
             sounds_dir=Path(getattr(cfg, "SOUNDS_DIR", Path(cfg.ASSETS_DIR).parent / "sounds")),
             images_dir=Path(getattr(cfg, "IMAGES_DIR", Path(cfg.ASSETS_DIR).parent / "bilder")),
@@ -134,5 +138,5 @@ class AppSettings:
             raise ValueError("REPLAY_SECONDS_PER_STROKE muss zwischen 0.05 und 10 liegen.")
         if not 0.5 <= self.celebration_seconds <= 30:
             raise ValueError("CELEBRATION_SECONDS muss zwischen 0.5 und 30 liegen.")
-        if any(not -7 <= v <= 7 for v in self.celebration_values):
-            raise ValueError("CELEBRATION_VALUES darf nur Werte von -7 bis 7 enthalten.")
+        if any(not -7 <= v <= 7 for v in self.celebration_values + self.celebration_minus_values):
+            raise ValueError("CELEBRATION_VALUES und CELEBRATION_MINUS_VALUES dürfen nur Werte von -7 bis 7 enthalten.")
