@@ -55,7 +55,7 @@ bk/media.py          Ton (winsound/Qt, fehlerfrei geschluckt) + Bildauswahl (1 D
 bk/ui/widgets.py, theme.py, keymap.py
 sounds/, bilder/     Ton- und Bilddateien neben der .exe (austauschbar, ohne Neubau)
 vereinslogo/         Vereinslogo (beliebiges Bildformat), Auswahl im Einstellungsmenü
-tests/               155 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
+tests/               157 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
 ```
 Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), `results/` (PDF+JSON), `logs/`.
 
@@ -88,7 +88,8 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   übernimmt live (keymap, theme.apply_colors, Titelleiste, GameScreen.set_settings, Fenster, NumLock-Guard).
 - Bereiche: Anzeige (Vollbild, Fenstergröße-Presets, Schriftgröße 80–130 % (`theme.FONT_SCALE` wirkt in
   `fitted_font` auf die Höhe, Breite bleibt Grenze; große Zahlen per `base_font` unverändert), Vereinsname per
-  QInputDialog, Vereinslogo aus `vereinslogo/` (Hauptmenü unter dem BK-Bild, NICHT im PDF), Letzte Stöße,
+  QInputDialog, Vereinslogo aus `vereinslogo/` (Hauptmenü rechts groß, automatisch freigestellt per
+  `media.cut_out_background` (Pillow-Flutfüllung vom Rand); BK-Scoreboard-Bild im Menü ENTFERNT, ohne Logo Menü mittig; NICHT im PDF), Letzte Stöße,
   Felder „Letzte Stöße“/„Eingabe“ ausblendbar (`show_history`/`show_input_status`, Nachbar spannt dann 2 Spalten),
   Beim Windows-Start öffnen (NICHT in einstellungen.json, sondern Registry)), Design
   (Klassisch / eigene Primär- + Sekundärfarbe RGB), Eingabe, Tasten (Aufnahme), Töne (Halbzeit/Ende aus sounds/,

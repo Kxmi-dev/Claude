@@ -8,14 +8,17 @@ Tastatur wird zentral im Hauptfenster ausgewertet.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QRectF, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFontMetricsF, QPainter, QPaintEvent, QPen, QPixmap
+from PySide6.QtGui import QColor, QFontMetricsF, QImage, QPainter, QPaintEvent, QPen, QPixmap
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from . import theme
+
+log = logging.getLogger(__name__)
 
 
 class _Painted(QWidget):
@@ -456,15 +459,31 @@ class Plate(_Painted):
 
 
 # ================================================================== Logo
+def _cut_out_pixmap(path: Path) -> QPixmap:
+    """Logo mit durchsichtigem Hintergrund (siehe media.cut_out_background); leer bei Fehler."""
+    from ..media import cut_out_background
+    try:
+        image = cut_out_background(path)
+        if image is None:
+            return QPixmap()
+        data = image.tobytes("raw", "RGBA")
+        qimage = QImage(data, image.width, image.height, 4 * image.width, QImage.Format.Format_RGBA8888).copy()
+        return QPixmap.fromImage(qimage)
+    except Exception:
+        log.exception("Logo konnte nicht freigestellt werden")
+        return QPixmap()
+
+
 class LogoWidget(_Painted):
     """Zeigt das Logo seitenverhältnistreu und zentriert.
 
     ``placeholder=False``: ohne (lesbares) Bild bleibt die Fläche leer."""
 
     def __init__(self, logo_path: Path | None, parent: QWidget | None = None,
-                 placeholder: bool = True) -> None:
+                 placeholder: bool = True, cut_out: bool = False) -> None:
         super().__init__(parent)
         self._placeholder = placeholder
+        self._cut_out = cut_out          # einfarbigen Hintergrund durchsichtig machen
         self._pixmap = QPixmap()
         self._cache: QPixmap | None = None
         self.set_path(logo_path)
@@ -472,7 +491,12 @@ class LogoWidget(_Painted):
     def set_path(self, logo_path: Path | None) -> bool:
         """Neues Bild laden. False, wenn die Datei fehlt oder nicht lesbar ist."""
         path = Path(logo_path) if logo_path else None
-        self._pixmap = QPixmap(str(path)) if path is not None and path.is_file() else QPixmap()
+        self._pixmap = QPixmap()
+        if path is not None and path.is_file():
+            if self._cut_out and path.suffix.lower() != ".svg":
+                self._pixmap = _cut_out_pixmap(path)
+            if self._pixmap.isNull():
+                self._pixmap = QPixmap(str(path))
         self._cache = None
         self.update()
         return not self._pixmap.isNull()

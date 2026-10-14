@@ -38,3 +38,9 @@ class TempDir:
 
     def cleanup(self) -> None:
         shutil.rmtree(self.path, ignore_errors=True)
+
+    def __enter__(self) -> "TempDir":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.cleanup()

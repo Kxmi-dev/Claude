@@ -62,8 +62,8 @@ class MenuScreen(QWidget):
                                     "" if mode.available else "in Vorbereitung", parent=self)
             button.clicked.connect(lambda i=index: self._click(i))
             self._buttons.append(button)
-        self._logo = LogoWidget(settings.logo_path, self)
-        self._club_logo = LogoWidget(None, self, placeholder=False)
+        # Rechts nur noch das Vereinslogo (freigestellt); das BK-Scoreboard-Bild entfällt
+        self._club_logo = LogoWidget(None, self, placeholder=False, cut_out=True)
         self._shutdown_armed = False
         self._disarm_timer = QTimer(self)
         self._disarm_timer.setSingleShot(True)
@@ -94,7 +94,9 @@ class MenuScreen(QWidget):
         def place(widget: QWidget, x: float, y: float, w: float, h: float) -> None:
             widget.setGeometry(QRect(round(ox + x * unit), round(oy + y * unit), round(w * unit), round(h * unit)))
 
-        place(self._plate, 40, 30, 520, 56)
+        # Mit Vereinslogo: Menü links, Logo rechts. Ohne Logo: Menü mittig.
+        left = 70 if self._club_logo.has_image else (CONTENT_W - 460) / 2
+        place(self._plate, left - 30, 30, 520, 56)
         # Spielarten untereinander, danach abgesetzt "Archiv", "Einstellungen" und "Beenden" – alles
         # passt immer zwischen Überschrift (y = 112) und Unterkante (y = 694)
         count = len(self._buttons)
@@ -106,13 +108,9 @@ class MenuScreen(QWidget):
         modes = count - len(EXTRA_ENTRIES)
         for i, button in enumerate(self._buttons):
             y = top + i * step + (gap if i >= modes else 0)
-            place(button, 70, y, 460 + shadow, height + shadow)
+            place(button, left, y, 460 + shadow, height + shadow)
         if self._club_logo.has_image:
-            # BK-Bild kleiner, darunter groß das Vereinslogo
-            place(self._logo, 599, 30, 387, 300)
-            place(self._club_logo, 599, 345, 387, 340)
-        else:
-            place(self._logo, 599, 50, 387, 595)
+            place(self._club_logo, 580, 40, 420, 640)
 
     def set_club_logo(self, path: Path | None) -> bool:
         """Vereinslogo setzen (None = keins). False, wenn die Datei fehlt oder nicht lesbar ist."""

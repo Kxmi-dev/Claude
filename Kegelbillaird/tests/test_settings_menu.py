@@ -245,8 +245,8 @@ class SettingsMenuTests(unittest.TestCase):
         self.key(Qt.Key.Key_Escape)
         self.assertIs(self.window.stack.currentWidget(), menu)
         self.assertTrue(menu._club_logo.isVisible())
-        self.assertLess(menu._logo.height(), menu.height() * 0.75)   # BK-Bild kleiner, Logo darunter
-        self.assertGreater(menu._club_logo.y(), menu._logo.y() + menu._logo.height() - 1)
+        self.assertFalse(hasattr(menu, "_logo"))                      # BK-Scoreboard-Bild entfällt
+        self.assertGreater(menu._club_logo.height(), menu.height() * 0.8)
         # Datei verschwindet -> Hinweis, Programm läuft weiter
         (folder / "verein.png").unlink()
         self.window._load_club_logo()

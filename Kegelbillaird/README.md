@@ -192,7 +192,9 @@ Fehlt die Tonausgabe (z. B. Monitor ohne Lautsprecher), läuft alles normal weit
 automatisch erkannt. Ist `minus` leer, werden die Plus-Bilder genommen. Eine Datei = immer diese, mehrere = zufällig.
 
 **Vereinslogo:** Logo in den Ordner `vereinslogo` ziehen (PNG, JPG, GIF, BMP, WEBP, SVG, ICO, TIF) und unter
-Einstellungen → Anzeige → „Vereinslogo“ auswählen. Es erscheint im Hauptmenü unter dem BK-Bild. Fehlt die Datei,
+Einstellungen → Anzeige → „Vereinslogo“ auswählen. Es erscheint groß rechts im Hauptmenü (ohne Logo steht das
+Menü mittig). Ein einfarbiger Hintergrund (z. B. weiß bei JPG) wird automatisch **freigestellt**, damit das Logo
+zum Hintergrund passt – gleichfarbige Flächen innerhalb des Logos bleiben erhalten. Fehlt die Datei,
 erscheint ein Hinweis in der Fußzeile. Das PDF bleibt unverändert.
 
 **Schriftgröße:** gilt für Beschriftungen, Menüs, Legende, Titelleiste, Einstellungen, Archiv und Auswertung.
