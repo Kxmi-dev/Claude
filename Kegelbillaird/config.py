@@ -67,11 +67,11 @@ KEY_MINUS = ["-"]            # Minus wählen; ist auch das „Ja“ bei der Abbr
 KEY_UNDO = ["/"]             # letzte Wertung zurücknehmen
 KEY_ABORT = ["*"]            # Partie beenden/abbrechen (danach mit KEY_MINUS bestätigen)
 
-# --- In Menüs, Archiv, Statistik-Fenster und Wiedergabe ---
+# --- In Menüs, Archiv, Auswertung und Wiedergabe ---
 KEY_UP = ["8", "Up"]         # nach oben (im Bericht: hoch blättern)
 KEY_DOWN = ["2", "Down"]     # nach unten (im Bericht: runter blättern)
-KEY_LEFT = ["4", "Left"]     # Statistik-Fenster: Knopf links
-KEY_RIGHT = ["6", "Right"]   # Statistik-Fenster: Knopf rechts
+KEY_LEFT = ["4", "Left"]     # Auswertung: Knopf links
+KEY_RIGHT = ["6", "Right"]   # Auswertung: Knopf rechts
 KEY_ENTER = ["Enter"]        # bestätigen; in der Wiedergabe Pause/Weiter
 KEY_BACK = ["*", "Esc"]      # zurück / Fenster schließen / Wiedergabe beenden
 
@@ -150,7 +150,7 @@ PDF_ROWS_PER_BLOCK = 25      # Zeilen je Spaltenblock der Stoßliste
 PDF_BLOCKS_PER_ROW = 4       # Spaltenblöcke nebeneinander (4 × 25 = 100 auf einer Seite)
 
 # Das PDF wird nach jeder Partie IMMER automatisch in "results" gespeichert.
-# True = danach das Statistik-Fenster öffnen (Spielbericht mit Speichern / Drucken / Schließen)
+# True = danach die Auswertung zeigen (mit Als PDF speichern / Drucken / Weiter)
 SHOW_REPORT_AFTER_GAME = True
 # True = das PDF zusätzlich im PDF-Programm von Windows öffnen
 OPEN_PDF_AFTER_GAME = False

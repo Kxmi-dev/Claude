@@ -41,7 +41,8 @@ bk/ui/main_window.py Bildschirmwechsel, Startprüfung, Abschluss, Archiv-Aktione
 bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, 2x 50 (gesperrt), Zweikampf (gesperrt), Archiv, Ende
 bk/ui/game_screen.py Zählansicht + Wiedergabe-Modus
 bk/ui/archive_screen.py  Archivliste
-bk/ui/report_dialog.py   Statistik-Fenster (PDF-Ansicht, Speichern, Drucken, Schließen)
+bk/ui/result_screen.py   Auswertung im Hauptfenster (Kennzahlen, Raster, Anzahl je Wertung, Knöpfe)
+bk/ui/report_output.py   PDF speichern (ohne Nachfrage) + drucken (ohne Dialog), gleiche Bytes wie results-PDF
 bk/ui/overlays.py    Abfrage-Karten (Fortsetzen, Abbruch, Archiv-Auswahl, Fehler)
 bk/ui/celebration.py Bild-/GIF-Einblendung bei CELEBRATION_VALUES
 bk/user_settings.py  UserSettingsStore: einstellungen.json laden/prüfen/speichern, FIELDS = im Menü änderbare Felder
@@ -66,7 +67,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 - **Kein Spielername**, kein Spielerdaten-Fenster: Menüauswahl + Enter startet sofort.
   PDF-Name: `BK50_2026-09-29_15-42.pdf`. Alte Spielstände mit `player_name` laden weiterhin.
 - Nach letztem Stoß läuft die Sperrzeit noch ab (Korrektur mit `/` möglich), dann automatisch:
-  Ergebnis-JSON + PDF in `results/`, Archiv „beendet“, **Statistik-Fenster** öffnet sich.
+  Ergebnis-JSON + PDF in `results/`, Archiv „beendet“, **Auswertung** im Hauptfenster (kein Extra-Fenster).
 - Speichern nach JEDER Wertung/Rücknahme. Start: „Unterbrochene Partie gefunden“ →
   PARTIE FORTSETZEN / NEUE PARTIE (alte wird archiviert, nie gelöscht).
 - **2x 50 Stoß und Zweikampf** sind im BKV-Regelwerk nicht definiert → im Menü „in Vorbereitung“,
@@ -90,7 +91,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   nur wenn `QMediaDevices.audioOutputs()` nicht leer.
 
 ## Tastenbelegung (frei wählbar)
-- `KEY_PLUS/MINUS/UNDO/ABORT` (Partie) und `KEY_UP/DOWN/LEFT/RIGHT/ENTER/BACK` (Menüs, Archiv, Statistik, Wiedergabe)
+- `KEY_PLUS/MINUS/UNDO/ABORT` (Partie) und `KEY_UP/DOWN/LEFT/RIGHT/ENTER/BACK` (Menüs, Archiv, Auswertung, Wiedergabe)
   in `config.py`, je eine Liste; die erste Taste steht in der Legende. Ziffern 0–7 fest. Abbruch-Bestätigung = `KEY_MINUS`.
 - `bk/ui/keymap.py` hält die aktive Belegung (`keymap.configure` im MainWindow); ALLE Legenden/Hinweise nutzen
   `keymap.label(...)` / `label_all(...)` – nie wieder feste Tastennamen in Texte schreiben.
@@ -102,15 +103,15 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 - +6/+7 (`CELEBRATION_VALUES`) → alle Bilder in `bilder/plus`; −6/−7 (`CELEBRATION_MINUS_VALUES`) → `bilder/minus`
   (leer = Plus-Bilder). Eine Datei = immer diese, mehrere = zufällig. `/` blendet es sofort aus.
 
-## Statistik-Fenster & Archiv
-- Statistik-Fenster zeigt den Bericht wie im PDF: Knöpfe **Als PDF speichern** (ohne Nachfrage in `pdf_save_dir`,
-  Standard Dokumente), **Drucken** (sofort auf gewähltem Drucker bzw. **Windows-Standarddrucker, kein Druckdialog**),
-  **Schließen**. Bedienung `4`/`6`, Enter, `8`/`2` blättern, `*`/Esc.
+## Auswertung & Archiv
+- **Kein Extra-Fenster** (Nutzerwunsch): `ResultScreen` im Stack, alles auf einem Bildschirm ohne Scrollen
+  (Referenz 1024×702 wie Menü/Archiv). Kennzahlen-Reihe, ScoreGrid (show_current=False), DistributionBox,
+  Knöpfe **Als PDF speichern** (ohne Nachfrage in `pdf_save_dir`, Standard Dokumente) / **Drucken** (gewählter
+  bzw. Standarddrucker, kein Dialog) / **Weiter** (Archiv: „Zurück“). `4`/`6`, Enter, `*`/Esc.
+- **Das PDF bleibt unverändert** (Nutzer: „so wie es jetzt ist“) – Formatierung nur auf ausdrücklichen Wunsch ändern.
 - PDF enthält „**Anzahl je Wertung**“ (wie oft −7…+7 gestoßen) und gleich dicke Tabellenlinien
-  (`LINE_WIDTH`, alle Maße ganze Punkte). Bildschirmanzeige: eigene PDF-Variante über
-  `screen_line_options(scale)`, Maßstäbe in 0,5-Schritten, `PathAliased` → jede Linie exakt 1 px.
-  Druck mit 4 px/pt. Zählansicht-Raster nutzt kosmetische Stifte.
-- Archiv (Hauptmenü): Liste aller Partien → STATISTIK ANZEIGEN / WIEDERGABE (Stoß für Stoß,
+  (`LINE_WIDTH`, alle Maße ganze Punkte). Druck mit 4 px/pt. Zählansicht-Raster nutzt kosmetische Stifte.
+- Archiv (Hauptmenü): Liste aller Partien → AUSWERTUNG ANZEIGEN / WIEDERGABE (Stoß für Stoß,
   speichert nie etwas) / WEITERSPIELEN (nur abgebrochene/unterbrochene).
 - **Aufräumen** beim Start + alle 6 h: `ARCHIVE_RETENTION_DAYS = 30`, `LOG_RETENTION_DAYS = 30`,
   `RESULTS_RETENTION_DAYS = 0` (PDFs nie löschen). Aktive Partie / aktuelles Log nie.

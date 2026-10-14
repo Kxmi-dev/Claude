@@ -26,7 +26,7 @@ Hauptfenster schließt die Partie ab.
 Wiedergabe (aus dem Archiv): Dieselbe Ansicht spielt eine gespeicherte
 Partie Stoß für Stoß ab. Dabei wird eine KOPIE angezeigt – es wird nichts
 gespeichert und keine Eingabe als Wertung ausgewertet.
-[Enter] Pause/Weiter (am Ende: Statistik), [+]/[−] Tempo, [*]/[Esc] beenden.
+[Enter] Pause/Weiter (am Ende: Auswertung), [+]/[−] Tempo, [*]/[Esc] beenden.
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ class GameScreen(QWidget):
     warning = Signal(str, object)        # dauerhafte Warnung (Schlüssel, Text oder None)
     footer_changed = Signal()            # Bedienhinweise haben sich geändert (Wiedergabe)
     replay_exit = Signal()               # Wiedergabe beendet -> zurück ins Archiv
-    replay_stats = Signal(object)        # Statistik der wiedergegebenen Partie (GameState)
+    replay_stats = Signal(object)        # Auswertung der wiedergegebenen Partie (GameState)
 
     def __init__(self, settings: AppSettings, storage: GameStorage,
                  parent: QWidget | None = None, clock=time.monotonic) -> None:
@@ -216,7 +216,7 @@ class GameScreen(QWidget):
     def footer_segments(self) -> list[str]:
         if self.is_replay:
             if self._replay_done():
-                return ["Wiedergabe beendet", f"Statistik mit  [{keymap.label('enter')}]",
+                return ["Wiedergabe beendet", f"Auswertung mit  [{keymap.label('enter')}]",
                         f"Zurück mit  [{keymap.label_all('back')}]"]
             return [f"Pause / Weiter mit  [{keymap.label('enter')}]",
                     f"Tempo mit  [{keymap.label('plus')}]  /  [{keymap.label('minus')}]",

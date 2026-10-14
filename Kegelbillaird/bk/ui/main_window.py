@@ -4,8 +4,8 @@ Hauptfenster: verbindet Bildschirme, Speicherung, PDF und NumLock.
 Bildschirmfolge::
 
     Start ─► (Unterbrochene Partie? ─► FORTSETZEN ─► Zählansicht)
-         └─► Hauptmenü ─► Zählansicht ─► Abschluss ─► Statistik-Fenster ─► Hauptmenü
-                      └─► Archiv ─► Statistik-Fenster | Wiedergabe | Weiterspielen
+         └─► Hauptmenü ─► Zählansicht ─► Abschluss ─► Auswertung ─► Hauptmenü
+                      └─► Archiv ─► Auswertung | Wiedergabe | Weiterspielen
 
 Tastatur: Alle Unterelemente sind fokuslos; Tastendrücke landen genau
 einmal in ``keyPressEvent`` und werden an die sichtbare Karte bzw. den
@@ -34,6 +34,7 @@ from . import keymap, theme
 from .archive_screen import ArchiveScreen
 from .game_screen import GameScreen
 from .menu_screen import MenuScreen
+from .result_screen import ResultScreen
 from .settings_screen import SettingsScreen
 from .overlays import Overlay, OverlayContent
 from .widgets import FooterBar, TitleBar
@@ -144,11 +145,13 @@ class MainWindow(QWidget):
         self.menu_screen = MenuScreen(settings)
         self.game_screen = GameScreen(settings, storage)
         self.archive_screen = ArchiveScreen(settings, storage)
+        self.result_screen = ResultScreen(settings)
         self.settings_screen = SettingsScreen(self._store)
         self.settings_screen.preview_sound = self.game_screen.play_sound
-        for screen in (self.menu_screen, self.archive_screen, self.game_screen, self.settings_screen):
+        for screen in (self.menu_screen, self.archive_screen, self.game_screen, self.settings_screen,
+                       self.result_screen):
             self.stack.addWidget(screen)
-        self._report_dialog = None
+        self._result_close = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -167,6 +170,9 @@ class MainWindow(QWidget):
         self.menu_screen.quit_requested.connect(self.close)
         self.menu_screen.archive_requested.connect(self.show_archive)
         self.menu_screen.settings_requested.connect(self.show_settings)
+        self.result_screen.closed.connect(self._close_result)
+        self.result_screen.message.connect(self._flash)
+        self.result_screen.footer_changed.connect(self._refresh_footer)
         self.settings_screen.back_requested.connect(self._settings_back)
         self.settings_screen.settings_changed.connect(self.apply_settings)
         self.settings_screen.notice.connect(self._flash)
@@ -296,6 +302,7 @@ class MainWindow(QWidget):
         theme.apply_colors(settings.theme_mode, settings.primary_color, settings.secondary_color)
         self.title_bar.set_club(settings.club_name)
         self.game_screen.set_settings(settings)
+        self.result_screen.set_settings(settings)
         self.numlock_guard.update_settings(settings.auto_enable_numlock, settings.numlock_check_seconds)
         if (old.fullscreen, old.window_size) != (settings.fullscreen, settings.window_size) and self.isVisible():
             self._apply_window_mode()
@@ -318,7 +325,7 @@ class MainWindow(QWidget):
         state = entry.state
         game = Game(state)
         started = datetime.fromisoformat(state.started_at)
-        actions = [("STATISTIK ANZEIGEN", lambda: self._show_archive_report(state)),
+        actions = [("AUSWERTUNG ANZEIGEN", lambda: self._show_archive_report(state)),
                    ("WIEDERGABE", lambda: self._start_replay(state))]
         if entry.can_continue:
             actions.append(("WEITERSPIELEN", lambda: self._continue_archived(entry)))
@@ -339,9 +346,11 @@ class MainWindow(QWidget):
         started = datetime.fromisoformat(state.started_at)
         game = Game(state)
         status = {GameStatus.FINISHED: "beendet", GameStatus.ABORTED: "abgebrochen"}.get(state.status, "unterbrochen")
-        self.show_report(state, f"Statistik  –  {state.mode.title} vom {started:%d.%m.%Y}",
-                         f"Partie {status}   ·   {game.played} von {game.max_strokes} Stößen   ·   "
-                         f"Ergebnis: {game.total}")
+        from_replay = self.stack.currentWidget() is self.game_screen and self.game_screen.is_replay
+        back = (lambda: self._show_screen(self.game_screen)) if from_replay else self.show_archive
+        self.show_result(state, f"{state.mode.title} vom {started:%d.%m.%Y}  –  Ergebnis: {game.total}",
+                         f"Partie {status}   ·   {game.played} von {game.max_strokes} Stößen",
+                         on_close=back, continue_label="Zurück")
 
     def _start_replay(self, state: GameState) -> None:
         log.info("Wiedergabe: %s vom %s", state.mode.key, state.started_at)
@@ -359,30 +368,25 @@ class MainWindow(QWidget):
         self._enter_game(Game(state))
         self._flash("Partie aus dem Archiv wird fortgesetzt.")
 
-    # ======================================================= Statistik-Fenster
-    def show_report(self, state: GameState, heading: str, note: str = "", on_close=None) -> bool:
-        """Öffnet das Statistik-Fenster (Spielbericht mit Speichern / Drucken / Schließen)."""
+    # ============================================================ Auswertung
+    def show_result(self, state: GameState, heading: str, note: str = "", on_close=None,
+                    continue_label: str = "Weiter") -> bool:
+        """Auswertung im Hauptfenster anzeigen (kein Extra-Fenster)."""
         try:
-            from .report_dialog import ReportDialog   # erst hier laden: Fehler dürfen den Start nie verhindern
-            dialog = ReportDialog(self, state, self._settings, heading, note)
+            self.result_screen.show_state(state, heading, note, continue_label)
         except Exception:
-            log.exception("Statistik-Fenster konnte nicht geöffnet werden")
-            self._flash("Statistik-Fenster konnte nicht geöffnet werden – siehe logs/application.log", True)
+            log.exception("Auswertung konnte nicht angezeigt werden")
+            self._flash("Auswertung konnte nicht angezeigt werden – siehe logs/application.log", True)
             return False
-        self._report_dialog = dialog
+        self._result_close = on_close
         self.footer.clear_flash()        # alte Kurzmeldungen (z. B. "Letzter Stoß …") ausblenden
-
-        def closed(_result: int) -> None:
-            self._report_dialog = None
-            dialog.deleteLater()
-            self.setFocus(Qt.FocusReason.OtherFocusReason)
-            if on_close is not None:
-                on_close()
-
-        dialog.finished.connect(closed)
-        dialog.open()
-        log.info("Statistik-Fenster geöffnet: %s vom %s", state.mode.key, state.started_at)
+        self._show_screen(self.result_screen)
+        log.info("Auswertung angezeigt: %s vom %s", state.mode.key, state.started_at)
         return True
+
+    def _close_result(self) -> None:
+        action, self._result_close = self._result_close, None
+        (action or self.show_menu)()
 
     def _flash(self, text: str, warning: bool = False) -> None:
         self.footer.flash(text, warning, 3.0 if warning else 2.5)
@@ -539,8 +543,7 @@ class MainWindow(QWidget):
             note = f"PDF automatisch gespeichert: {pdf_path.parent.name}\\{pdf_path.name}"
             if recovered:
                 note += "   (Abschluss nach Programmneustart nachgeholt)"
-            self.footer.set_segments(["Statistik-Fenster geöffnet", f"Schließen mit  [{keymap.label('enter')}]  oder  [{keymap.label_all('back')}]"])
-            if self.show_report(state, f"Partie beendet  –  ENDRESULTAT: {game.total}", note,
+            if self.show_result(state, f"Partie beendet  –  ENDRESULTAT: {game.total}", note,
                                 on_close=self.show_menu):
                 return
         self.footer.set_segments([f"Weiter mit  [{keymap.label('enter')}]"])

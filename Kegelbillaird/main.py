@@ -42,7 +42,7 @@ REQUIRED_FILES = (
     "bk/media.py", "bk/keys.py", "bk/user_settings.py", "bk/ui/celebration.py", "bk/ui/settings_screen.py",
     "bk/ui/__init__.py", "bk/ui/theme.py", "bk/ui/widgets.py", "bk/ui/keymap.py",
     "bk/ui/menu_screen.py", "bk/ui/game_screen.py", "bk/ui/archive_screen.py",
-    "bk/ui/report_dialog.py", "bk/ui/overlays.py", "bk/ui/main_window.py",
+    "bk/ui/report_output.py", "bk/ui/result_screen.py", "bk/ui/overlays.py", "bk/ui/main_window.py",
 )
 
 

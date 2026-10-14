@@ -1,7 +1,7 @@
 """
 Archiv: Liste aller gespeicherten Partien (beendet, abgebrochen, unterbrochen).
 
-Bedienung: [8] / [2] wählen, [Enter] öffnen (Statistik, Wiedergabe, Weiterspielen),
+Bedienung: [8] / [2] wählen, [Enter] öffnen (Auswertung, Wiedergabe, Weiterspielen),
 [*] oder [Esc] zurück zum Hauptmenü. Maus: Zeile anklicken, Doppelklick öffnet, Mausrad blättert.
 """
 

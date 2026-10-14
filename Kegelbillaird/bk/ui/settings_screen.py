@@ -322,7 +322,7 @@ class SettingsScreen(QWidget):
             ("Tasten", self._page_keys, "Welche Taste was macht – die Legende passt sich an"),
             ("Töne", self._page_sounds, "Halbzeit- und Ende-Ton, Lautstärke"),
             ("Bilder", self._page_images, "Bilder/GIFs bei +6/+7 und −6/−7"),
-            ("Drucken & PDF", self._page_print, "Drucker, PDF-Speicherort, Statistik nach der Partie"),
+            ("Drucken & PDF", self._page_print, "Drucker, PDF-Speicherort, Auswertung nach der Partie"),
             ("Archiv & Aufräumen", self._page_archive, "Wiedergabe-Tempo, Aufbewahrungsdauer"),
         ]
         items = [Item(title, lambda: "▶", None, (lambda t=title, b=builder: self.open_page(t, b)), hint)
@@ -511,7 +511,7 @@ class SettingsScreen(QWidget):
             Item("PDF-Speicherort", folder_value, lambda _d: self.set_value("pdf_save_dir", ""), choose_folder,
                  "„Als PDF speichern“ legt die Datei ohne Nachfrage hier ab. [Enter] = Ordner wählen, "
                  "[4]/[6] = zurück auf Dokumente."),
-            self._bool_item("Statistik nach der Partie anzeigen", "show_report_after_game"),
+            self._bool_item("Auswertung nach der Partie anzeigen", "show_report_after_game"),
             self._bool_item("PDF nach der Partie öffnen", "open_pdf_after_game"),
         ]
 

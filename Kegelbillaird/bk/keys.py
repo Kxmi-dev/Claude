@@ -20,8 +20,8 @@ ACTIONS: dict[str, tuple[tuple[str, ...], str]] = {
     "abort": (("*",), "Partie abbrechen (danach mit der Minus-Taste bestätigen)"),
     "up":    (("8", "Up"), "Menü: nach oben / im Bericht nach oben blättern"),
     "down":  (("2", "Down"), "Menü: nach unten / im Bericht nach unten blättern"),
-    "left":  (("4", "Left"), "Statistik-Fenster: Knopf links"),
-    "right": (("6", "Right"), "Statistik-Fenster: Knopf rechts"),
+    "left":  (("4", "Left"), "Auswertung: Knopf links"),
+    "right": (("6", "Right"), "Auswertung: Knopf rechts"),
     "enter": (("Enter",), "Bestätigen / Wiedergabe Pause und Weiter"),
     "back":  (("*", "Esc"), "Zurück / Fenster schließen / Wiedergabe beenden"),
 }

@@ -249,7 +249,7 @@ class SettingsMenuTests(unittest.TestCase):
         self.assertEqual(self.screen._list.current().value(), "0 von 1 aktiv")
 
     def test_pdf_folder_and_printer(self):
-        from bk.ui.report_dialog import ReportDialog
+        from bk.ui import report_output
         target = self.tmp.path / "usb"
         self.open_section("Drucken & PDF")
         self.screen.ask_folder = lambda title, start: str(target)
@@ -265,14 +265,13 @@ class SettingsMenuTests(unittest.TestCase):
         for _ in range(50):
             game.record(3)
         game.finish()
-        dialog = ReportDialog(self.window, game.state, self.window._settings, "Test")
-        first, second = dialog.save_pdf(), dialog.save_pdf()      # ohne Nachfrage, freier Name
+        settings = self.window._settings
+        first = report_output.save_pdf(game.state, settings)      # ohne Nachfrage, freier Name
+        second = report_output.save_pdf(game.state, settings)
         self.assertEqual(first.parent, target)
         self.assertNotEqual(first, second)
         self.assertTrue(second.stem.endswith("_2"))
-        dialog.default_printer()                                   # "Drucker A" gibt es nicht
-        self.assertIn("nicht gefunden", dialog._printer_note)
-        dialog.close()
+        self.assertIn("nicht gefunden", report_output.choose_printer(settings)[1])   # "Drucker A" fehlt
 
     def test_reset_needs_two_presses(self):
         self.store.set("club_name", "Geändert")

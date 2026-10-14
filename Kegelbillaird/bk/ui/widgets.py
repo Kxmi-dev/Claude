@@ -415,6 +415,10 @@ class MenuButton(_Painted):
             self._selected = selected
             self.update()
 
+    def set_text(self, text: str) -> None:
+        self._text = text
+        self.update()
+
     def text(self) -> str:
         return self._text
 

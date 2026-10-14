@@ -9,7 +9,7 @@ Programm übernimmt den Rest:
 
 Bei einem Fehler: **`/`** nimmt die letzte Wertung vollständig zurück.
 Bei einem Absturz: **Programm neu starten → Partie fortsetzen.**
-Nach dem letzten Stoß: **automatischer Abschluss mit druckfertigem PDF und Statistik-Fenster.**
+Nach dem letzten Stoß: **automatischer Abschluss mit druckfertigem PDF und Auswertung.**
 Im **Archiv**: jede frühere Partie ansehen, drucken, Stoß für Stoß wiedergeben oder weiterspielen.
 
 ---
@@ -108,34 +108,35 @@ Datum und Uhrzeit werden automatisch erfasst und stehen im PDF.
 | Spieldauer      | Laufzeit der Partie |
 | Stoß-Raster     | ein Feld pro Stoß; **blauer Rahmen** = nächster Stoß, **gelb** = Halbzeit und letzte 5 Stöße, kleine Zahl = Zwischenstand |
 
-### Partieende und Statistik-Fenster
+### Partieende und Auswertung
 Nach dem letzten Stoß läuft noch die normale Sperrzeit ab – in dieser Zeit kann ein
 Tippfehler beim letzten Stoß mit `/` korrigiert werden. Danach wird die Partie
 automatisch abgeschlossen: Ergebnis speichern, **PDF automatisch in `results` ablegen**,
-Spielstand archivieren – und das **Statistik-Fenster** öffnet sich.
+Spielstand archivieren – und das Hauptfenster zeigt die **Auswertung** (kein Extra-Fenster).
 
-Das Statistik-Fenster zeigt den Spielbericht genau so, wie er im PDF steht
-(„ENDRESULTAT“, Kennzahlen, **Anzahl je Wertung** – wie oft −7 … +7 gestoßen wurde –
-und die komplette Stoßliste) und bietet drei Knöpfe:
+Die Auswertung passt komplett auf einen Bildschirm (ohne Blättern): Überschrift mit
+ENDRESULTAT, Kennzahlen (Endresultat, Halbzeit, Minuspunkte, Schnitt je Stoß, Stöße,
+Spieldauer), links die **Stoßliste** im Raster der Zählansicht, rechts **Anzahl je Wertung**
+(Balken für +7 … −7) und drei Knöpfe:
 
 | Knopf | Wirkung |
 |-------|---------|
-| **Als PDF speichern** | Speichern-Dialog, z. B. auf einen USB-Stick (vorgeschlagen: Ordner „Dokumente“, weil das PDF in `results` schon automatisch liegt) |
-| **Drucken** | druckt sofort auf dem **Windows-Standarddrucker** – ohne Druckdialog |
-| **Schließen** | zurück (nach einer Partie ins Hauptmenü, sonst ins Archiv) |
+| **Als PDF speichern** | speichert ohne Nachfrage im eingestellten PDF-Speicherort (Standard: „Dokumente“) |
+| **Drucken** | druckt sofort auf dem eingestellten Drucker bzw. dem **Windows-Standarddrucker** – ohne Druckdialog |
+| **Weiter** / **Zurück** | nach einer Partie ins Hauptmenü, sonst zurück ins Archiv bzw. zur Wiedergabe |
 
-Bedienung im Fenster: `4` / `6` Knopf wählen, `Enter` ausführen, `8` / `2` im Bericht
-blättern, `*` oder `Esc` schließen – oder einfach mit der Maus.
+Das PDF selbst (automatisch gespeichert, „Als PDF speichern“ und Ausdruck) ist unverändert.
+Bedienung: `4` / `6` Knopf wählen, `Enter` ausführen, `*` oder `Esc` weiter – oder mit der Maus.
 
 ### Archiv
 Hauptmenü → **Archiv** zeigt alle gespeicherten Partien (neueste oben) mit Datum, Uhrzeit,
 Spielart, Status (beendet / abgebrochen / unterbrochen), Stoßzahl und Ergebnis.
 `8` / `2` wählen, `Enter` öffnet die Partie, `*` oder `Esc` führt zurück. Zur Auswahl stehen:
 
-* **STATISTIK ANZEIGEN** – das Statistik-Fenster (Speichern, Drucken, Schließen)
+* **AUSWERTUNG ANZEIGEN** – das Auswertung (Speichern, Drucken, Schließen)
 * **WIEDERGABE** – die Partie läuft Stoß für Stoß noch einmal auf der Zähltafel ab
   (`Enter` Pause/Weiter, `+` / `−` schneller/langsamer, `*` oder `Esc` beenden;
-  am Ende öffnet `Enter` die Statistik). Eine Wiedergabe verändert und speichert nichts.
+  am Ende öffnet `Enter` die Auswertung). Eine Wiedergabe verändert und speichert nichts.
 * **WEITERSPIELEN** – nur bei abgebrochenen oder unterbrochenen Partien: Die Partie wird
   wieder zur laufenden Partie und genau dort fortgesetzt, wo sie aufgehört hat.
 
@@ -159,7 +160,7 @@ Taste aufnehmen / Ton probehören · `*`/`Esc` zurück (bzw. die eingestellten T
 | Tasten | jede Aktion: `Enter`, dann die neue Taste drücken (doppelt belegte Tasten werden abgelehnt); `4`/`6` = Standard. Legende passt sich sofort an |
 | Töne | Töne an/aus, Lautstärke 0–100 %, Ton zur Halbzeit, Ton am Partie-Ende – Auswahl aus allen `.wav`/`.mp3` im Ordner `sounds` |
 | Bilder | Bilder an/aus, Anzeigedauer, Übersicht „Bilder bei +6/+7“ und „−6/−7“ mit An/Aus je Bild |
-| Drucken & PDF | Drucker (Windows-Standarddrucker oder ein installierter Drucker), PDF-Speicherort für „Als PDF speichern“ (ohne Nachfrage; Standard: Dokumente), Statistik nach der Partie, PDF automatisch öffnen |
+| Drucken & PDF | Drucker (Windows-Standarddrucker oder ein installierter Drucker), PDF-Speicherort für „Als PDF speichern“ (ohne Nachfrage; Standard: Dokumente), Auswertung nach der Partie, PDF automatisch öffnen |
 | Archiv & Aufräumen | Wiedergabe-Tempo, Aufbewahrung von Archiv, Protokollen und PDFs |
 | Alle Einstellungen zurücksetzen | zweimal `Enter` – danach gelten wieder die Werte aus `config.py` |
 
@@ -186,7 +187,7 @@ Werte aus dem Einstellungsmenü haben Vorrang. Nach einer Änderung hier das Pro
 | `HISTORY_LENGTH` | `5` | Einträge unter „Letzte Stöße“ |
 | `APP_TITLE`, `APP_VERSION`, `CLUB_NAME` | | Texte in Titelleiste und PDF |
 | `KEY_PLUS`, `KEY_MINUS`, `KEY_UNDO`, `KEY_ABORT` | `+` `-` `/` `*` | Tasten in der Partie: Plus, Minus (auch „Ja“ bei der Abbruch-Frage), Rücknahme, Partie abbrechen |
-| `KEY_UP`, `KEY_DOWN`, `KEY_LEFT`, `KEY_RIGHT`, `KEY_ENTER`, `KEY_BACK` | `8` `2` `4` `6` `Enter` `*`/`Esc` | Tasten in Menüs, Archiv, Statistik-Fenster und Wiedergabe |
+| `KEY_UP`, `KEY_DOWN`, `KEY_LEFT`, `KEY_RIGHT`, `KEY_ENTER`, `KEY_BACK` | `8` `2` `4` `6` `Enter` `*`/`Esc` | Tasten in Menüs, Archiv, Auswertung und Wiedergabe |
 | `SOUND_ENABLED`, `HALFTIME_SOUND` | `True`, `"halbzeit.wav"` | Ton zur Halbzeit (WAV im Ordner `sounds`). Leerer Name = kein Ton. Ohne Tonausgabe läuft alles weiter, das Halbzeit-Feld leuchtet zusätzlich ca. 4 s gelb auf |
 | `CELEBRATION_ENABLED`, `CELEBRATION_VALUES`, `CELEBRATION_MINUS_VALUES` | `True`, `(6, 7)`, `(-6, -7)` | bei diesen Wertungen erscheint ein Bild aus `bilder\plus` bzw. `bilder\minus`; `()` = aus |
 | `END_SOUND`, `SOUND_VOLUME`, `WINDOW_SIZE` | `""`, `80`, `(1280, 800)` | Ende-Ton, Lautstärke, Fenstergröße (alles auch im Menü) |
@@ -197,7 +198,7 @@ Werte aus dem Einstellungsmenü haben Vorrang. Nach einer Änderung hier das Pro
 | `GAME_MODES` | BK 100, BK 50, … | Spielarten (siehe unten) |
 | `SHOW_UNAVAILABLE_MODES` | `True` | nicht freigeschaltete Spielarten im Menü anzeigen |
 | `PDF_ROWS_PER_BLOCK`, `PDF_BLOCKS_PER_ROW` | `25`, `4` | Aufteilung der Stoßliste im PDF (4 × 25 = 100 Stöße auf einer Seite) |
-| `SHOW_REPORT_AFTER_GAME` | `True` | nach jeder Partie das Statistik-Fenster öffnen (das PDF wird in jedem Fall gespeichert) |
+| `SHOW_REPORT_AFTER_GAME` | `True` | nach jeder Partie das Auswertung öffnen (das PDF wird in jedem Fall gespeichert) |
 | `OPEN_PDF_AFTER_GAME` | `False` | PDF zusätzlich im PDF-Programm von Windows öffnen |
 | `REPLAY_SECONDS_PER_STROKE` | `0.8` | Tempo der Wiedergabe aus dem Archiv (Sekunden pro Stoß) |
 | `ARCHIVE_RETENTION_DAYS` | `30` | Archiv (`data\archive`) und beschädigte Spielstände (`data\corrupt`) nach so vielen Tagen löschen (0 = nie) |
@@ -317,7 +318,7 @@ bk_scoreboard/
 │       ├── menu_screen.py   Hauptmenü (Vorlage 1)
 │       ├── game_screen.py   Zählansicht (Vorlage 2), auch für die Wiedergabe
 │       ├── archive_screen.py Archiv: Liste aller gespeicherten Partien
-│       ├── report_dialog.py Statistik-Fenster: Bericht anzeigen, als PDF speichern, drucken
+│       ├── report_dialog.py Auswertung: Bericht anzeigen, als PDF speichern, drucken
 │       ├── overlays.py      Abfragen: Fortsetzen, Abbruch, Archiv-Auswahl, Fehler
 │       └── main_window.py   Bildschirmwechsel, Start-Prüfung, Abschluss, NumLock-Wächter
 └── tests/                   automatische Tests (unittest)
@@ -411,7 +412,7 @@ Tastenprellen, `/` direkt nach einer Eingabe, `/` mehrfach, Stoßzähler, komple
 50- und 100-Stoß-Partien, Abschluss exakt beim 50. bzw. 100. Stoß, Speichern nach jeder
 Wertung, Absturz direkt nach einer Wertung, Absturz während des Schreibens, beschädigte
 Dateien, Wiederherstellung kurz vor dem letzten Stoß, Fortsetzen, neue Partie, Abbruch,
-PDF-Inhalt und Dateiname, NumLock-Schutzlogik, Archivliste, Statistik-Fenster
+PDF-Inhalt und Dateiname, NumLock-Schutzlogik, Archivliste, Auswertung
 (Speichern und Drucken in eine Datei), Wiedergabe ohne Speicherung, Weiterspielen aus
 dem Archiv, Anzahl je Wertung, Drucken ohne Standarddrucker, automatisches Löschen alter
 Dateien sowie Oberflächentests mit echten Nummernblock-Tastenereignissen.

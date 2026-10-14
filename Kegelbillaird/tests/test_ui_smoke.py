@@ -120,17 +120,16 @@ class UiSmokeTests(unittest.TestCase):
         self.assertTrue(game.is_complete)
         total = game.total
         QTest.qWait(300)
-        dialog = window._report_dialog                            # Statistik-Fenster ist offen
-        self.assertIsNotNone(dialog)
-        self.assertTrue(dialog.isVisible())
-        self.assertIn(f"ENDRESULTAT: {total}", dialog._heading._text)
+        result = window.result_screen                             # Auswertung im Hauptfenster
+        self.assertIs(window.stack.currentWidget(), result)
+        self.assertIn(f"ENDRESULTAT: {total}", result._plate._text)
+        self.assertEqual(result.boxes["total"].text(), str(total).replace("-", "\u2212"))
+        self.assertEqual(result.boxes["strokes"].text(), "50 / 50")
         pdfs = list(self.settings.results_dir.glob("BK50_*.pdf"))
         self.assertEqual(len(pdfs), 1)                            # PDF wurde automatisch gespeichert
         self.assertFalse(self.storage.has_active_files())
         self.assertEqual(len(list((self.settings.data_dir / "archive").glob("*_beendet.json"))), 1)
-        QTest.keyClick(dialog, Qt.Key.Key_Enter)                  # "Schließen" ist vorgewählt
-        QTest.qWait(50)
-        self.assertIsNone(window._report_dialog)
+        self.key(window, Qt.Key.Key_Enter)                       # "Weiter" ist vorgewählt
         self.assertIs(window.stack.currentWidget(), window.menu_screen)
 
     def test_undo_of_last_stroke_during_lock_prevents_finish(self):
@@ -149,7 +148,7 @@ class UiSmokeTests(unittest.TestCase):
         self.assertEqual(game.played, 49)
         self.score(window, 2)
         QTest.qWait(int(self.LOCK * 1000) + 300)
-        self.assertIn("ENDRESULTAT: 51", window._report_dialog._heading._text)
+        self.assertIn("ENDRESULTAT: 51", window.result_screen._plate._text)
 
     def test_abort_with_star_and_minus(self):
         window = self.open_window()
@@ -253,33 +252,31 @@ class UiSmokeTests(unittest.TestCase):
         self.key(window, Qt.Key.Key_Asterisk)                    # [*] = zurück
         self.assertIs(window.stack.currentWidget(), window.menu_screen)
 
-    def test_statistics_window_save_and_print(self):
+    def test_result_screen_save_and_print(self):
         from PySide6.QtPrintSupport import QPrinter
         finished, _ = self._archive_two_games()
         window = self.open_window()
         self.open_archive(window)
         self.key(window, Qt.Key.Key_2)                           # beendete Partie
         self.key(window, Qt.Key.Key_Enter)
-        self.assertEqual(window.overlay.content.choices, ["STATISTIK ANZEIGEN", "WIEDERGABE", "ZURÜCK"])
-        self.key(window, Qt.Key.Key_Enter)                       # STATISTIK ANZEIGEN
-        dialog = window._report_dialog
-        self.assertTrue(dialog.isVisible())
-        self.assertEqual(dialog._document.pageCount(), 1)
-        saved = dialog.save_pdf(self.tmp.path / "usb" / "bericht")    # ohne Dialog, Endung wird ergänzt
+        self.assertEqual(window.overlay.content.choices, ["AUSWERTUNG ANZEIGEN", "WIEDERGABE", "ZURÜCK"])
+        self.key(window, Qt.Key.Key_Enter)                       # AUSWERTUNG ANZEIGEN
+        result = window.result_screen
+        self.assertIs(window.stack.currentWidget(), result)      # kein Extra-Fenster
+        self.assertEqual(result.state.strokes, finished.strokes)
+        saved = result.save_pdf(self.tmp.path / "usb" / "bericht")    # Endung wird ergänzt
         self.assertEqual(saved.name, "bericht.pdf")
         self.assertTrue(saved.read_bytes().startswith(b"%PDF"))
-        self.assertFalse(dialog.page_view_pixmap_is_null())          # Seite wurde gezeichnet
-        if dialog.default_printer() is None:                        # hier kein Drucker vorhanden:
-            self.assertFalse(dialog.print_report())                 # klare Meldung, kein Dialog
-            self.assertIn("Standarddrucker", dialog._note.text())
+        from bk.ui import report_output
+        if report_output.choose_printer(self.settings)[0] is None:  # hier kein Drucker vorhanden:
+            self.assertFalse(result.print_report())                 # klare Meldung, kein Dialog
+            self.assertIn("Standarddrucker", result.note_text())
         printer = QPrinter(QPrinter.PrinterMode.HighResolution)
         printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
         printer.setOutputFileName(str(self.tmp.path / "druck.pdf"))
-        self.assertTrue(dialog.print_report(printer))
+        self.assertTrue(result.print_report(printer))
         self.assertGreater((self.tmp.path / "druck.pdf").stat().st_size, 10_000)
-        QTest.keyClick(dialog, Qt.Key.Key_Asterisk)              # schließen
-        QTest.qWait(50)
-        self.assertIsNone(window._report_dialog)
+        self.key(window, Qt.Key.Key_Asterisk)                    # zurück
         self.assertIs(window.stack.currentWidget(), window.archive_screen)
 
     def test_replay_shows_game_without_saving(self):
@@ -309,9 +306,9 @@ class UiSmokeTests(unittest.TestCase):
         self.assertFalse(self.storage.has_active_files())        # nichts gespeichert
         self.assertFalse(screen.has_live_game)
         self.key(window, Qt.Key.Key_Enter)                       # am Ende: Statistik
-        self.assertIsNotNone(window._report_dialog)
-        QTest.keyClick(window._report_dialog, Qt.Key.Key_Escape)
-        QTest.qWait(50)
+        self.assertIs(window.stack.currentWidget(), window.result_screen)
+        self.key(window, Qt.Key.Key_Escape)                      # zurück zur Wiedergabe
+        self.assertIs(window.stack.currentWidget(), screen)
         self.key(window, Qt.Key.Key_Escape)                      # Wiedergabe verlassen
         self.assertIs(window.stack.currentWidget(), window.archive_screen)
         window.close()
