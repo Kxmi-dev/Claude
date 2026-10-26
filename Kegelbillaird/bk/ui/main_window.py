@@ -41,6 +41,9 @@ from .widgets import FooterBar, TitleBar, format_points
 
 log = logging.getLogger(__name__)
 
+_MOUSE_EVENTS = (QEvent.Type.MouseMove, QEvent.Type.MouseButtonPress, QEvent.Type.Wheel,
+                 QEvent.Type.HoverMove)
+
 CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000
 
 
@@ -136,6 +139,10 @@ class MainWindow(QWidget):
         self._on_top_suspended = False   # „immer im Vordergrund“ kurz aus, solange ein geöffnetes PDF vorne ist
         self._left_window = False
         self._cursor_hidden = False
+        self._cursor_pos = QCursor.pos()
+        self._cursor_timer = QTimer(self)    # Mauszeiger nach x s ohne Mausbewegung ausblenden
+        self._cursor_timer.setSingleShot(True)
+        self._cursor_timer.timeout.connect(lambda: self._apply_cursor(True))
 
         self.setWindowTitle(f"{settings.app_title} {settings.app_version}")
         if settings.icon_path.is_file():
@@ -262,6 +269,8 @@ class MainWindow(QWidget):
                 QTimer.singleShot(0, self._apply_window_mode)
 
     def closeEvent(self, event) -> None:  # noqa: N802
+        self._cursor_timer.stop()
+        QApplication.instance().removeEventFilter(self)
         self._apply_cursor(False)
         if self.game_screen.has_live_game:      # nie bei einer Wiedergabe
             self.game_screen.stop()
@@ -316,12 +325,30 @@ class MainWindow(QWidget):
         """Erstes Anzeigen: Vollbild oder Fenster in der eingestellten Größe."""
         self._force_windowed = force_windowed
         self._apply_window_mode(first=True)
-        self._apply_cursor()
+        QApplication.instance().installEventFilter(self)   # Mausbewegungen im ganzen Programm
+        self._restart_cursor_timer()
 
-    def _apply_cursor(self, hidden: bool | None = None) -> None:
-        """Mauszeiger im ganzen Programm aus-/einblenden (HIDE_MOUSE_CURSOR)."""
-        if hidden is None:
-            hidden = self._settings.hide_cursor
+    def eventFilter(self, obj, event) -> bool:  # noqa: N802
+        kind = event.type()
+        if kind in _MOUSE_EVENTS:
+            pos = QCursor.pos()
+            # Windows schickt auch ohne echte Bewegung Mausereignisse -> nur zählen, wenn sich etwas tut
+            if kind not in (QEvent.Type.MouseMove, QEvent.Type.HoverMove) or pos != self._cursor_pos:
+                self._cursor_pos = pos
+                self._apply_cursor(False)
+                self._restart_cursor_timer()
+        return False
+
+    def _restart_cursor_timer(self) -> None:
+        seconds = self._settings.hide_cursor_seconds
+        if seconds > 0:
+            self._cursor_timer.start(int(seconds * 1000))
+        else:
+            self._cursor_timer.stop()
+            self._apply_cursor(False)
+
+    def _apply_cursor(self, hidden: bool) -> None:
+        """Mauszeiger im ganzen Programm aus-/einblenden (HIDE_CURSOR_SECONDS)."""
         if hidden == self._cursor_hidden:
             return
         self._cursor_hidden = hidden
@@ -378,7 +405,7 @@ class MainWindow(QWidget):
                 != (settings.fullscreen, settings.window_size, settings.stay_on_top) and self.isVisible()):
             self._apply_window_mode()
         if self.isVisible():
-            self._apply_cursor()
+            self._restart_cursor_timer()
         self._background = None
         for widget in [self] + self.findChildren(QWidget):
             widget.update()

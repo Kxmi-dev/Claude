@@ -147,7 +147,8 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 ## Wichtige config.py-Schalter
 KEY_*, SOUND_ENABLED, HALFTIME_SOUND, CELEBRATION_*, INPUT_LOCK_SECONDS, UNDO_LOCK_SECONDS, ABORT_CONFIRM_SECONDS, NUMPAD_ONLY, FULLSCREEN, HISTORY_LENGTH,
 STAY_ON_TOP (Fenster immer oben; `_open_external` setzt es aus, bis das Scoreboard wieder aktiv ist),
-HIDE_MOUSE_CURSOR (Override-Cursor BlankCursor, beim Schließen zurück), APP_TITLE, APP_VERSION, CLUB_NAME, AUTO_ENABLE_NUMLOCK, NUMLOCK_CHECK_SECONDS, AUTOSAVE_SECONDS,
+HIDE_CURSOR_SECONDS (Standard 5; App-Eventfilter: echte Mausbewegung/Klick zeigt den Zeiger, nach x s ohne Maus
+  BlankCursor-Override; Tasten zählen nicht; beim Schließen zurück), APP_TITLE, APP_VERSION, CLUB_NAME, AUTO_ENABLE_NUMLOCK, NUMLOCK_CHECK_SECONDS, AUTOSAVE_SECONDS,
 GAME_MODES, SHOW_UNAVAILABLE_MODES, PDF_ROWS_PER_BLOCK/BLOCKS_PER_ROW, SHOW_REPORT_AFTER_GAME,
 OPEN_PDF_AFTER_GAME, REPLAY_SECONDS_PER_STROKE, *_RETENTION_DAYS, Ordnerpfade (exe-aware).
 Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lesen.

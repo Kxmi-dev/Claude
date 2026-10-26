@@ -71,6 +71,9 @@ def _days(value: int) -> str:
     return "nie löschen" if value == 0 else f"{value} Tage"
 
 
+CURSOR_SECONDS = (0.0, 3.0, 5.0, 10.0, 30.0)   # Auswahl „Mauszeiger ausblenden nach“
+
+
 def _cycle(options: list, current, delta: int):
     if not options:
         return current
@@ -384,8 +387,12 @@ class SettingsScreen(QWidget):
                  "Gilt, wenn Vollbild aus ist."),
             self._bool_item("Immer im Vordergrund", "stay_on_top",
                             "An = kein anderes Fenster kann sich vor das Scoreboard legen."),
-            self._bool_item("Mauszeiger ausblenden", "hide_cursor",
-                            "An = Mauszeiger ist unsichtbar (Bedienung über den Nummernblock)."),
+            Item("Mauszeiger ausblenden nach",
+                 lambda: "Aus" if not self.settings.hide_cursor_seconds else _seconds(self.settings.hide_cursor_seconds),
+                 lambda d: self.set_value("hide_cursor_seconds",
+                                          _cycle(list(CURSOR_SECONDS), self.settings.hide_cursor_seconds, d)),
+                 None, "Der Mauszeiger verschwindet, wenn die Maus so lange nicht bewegt wurde. "
+                       "Aus = Zeiger immer sichtbar."),
             Item("Schriftgröße", lambda: f"{self.settings.font_scale} %",
                  lambda d: self.set_value("font_scale", _cycle(list(FONT_SCALES), self.settings.font_scale, d)),
                  None, "Große Zahlen füllen ihr Feld immer aus; Texte werden nie abgeschnitten."),

@@ -75,7 +75,7 @@ class AppSettings:
     enter_skips_lock: bool = True                        # [Enter] beendet die Sperre nach einer Wertung
     grid_running_total: bool = True                      # Raster zeigt Gesamtpunkte (3, 6, 9) statt Einzelstoß
     stay_on_top: bool = True                             # Fenster immer im Vordergrund
-    hide_cursor: bool = True                             # Mauszeiger ausblenden
+    hide_cursor_seconds: float = 5.0                     # Mauszeiger nach x s ohne Mausbewegung ausblenden (0 = nie)
 
     @property
     def logo_path(self) -> Path:
@@ -144,7 +144,7 @@ class AppSettings:
             enter_skips_lock=bool(getattr(cfg, "ENTER_SKIPS_LOCK", True)),
             grid_running_total=bool(getattr(cfg, "GRID_RUNNING_TOTAL", True)),
             stay_on_top=bool(getattr(cfg, "STAY_ON_TOP", True)),
-            hide_cursor=bool(getattr(cfg, "HIDE_MOUSE_CURSOR", True)),
+            hide_cursor_seconds=max(0.0, float(getattr(cfg, "HIDE_CURSOR_SECONDS", 5))),
         )
         settings.validate()
         return settings

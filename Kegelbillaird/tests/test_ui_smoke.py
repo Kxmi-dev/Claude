@@ -83,20 +83,31 @@ class UiSmokeTests(unittest.TestCase):
     def test_stay_on_top_hidden_cursor_and_pdf_suspend(self):
         from unittest import mock
         from bk.ui.main_window import MainWindow
-        window = MainWindow(self.settings, self.storage)
+        from PySide6.QtCore import QPointF
+        from PySide6.QtGui import QMouseEvent
+        window = MainWindow(dataclasses.replace(self.settings, hide_cursor_seconds=0.3), self.storage)
         self.windows.append(window)
         window.show_window()
+        self.assertIsNone(QApplication.overrideCursor())                      # beim Start sichtbar …
         QTest.qWait(450)
         self.assertTrue(window.stays_on_top)                                  # immer im Vordergrund
+        self.assertEqual(QApplication.overrideCursor().shape(), Qt.CursorShape.BlankCursor)   # … nach 0,3 s weg
+        QApplication.sendEvent(window, QMouseEvent(QEvent.Type.MouseButtonPress, QPointF(5, 5), QPointF(5, 5),
+                                                   Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton, NO))
+        self.assertIsNone(QApplication.overrideCursor())                      # Maus benutzt -> wieder da
+        self.key(window, Qt.Key.Key_2)                                        # Taste zählt nicht
+        QTest.qWait(450)
         self.assertEqual(QApplication.overrideCursor().shape(), Qt.CursorShape.BlankCursor)
         with mock.patch("bk.ui.main_window.QDesktopServices.openUrl") as open_url:
             window._open_external(str(self.tmp.path / "x.pdf"))              # PDF öffnen: kurz nicht oben
         open_url.assert_called_once()
         self.assertFalse(window.stays_on_top)
         window._on_top_suspended = False
-        window.apply_settings(dataclasses.replace(self.settings, stay_on_top=False, hide_cursor=False))
+        window.apply_settings(dataclasses.replace(self.settings, stay_on_top=False, hide_cursor_seconds=0.0))
         self.assertFalse(window.stays_on_top)
-        self.assertIsNone(QApplication.overrideCursor())                      # Zeiger wieder sichtbar
+        self.assertIsNone(QApplication.overrideCursor())                      # „Aus“: Zeiger immer sichtbar
+        QTest.qWait(450)
+        self.assertIsNone(QApplication.overrideCursor())
         window.apply_settings(self.settings)
         self.assertTrue(window.stays_on_top)
         window.close()

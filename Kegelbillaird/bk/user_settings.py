@@ -97,7 +97,7 @@ FIELDS: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]]] = {
     "show_input_status": (_bool, bool),
     "grid_running_total": (_bool, bool),
     "stay_on_top": (_bool, bool),
-    "hide_cursor": (_bool, bool),
+    "hide_cursor_seconds": (_float, float),
     "input_lock_seconds": (_float, float),
     "undo_lock_seconds": (_float, float),
     "abort_confirm_seconds": (_float, float),
