@@ -136,6 +136,21 @@ class UndoTests(unittest.TestCase):
         self.assertFalse(game.is_complete)
         self.assertEqual(game.current_stroke_number, 50)
 
+    def test_replace_last_changes_only_last_stroke(self):
+        game = new_game()
+        self.assertIsNone(game.replace_last(3))   # noch kein Stoß
+        game.record(4)
+        game.record(-3)
+        old, entry = game.replace_last(-2)
+        self.assertEqual(old, -3)
+        self.assertEqual((entry.number, entry.value, entry.running_total), (2, -2, 2))
+        self.assertEqual(game.state.strokes, [4, -2])   # frühere Stöße bleiben fest
+        self.assertEqual(game.state.corrections, 1)
+        game.replace_last(-2)                            # gleicher Wert zählt nicht als Korrektur
+        self.assertEqual(game.state.corrections, 1)
+        with self.assertRaises(GameError):
+            game.replace_last(8)
+
 
 class ValueCountTests(unittest.TestCase):
     def test_counts_for_every_value(self):

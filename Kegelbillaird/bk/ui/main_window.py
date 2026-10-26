@@ -37,7 +37,7 @@ from .menu_screen import MenuScreen
 from .result_screen import ResultScreen
 from .settings_screen import SettingsScreen
 from .overlays import Overlay, OverlayContent
-from .widgets import FooterBar, TitleBar
+from .widgets import FooterBar, TitleBar, format_points
 
 log = logging.getLogger(__name__)
 
@@ -190,6 +190,7 @@ class MainWindow(QWidget):
         self.game_screen.completed.connect(self._finalize_game)
         self.game_screen.abort_confirmed.connect(self._abort_game)
         self.game_screen.abort_prompt.connect(self._on_abort_prompt)
+        self.game_screen.correction_prompt.connect(self._on_correction_prompt)
         self.game_screen.message.connect(self._flash)
         self.game_screen.warning.connect(self.footer.set_warning)
 
@@ -615,6 +616,25 @@ class MainWindow(QWidget):
                     warning=True, interactive=False))
         elif self.overlay.isVisible() and not self.overlay.interactive:
             self.overlay.close_overlay()
+
+    def _on_correction_prompt(self, info) -> None:
+        """Korrekturfeld: alte Punktzahl anzeigen, neue Punktzahl wird eingetippt (None = schließen)."""
+        if info is None:
+            if self.overlay.isVisible() and not self.overlay.interactive:
+                self.overlay.close_overlay()
+            return
+        number, old, new, minus = info
+        if new is None:
+            new_text = "\u2212 _" if minus else "_"
+        else:
+            new_text = format_points(new)
+        self.overlay.show_content(OverlayContent(
+            f"Korrektur  Stoß {number}",
+            [f"Bestätigen = [{keymap.label('enter')}]      Abbrechen = [{keymap.label('abort')}]"],
+            top_lines=[f"Alte Punktzahl:   {format_points(old)}"],
+            big=f"Neue Punktzahl:   {new_text}",
+            hint=f"Minus: erst [{keymap.label('minus')}], dann [0] bis [7]. Nur der letzte Stoß ist änderbar.",
+            highlight=True, interactive=False))
 
     def _abort_game(self) -> None:
         game = self.game_screen.game

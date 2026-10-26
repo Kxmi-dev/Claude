@@ -118,7 +118,7 @@ class KeyBindingUiTests(unittest.TestCase):
         screen = window.game_screen
         self.assertIs(window.stack.currentWidget(), screen)
         legend = " | ".join(screen.footer_segments())
-        self.assertIn("Korrektur mit  [U]", legend)
+        self.assertIn("Korrektur letzter Stoß mit  [U]", legend)
         self.assertIn("Minus:  [M]", legend)
         self.assertIn("Partie-Abbruch mit  [F10]  &  [M]", legend)
         self.assertNotIn("[/]", legend)
@@ -129,9 +129,11 @@ class KeyBindingUiTests(unittest.TestCase):
         self.key(window, Qt.Key.Key_Slash, keypad=True)          # altes Zeichen tut nichts mehr
         self.assertEqual(screen.game.played, 1)
         self.key(window, Qt.Key.Key_U)                           # neue Rücknahme-Taste (kein Nummernblock nötig)
-        self.assertEqual(screen.game.played, 1)                  # erst Abfrage …
-        self.key(window, Qt.Key.Key_Space)                       # … bestätigt mit der Enter-Taste
-        self.assertEqual(screen.game.played, 0)
+        self.assertTrue(screen.controller.correction_pending())  # Korrekturfeld …
+        self.key(window, Qt.Key.Key_M)                           # … neue Punktzahl −2
+        self.key(window, Qt.Key.Key_2, keypad=True)
+        self.key(window, Qt.Key.Key_Space)                       # … übernommen mit der Enter-Taste
+        self.assertEqual(screen.game.state.strokes, [-2])
 
         self.key(window, Qt.Key.Key_F10)                         # Abbruch-Frage
         self.assertTrue(screen.controller.abort_pending())

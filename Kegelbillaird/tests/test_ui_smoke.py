@@ -94,15 +94,38 @@ class UiSmokeTests(unittest.TestCase):
         self.score(window, -3)
         self.assertEqual(game.state.strokes, [5, -3])
         self.assertEqual(window.game_screen.score_box.text(), "2")
-        self.key(window, Qt.Key.Key_Slash)                       # Korrektur: erst Abfrage
+        self.key(window, Qt.Key.Key_Slash)                       # Korrektur: Korrekturfeld öffnet sich
         self.assertEqual(game.state.strokes, [5, -3])
-        self.assertEqual(window.game_screen.status_box.text(), "KORREKTUR?")
+        self.assertEqual(window.game_screen.status_box.text(), "KORREKTUR")
         self.assertEqual(window.game_screen.grid._pending, 1)    # Kästchen gelb hinterlegt
-        self.key(window, Qt.Key.Key_Enter)                       # bestätigt
-        self.assertEqual(game.state.strokes, [5])
+        overlay = window.overlay
+        self.assertTrue(overlay.isVisible())
+        self.assertEqual(overlay.content.title, "Korrektur  Stoß 2")
+        self.assertEqual(overlay.content.top_lines, ["Alte Punktzahl:   \u22123"])
+        self.assertEqual(overlay.content.big, "Neue Punktzahl:   _")
+        self.key(window, Qt.Key.Key_Enter)                       # ohne neue Zahl: Feld bleibt offen
+        self.assertTrue(overlay.isVisible())
+        self.key(window, Qt.Key.Key_4)                           # vertippt …
+        self.key(window, Qt.Key.Key_Minus)                       # … Minus nachträglich
+        self.assertEqual(overlay.content.big, "Neue Punktzahl:   \u22124")
+        self.key(window, Qt.Key.Key_2)                           # andere Ziffer überschreibt
+        self.assertEqual(overlay.content.big, "Neue Punktzahl:   \u22122")
+        self.assertEqual(game.state.strokes, [5, -3])            # noch nichts geändert
+        self.key(window, Qt.Key.Key_Enter)                       # übernehmen
+        self.assertFalse(overlay.isVisible())
+        self.assertEqual(game.state.strokes, [5, -2])
         self.assertIsNone(window.game_screen.grid._pending)
-        self.assertEqual(self.storage.load_active().state.strokes, [5])
-        self.assertEqual(window.game_screen.strokes_box.text(), "1")         # gespielte Stöße
+        self.assertEqual(window.game_screen.score_box.text(), "3")
+        self.assertEqual(self.storage.load_active().state.strokes, [5, -2])
+        self.assertEqual(window.game_screen.strokes_box.text(), "2")         # gespielte Stöße
+        QTest.qWait(100)                                         # kurze Sperre der Korrektur-Taste
+        self.key(window, Qt.Key.Key_Slash)                       # Korrektur abbrechen mit [*]
+        self.key(window, Qt.Key.Key_7)
+        self.key(window, Qt.Key.Key_Asterisk)
+        self.assertFalse(overlay.isVisible())
+        self.assertEqual(game.state.strokes, [5, -2])
+        self.score(window, 1)                                    # nächster Stoß sofort möglich
+        self.assertEqual(game.state.strokes, [5, -2, 1])
 
     def test_non_numpad_and_autorepeat_keys_are_ignored(self):
         window = self.open_window()
@@ -159,13 +182,12 @@ class UiSmokeTests(unittest.TestCase):
         self.score(window, 7)
         self.assertTrue(game.is_complete)
         self.key(window, Qt.Key.Key_Slash)                       # Korrektur nach dem letzten Stoß
-        self.key(window, Qt.Key.Key_Enter)                       # bestätigt (beendet die Partie nicht)
+        self.key(window, Qt.Key.Key_2)
+        self.key(window, Qt.Key.Key_Enter)                       # übernimmt (beendet die Partie nicht)
         QTest.qWait(int(self.LOCK * 1000) + 300)
         self.assertFalse(window.overlay.isVisible())
-        self.assertEqual(game.played, 49)
-        self.assertIs(window.stack.currentWidget(), window.game_screen)
-        self.score(window, 2)
-        QTest.qWait(int(self.LOCK * 1000) + 300)
+        self.assertEqual(game.played, 50)
+        self.assertEqual(game.state.strokes[-1], 2)
         self.assertIs(window.stack.currentWidget(), window.game_screen)
         self.key(window, Qt.Key.Key_Enter)                       # erst jetzt: Auswertung
         self.assertEqual(window.result_screen.boxes["total"].text(), "51")

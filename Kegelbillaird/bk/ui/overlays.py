@@ -4,6 +4,7 @@
 Verwendet für:
 * "Unterbrochene Partie gefunden"  (PARTIE FORTSETZEN / NEUE PARTIE)
 * Abbruch-Frage während der Partie ([−] = Ja, jede andere Taste = Nein)
+* Korrekturfeld (alte Punktzahl / neue Punktzahl des letzten Stoßes)
 * "Partie beendet" mit Endresultat und PDF-Pfad
 * Fehlermeldungen (z. B. beschädigter Spielstand)
 
@@ -23,16 +24,19 @@ from . import theme
 from .keymap import MenuKey, map_menu_key
 
 WARNING_PLATE = QColor("#f2d4cf")
+HIGHLIGHT_PLATE = QColor("#ffe14d")   # gelb wie das zu korrigierende Kästchen
 
 
 @dataclass
 class OverlayContent:
     title: str
     lines: list[str] = field(default_factory=list)
+    top_lines: list[str] = field(default_factory=list)   # Zeilen über ``big``
     big: str = ""
     choices: list[str] = field(default_factory=list)
     hint: str = ""
     warning: bool = False
+    highlight: bool = False    # gelbe Titelplatte (Korrektur)
     interactive: bool = True   # False = reine Anzeige, Tasten gehen an die Zählansicht
     back_choice: int | None = None   # Auswahl bei [*]/[Esc] (None = Taste ohne Wirkung)
 
@@ -116,7 +120,7 @@ class Overlay(QWidget):
         button_h = 62 * u
         button_gap = 16 * u
         hint_h = 26 * u if c.hint else 0
-        height = (pad + title_h + 18 * u + big_h + len(c.lines) * line_h
+        height = (pad + title_h + 18 * u + big_h + (len(c.lines) + len(c.top_lines)) * line_h
                   + (18 * u + len(c.choices) * (button_h + button_gap) if c.choices else 0)
                   + hint_h + pad)
         width = min(self.width() * 0.92, 660 * u)
@@ -126,8 +130,13 @@ class Overlay(QWidget):
         x0, w0 = inner.left() + pad * 0.7, inner.width() - pad * 1.4
         y = card.top() + pad
         theme.draw_plate(p, QRectF(x0, y, w0, title_h), c.title, text_ratio=0.56,
-                         color=WARNING_PLATE if c.warning else theme.PLATE)
+                         color=WARNING_PLATE if c.warning else HIGHLIGHT_PLATE if c.highlight else theme.PLATE)
         y += title_h + 18 * u
+        for line in c.top_lines:
+            p.setPen(theme.TEXT)
+            p.setFont(theme.fitted_font(line, w0, line_h * 0.7))
+            p.drawText(QRectF(x0, y, w0, line_h), Qt.AlignmentFlag.AlignCenter, line)
+            y += line_h
         if c.big:
             p.setPen(theme.TEXT)
             p.setFont(theme.fitted_font(c.big, w0, big_h * 0.8, bold=True))

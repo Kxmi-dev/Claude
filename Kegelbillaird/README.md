@@ -97,7 +97,7 @@ Datum und Uhrzeit werden automatisch erfasst und stehen im PDF.
 | `0`–`7`            | Plus-Wertung +0 … +7 (z. B. `5` → **+5**) – Plus ist immer voreingestellt |
 | `-` dann `0`–`7`   | Minus-Wertung −0 … −7 (z. B. `-` `3` → **−3**; −0 zählt als 0) |
 | `+`                | hebt einen versehentlich gewählten Minus-Modus wieder auf  |
-| `/` dann `Enter`   | Korrektur: `/` hinterlegt den letzten Stoß im Raster **gelb** und fragt „KORREKTUR?“; `Enter` nimmt ihn zurück, jede andere Taste = keine Korrektur (mehrfach möglich) |
+| `/` → Zahl → `Enter` | Korrektur des **letzten** Stoßes: `/` hinterlegt ihn im Raster **gelb** und öffnet das Korrekturfeld („Alte Punktzahl“ / „Neue Punktzahl“). Neue Punktzahl eintippen (`-` davor für Minus, eine andere Ziffer überschreibt), `Enter` übernimmt, `*` oder `Esc` bricht ab. Kein Zeitlimit. Frühere Stöße stehen fest. |
 | `Enter`            | während „GESPERRT“: Sperre sofort beenden → BEREIT (abschaltbar); nach dem letzten Stoß: Auswertung |
 | `*` dann `-`       | Partie abbrechen (jede andere Taste = weiterspielen)       |
 
@@ -124,7 +124,7 @@ Datum und Uhrzeit werden automatisch erfasst und stehen im PDF.
 | Aktueller Stoß  | letzte Wertung groß (ohne Stoßnummer); nach `-` rot hinterlegt mit „Minus: Zahl 0 – 7“ |
 | Letzte Stöße    | die letzten fünf Wertungen („Stoß 47  +1“) |
 | Minus           | Summe aller Minuspunkte |
-| Eingabe         | BEREIT (Plus) / MINUS / GESPERRT mit Countdown-Balken / KORREKTUR? / ENDE |
+| Eingabe         | BEREIT (Plus) / MINUS / GESPERRT mit Countdown-Balken / KORREKTUR / ENDE |
 | Spieldauer      | Laufzeit der Partie |
 | Stoß-Raster     | ein Feld pro Stoß mit dem **Gesamtstand nach diesem Stoß** (3, 6, 9 …; umschaltbar auf Einzelstoß), **X** = Leerstoß, rot = Minus-Stoß; **blauer Rahmen** = nächster Stoß, **gelb** = Halbzeit und letzte 5 Stöße, kräftig gelb = Kästchen, das gerade korrigiert wird; rechts daneben, ohne Kästchen direkt auf dem grauen Hintergrund, die **Punkte je Reihe** |
 
@@ -140,7 +140,7 @@ Die Auswertung („Endergebnis“) passt komplett auf einen Bildschirm (ohne Bl�
 * **Spielanalyse:** wie oft 1er, 2er … 7er, Leerstöße und Minusstöße gestoßen wurden
 * **Statistik** in drei Spalten: Ausgeführte / Positive / Leer- / Minusstöße · Summe positive Punkte,
   Summe Minuspunkte, Netto-Endergebnis, Durchschnitt je Stoß · Höchstes Stoßergebnis, Halbzeitergebnis,
-  Punkte 2. Halbzeit, **Korrekturen** (wie oft mit `/` zurückgenommen wurde; bei Partien vor Version 3 „–“)
+  Punkte 2. Halbzeit, **Korrekturen** (wie oft mit `/` korrigiert wurde; bei Partien vor Version 3 „–“)
 
 | Knopf | Wirkung |
 |-------|---------|
@@ -387,7 +387,9 @@ bk_scoreboard/
               └── +  → zurück auf Plus    (8/9 werden abgelehnt)
 
  - und + sind auch während GESPERRT erlaubt (Modus für den nächsten Stoß), Ziffern nicht.
- /  → Rücknahme (auch während GESPERRT; hebt die Sperre auf, kurze Eigen-Sperre gegen Prellen)
+ /  → KORREKTURFELD (auch während GESPERRT) ── [−] 0..7 → neue Punktzahl des letzten Stoßes
+                     ├─ Enter → übernehmen (Sperre aufgehoben)
+                     └─ * / Esc → abbrechen (kein Zeitlimit)
  *  → ABBRUCH-FRAGE ── -  → Partie abbrechen
                    └─ jede andere Taste / Zeitablauf → weiter
 ```

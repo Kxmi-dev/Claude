@@ -274,7 +274,7 @@ class SettingsMenuTests(unittest.TestCase):
         self.assertEqual(self.window._settings.key_bindings.keys("abort"), ("*",))
         self.key(Qt.Key.Key_6)                                     # [4]/[6] = Standard
         self.window.game_screen.start_game(Game(GameState.new(BK50)))
-        self.assertIn("Korrektur mit  [U]", " ".join(self.window.game_screen.footer_segments()))
+        self.assertIn("Korrektur letzter Stoß mit  [U]", " ".join(self.window.game_screen.footer_segments()))
         self.window.game_screen.clear()
 
     def test_colors(self):

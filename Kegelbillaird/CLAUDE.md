@@ -68,9 +68,10 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 - **Keine Bestätigungstaste, kein Backspace.** Nur Nummernblock-Tasten (`NUMPAD_ONLY`), Autorepeat ignoriert.
 - **Sperre** `INPUT_LOCK_SECONDS = 3` (oben in config.py) nach jeder Wertung, nicht blockierend (Timer/monotone Uhr).
   Ziffern gesperrt; `-`/`+` (Modusvorwahl) und `/` während der Sperre erlaubt.
-- `/` = Korrektur MIT Abfrage: Kästchen im Raster kräftig gelb, „KORREKTUR?“; `Enter` bestätigt (letzte Wertung
-  komplett zurück inkl. Speicherung, hebt Sperre auf, Prellsperre 1 s), jede andere Taste/Zeitablauf
-  (`abort_confirm_seconds`) = keine Korrektur (Taste wird NICHT gewertet). Controller: `undo_confirm_seconds`.
+- `/` = Korrekturfeld (Nutzerwunsch): NUR der letzte Stoß ist änderbar. Kästchen im Raster kräftig gelb, Overlay
+  „Korrektur Stoß N“ mit „Alte Punktzahl“ / „Neue Punktzahl“; neue Zahl eintippen (`-`/`+` Vorzeichen, Ziffer
+  überschreibt), `Enter` übernimmt (`Game.replace_last`, Speicherung, Sperre aufgehoben), `*`/`Esc` bricht ab,
+  kein Zeitlimit. Controller: `correction_input=True`, Aktionen CORRECTION_*; Signal `correction_prompt`.
 - `Enter` in der Partie (GameKey.ENTER über map_menu_key): während GESPERRT → sofort BEREIT (`enter_skips_lock`,
   Einstellungen → Eingabe); nach dem letzten Stoß → Partie abschließen + Auswertung.
 - **Abbruch: `*` dann `-`** (statt Vorlage „[Num]&[-]“, weil NumLock-Taste mit Auto-NumLock kollidiert);
@@ -85,7 +86,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   **„Billiard vs Fußball“** (Schlüssel BK25): 25 Stoß, keine Halbzeit, Raster 5 × 5.
 - Anzeigen: Stoß-Anzahl (gespielte Stöße, Start 0), Punktestand, Prognose, Halbzeit (nach 50 bzw. 25),
   Aktueller Stoß (rot getönt bei Minus-Modus), Letzte Stöße (5), Minus (Summe Minuspunkte),
-  Eingabe (BEREIT / MINUS / GESPERRT + Countdown / KORREKTUR? / ENDE), Spieldauer, 10er-Raster: Kästchen zeigen
+  Eingabe (BEREIT / MINUS / GESPERRT + Countdown / KORREKTUR / ENDE), Spieldauer, 10er-Raster: Kästchen zeigen
   den GESAMTSTAND nach dem Stoß (3, 6, 9; `grid_running_total`, umschaltbar auf Einzelstoß), Leerstoß = „X“,
   Minus-Stoß rot; rechts Punkte je Reihe fett schwarz OHNE Kästchen/weißen Hintergrund (direkt auf Grau). Halbzeit-Feld bleibt ab Halbzeit gelb.
   Aktueller Stoß ohne „Stoß N“-Untertext (dafür Prognose/Halbzeit größer). Stoß-Anzahl = Zahl der GESPIELTEN Stöße (Start 0, kein „/ 100“), Aktueller Stoß ohne „+“
@@ -132,7 +133,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   Knöpfe Partie speichern / Partie drucken / Neue Partie (nur nach Partie, gleiche Spielart) / Hauptmenü
   (Archiv: Zurück) + **Tabelle ansehen** (Raster statt Kennzahlen, `*` zurück zur Auswertung). „Partie bearbeiten“ bewusst weggelassen.
 - **Sperre nach Partie-Ende** `result_lock_seconds` (Standard 5, Einstellungen → Eingabe): Enter/Back/Klick wirkungslos.
-- **Korrekturen** werden in `GameState.corrections` gezählt (`Game.undo`); alte Spielstände ohne Feld → None → „–“.
+- **Korrekturen** werden in `GameState.corrections` gezählt (`Game.undo` / `Game.replace_last`, nur bei geändertem Wert); alte Spielstände ohne Feld → None → „–“.
 - **Das PDF bleibt unverändert** (Nutzer: „so wie es jetzt ist“) – Formatierung nur auf ausdrücklichen Wunsch ändern.
   Einzige gewünschte Änderung bisher: Logo oben rechts = Vereinslogo statt BK-Scoreboard-Bild.
 - PDF enthält „**Anzahl je Wertung**“ (wie oft −7…+7 gestoßen) und gleich dicke Tabellenlinien
@@ -154,6 +155,7 @@ Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lese
 - **WICHTIG (ausdrücklicher Nutzerwunsch): Bei JEDER Änderung zuerst schreiben, WAS gebaut werden soll
   (kurzer Plan), und erst nach dem „ja“ des Nutzers umsetzen.** Auch bei kleinen Wünschen nie direkt loslegen.
 - **Nie einen Windows-/GitHub-Build starten** (Nutzerwunsch) – der Nutzer baut selbst mit `build_exe.bat`.
+- **Nicht die ganze Testsuite laufen lassen** (Nutzerwunsch) – nur die Tests, die zu den geänderten Stellen gehören (z. B. einzelne Testklassen/-methoden).
 - Tests: `python main.py --selftest` (oder `python -m unittest discover -s tests -t .`);
   UI-Tests laufen mit `QT_QPA_PLATFORM=offscreen`. Vor Auslieferung immer alle Tests grün + `pyflakes`.
 - .exe bauen: `build_exe.bat` (auf Windows). Nutzer-Update: nur `BK-Scoreboard.exe` + `_internal` ersetzen,

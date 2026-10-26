@@ -171,7 +171,7 @@ class MediaUiTests(unittest.TestCase):
         screen = self.screen()
         self.press(screen, 7)
         self.assertTrue(screen._celebration.isVisible())
-        for key in (Qt.Key.Key_Slash, Qt.Key.Key_Enter):         # Korrektur + Bestätigung
+        for key in (Qt.Key.Key_Slash, Qt.Key.Key_3, Qt.Key.Key_Enter):   # Korrektur auf +3
             screen.handle_key(QKeyEvent(QEvent.Type.KeyPress, key, Qt.KeyboardModifier.KeypadModifier, "", False))
         self.assertFalse(screen._celebration.isVisible())
 

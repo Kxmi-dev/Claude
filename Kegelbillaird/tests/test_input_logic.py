@@ -199,27 +199,49 @@ class UndoConfirmAndEnterTests(unittest.TestCase):
 
     def make(self, skip=True):
         clock = FakeClock()
-        return ScoreInputController(3.0, 1.0, 5.0, clock, undo_confirm_seconds=5.0, enter_skips_lock=skip), clock
+        return ScoreInputController(3.0, 1.0, 5.0, clock, correction_input=True, enter_skips_lock=skip), clock
 
-    def test_undo_needs_enter(self):
+    def test_correction_enters_new_value(self):
         ctrl, _ = self.make()
         ctrl.press(D, 4)
-        self.assertEqual(ctrl.press(U).action, Action.UNDO_REQUESTED)
-        self.assertTrue(ctrl.undo_pending())
-        self.assertEqual(ctrl.press(U).action, Action.UNDO_REQUESTED)    # Prellen: Frage bleibt offen
-        self.assertEqual(ctrl.press(self.E).action, Action.UNDO)
-        self.assertFalse(ctrl.undo_pending())
-        self.assertFalse(ctrl.is_locked())                              # korrigierter Stoß sofort möglich
+        self.assertEqual(ctrl.press(U).action, Action.CORRECTION_STARTED)
+        self.assertTrue(ctrl.correction_pending())
+        self.assertEqual(ctrl.press(U).action, Action.CORRECTION_CHANGED)   # Prellen: Feld bleibt offen
+        r = ctrl.press(self.E)                                              # noch keine Zahl -> bleibt offen
+        self.assertEqual((r.action, r.value), (Action.CORRECTION_CHANGED, None))
+        self.assertEqual(ctrl.press(D, 6).value, 6)
+        self.assertEqual(ctrl.press(D, 2).value, 2)                         # überschreibt
+        self.assertEqual(ctrl.press(M).value, -2)                           # Minus nachträglich
+        self.assertEqual(ctrl.press(D, 9).action, Action.IGNORED_INVALID)
+        r = ctrl.press(self.E)
+        self.assertEqual((r.action, r.value), (Action.CORRECTION_CONFIRMED, -2))
+        self.assertFalse(ctrl.correction_pending())
+        self.assertFalse(ctrl.is_locked())                                  # nächster Stoß sofort möglich
+        self.assertFalse(ctrl.minus_selected)
 
-    def test_other_key_or_timeout_cancels_undo(self):
+    def test_minus_before_digit_and_plus(self):
+        ctrl, _ = self.make()
+        ctrl.press(U)
+        self.assertIsNone(ctrl.press(M).value)
+        self.assertTrue(ctrl.correction_minus)
+        self.assertEqual(ctrl.press(D, 5).value, -5)
+        self.assertEqual(ctrl.press(P).value, 5)
+        self.assertEqual(ctrl.press(D, 0).value, 0)
+
+    def test_abort_key_cancels_without_timeout(self):
         ctrl, clock = self.make()
+        ctrl.press(D, 3)
         ctrl.press(U)
-        self.assertEqual(ctrl.press(D, 3).action, Action.UNDO_CANCELLED)  # Ziffer wird NICHT gewertet
+        clock.advance(60)
+        self.assertIsNone(ctrl.check_timeouts())                            # kein Zeitlimit
+        self.assertTrue(ctrl.correction_pending())
+        ctrl.press(D, 5)
+        self.assertEqual(ctrl.press(A).action, Action.CORRECTION_CANCELLED)
+        self.assertFalse(ctrl.correction_pending())
+        self.assertFalse(ctrl.abort_pending())                              # * startet keinen Abbruch
         clock.advance(1.5)
-        ctrl.press(U)
-        clock.advance(5.1)
-        self.assertEqual(ctrl.check_timeouts().action, Action.UNDO_CANCELLED)
-        self.assertEqual(ctrl.press(self.E).action, Action.CONFIRM)
+        self.assertEqual(ctrl.press(U).action, Action.CORRECTION_STARTED)
+        self.assertIsNone(ctrl.correction_value)                            # frisches Feld
 
     def test_enter_skips_lock(self):
         ctrl, _ = self.make()
