@@ -151,6 +151,9 @@ OPEN_PDF_AFTER_GAME, REPLAY_SECONDS_PER_STROKE, *_RETENTION_DAYS, Ordnerpfade (e
 Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lesen.
 
 ## Arbeitsweise
+- **WICHTIG (ausdrücklicher Nutzerwunsch): Bei JEDER Änderung zuerst schreiben, WAS gebaut werden soll
+  (kurzer Plan), und erst nach dem „ja“ des Nutzers umsetzen.** Auch bei kleinen Wünschen nie direkt loslegen.
+- **Nie einen Windows-/GitHub-Build starten** (Nutzerwunsch) – der Nutzer baut selbst mit `build_exe.bat`.
 - Tests: `python main.py --selftest` (oder `python -m unittest discover -s tests -t .`);
   UI-Tests laufen mit `QT_QPA_PLATFORM=offscreen`. Vor Auslieferung immer alle Tests grün + `pyflakes`.
 - .exe bauen: `build_exe.bat` (auf Windows). Nutzer-Update: nur `BK-Scoreboard.exe` + `_internal` ersetzen,
