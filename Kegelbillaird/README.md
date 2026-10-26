@@ -184,7 +184,7 @@ Taste aufnehmen / Ton probehören · `*`/`Esc` zurück (bzw. die eingestellten T
 
 | Bereich | Einstellungen |
 |---------|---------------|
-| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Schriftgröße** (80–130 %), Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`), **Raster zeigt** Gesamtpunkte / Einzelstoß, Anzahl „Letzte Stöße“, Felder **„Letzte Stöße“** und **„Eingabe“** ein-/ausblenden (der Nachbar wird dann breiter), **Beim Windows-Start öffnen** (Autostart) |
+| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Immer im Vordergrund**, **Mauszeiger ausblenden**, **Schriftgröße** (80–130 %), Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`), **Raster zeigt** Gesamtpunkte / Einzelstoß, Anzahl „Letzte Stöße“, Felder **„Letzte Stöße“** und **„Eingabe“** ein-/ausblenden (der Nachbar wird dann breiter), **Beim Windows-Start öffnen** (Autostart) |
 | Design | Farbschema **Klassisch** (Vorlage) oder **Eigene Farben**: Primärfarbe (Leisten, Hintergrund, gewählter Knopf) und Sekundärfarbe (Rahmen, Beschriftungen, Knöpfe, Linien) als R/G/B 0–255. Rot/Grün der Wertung bleiben immer gleich; auf dunklen Leisten wird die Schrift automatisch weiß |
 | Eingabe | Sperrzeit nach Wertung, **Sperre mit `Enter` überspringen**, Sperre nach Korrektur, Sperre nach Partie-Ende, Wartezeit der Abbruch-Frage, Nur Nummernblock, NumLock automatisch |
 | Tasten | jede Aktion: `Enter`, dann die neue Taste drücken (doppelt belegte Tasten werden abgelehnt); `4`/`6` = Standard. Legende passt sich sofort an |
@@ -224,6 +224,8 @@ Werte aus dem Einstellungsmenü haben Vorrang. Nach einer Änderung hier das Pro
 | `ABORT_CONFIRM_SECONDS` | `5` | so lange wartet die Abbruch-Frage auf `-` |
 | `NUMPAD_ONLY` | `True` | `True` = im Spiel zählen nur Nummernblock-Tasten; `False` = auch die normale Tastatur |
 | `FULLSCREEN` | `True` | Start im Vollbild |
+| `STAY_ON_TOP` | `True` | Programm bleibt immer vor allen anderen Fenstern (ruht kurz, solange ein automatisch geöffnetes PDF vorne ist) |
+| `HIDE_MOUSE_CURSOR` | `True` | Mauszeiger im Programm unsichtbar |
 | `HISTORY_LENGTH` | `5` | Einträge unter „Letzte Stöße“ |
 | `APP_TITLE`, `APP_VERSION`, `CLUB_NAME` | | Texte in Titelleiste und PDF |
 | `KEY_PLUS`, `KEY_MINUS`, `KEY_UNDO`, `KEY_ABORT` | `+` `-` `/` `*` | Tasten in der Partie: Plus, Minus (auch „Ja“ bei der Abbruch-Frage), Rücknahme, Partie abbrechen |

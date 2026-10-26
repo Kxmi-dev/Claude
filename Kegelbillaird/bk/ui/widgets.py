@@ -507,7 +507,7 @@ class BrandPanel(_Painted):
         y = pad
         text_h = h * 0.17
         if self.has_logo:
-            logo_h = (h - 2 * pad - text_h) * 0.5
+            logo_h = (h - 2 * pad - text_h * 1.2) * 0.5
             box = QRectF(pad, y, inner_w, logo_h)
             p.setPen(QPen(QColor("#d6d6d6"), 1))
             p.setBrush(theme.WHITE)
@@ -517,7 +517,7 @@ class BrandPanel(_Painted):
                                     Qt.TransformationMode.SmoothTransformation)
             p.drawPixmap(int(target.center().x() - pix.width() / 2), int(target.center().y() - pix.height() / 2), pix)
             y += logo_h + pad * 0.6
-        space = h - y - text_h - pad * 0.6 - pad
+        space = h - y - text_h * 1.2 - pad * 0.6 - pad   # 1.2: Name, Version, „powered by“
         table_h = min(space, inner_w * 0.64)          # Seitenverhältnis wie ein Tisch
         self._draw_table(p, QRectF(pad, y + (space - table_h) / 2, inner_w, table_h))
         y += space + pad * 0.6
@@ -527,8 +527,12 @@ class BrandPanel(_Painted):
         p.drawText(title_rect, Qt.AlignmentFlag.AlignCenter, "BK-Scoreboard")
         version = f"Version {self._version}"
         p.setPen(theme.TEXT)
-        p.setFont(theme.fitted_font(version, inner_w * 0.7, text_h * 0.34, bold=True))
-        p.drawText(QRectF(pad, y + text_h * 0.6, inner_w, text_h * 0.4), Qt.AlignmentFlag.AlignCenter, version)
+        p.setFont(theme.fitted_font(version, inner_w * 0.7, text_h * 0.3, bold=True))
+        p.drawText(QRectF(pad, y + text_h * 0.6, inner_w, text_h * 0.34), Qt.AlignmentFlag.AlignCenter, version)
+        powered = "powered by Kimi&AP"
+        p.setPen(theme.TEXT_MUTED)
+        p.setFont(theme.fitted_font(powered, inner_w * 0.7, text_h * 0.2))
+        p.drawText(QRectF(pad, y + text_h * 0.94, inner_w, text_h * 0.26), Qt.AlignmentFlag.AlignCenter, powered)
         p.end()
 
     def _draw_table(self, p: QPainter, rect: QRectF) -> None:

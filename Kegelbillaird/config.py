@@ -45,10 +45,12 @@ NUMPAD_ONLY = True
 
 FULLSCREEN = True            # Start direkt im Vollbild
 WINDOW_SIZE = (1280, 800)    # Fenstergröße, wenn FULLSCREEN = False
+STAY_ON_TOP = True           # Programm bleibt immer im Vordergrund (vor allen anderen Fenstern)
+HIDE_MOUSE_CURSOR = True     # Mauszeiger im Programm ausblenden
 HISTORY_LENGTH = 5           # Anzahl der Einträge unter "Letzte Stöße"
 
 APP_TITLE = "BK-Scoreboard"
-APP_VERSION = "3.0.0"
+APP_VERSION = "3.0"
 CLUB_NAME = "SG Grün-Weiß Schlepzig e.V."
 
 # Vereinslogo im Hauptmenü (unter dem BK-Bild): Dateiname im Ordner „vereinslogo“,

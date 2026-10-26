@@ -80,6 +80,28 @@ class UiSmokeTests(unittest.TestCase):
         return window.game_screen.game
 
     # ------------------------------------------------------------- Tests
+    def test_stay_on_top_hidden_cursor_and_pdf_suspend(self):
+        from unittest import mock
+        from bk.ui.main_window import MainWindow
+        window = MainWindow(self.settings, self.storage)
+        self.windows.append(window)
+        window.show_window()
+        QTest.qWait(450)
+        self.assertTrue(window.stays_on_top)                                  # immer im Vordergrund
+        self.assertEqual(QApplication.overrideCursor().shape(), Qt.CursorShape.BlankCursor)
+        with mock.patch("bk.ui.main_window.QDesktopServices.openUrl") as open_url:
+            window._open_external(str(self.tmp.path / "x.pdf"))              # PDF öffnen: kurz nicht oben
+        open_url.assert_called_once()
+        self.assertFalse(window.stays_on_top)
+        window._on_top_suspended = False
+        window.apply_settings(dataclasses.replace(self.settings, stay_on_top=False, hide_cursor=False))
+        self.assertFalse(window.stays_on_top)
+        self.assertIsNone(QApplication.overrideCursor())                      # Zeiger wieder sichtbar
+        window.apply_settings(self.settings)
+        self.assertTrue(window.stays_on_top)
+        window.close()
+        self.assertIsNone(QApplication.overrideCursor())                      # beim Beenden zurückgesetzt
+
     def test_score_lock_and_undo_via_numpad(self):
         window = self.open_window()
         game = self.start_game(window)

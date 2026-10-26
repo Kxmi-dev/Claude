@@ -41,7 +41,7 @@ bk/ui/main_window.py Bildschirmwechsel, Startprüfung, Abschluss, Archiv-Aktione
 bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, Billiard vs Fußball (25 Stoß), Archiv, Einstellungen,
                      Beenden, Beenden & Herunterfahren (ROTER Knopf, `danger=True`; 2× Enter innerhalb 5 s)
                      Rechts `BrandPanel` (widgets): Vereinslogo im weißen Kasten, gezeichneter grüner Billardtisch
-                     mit Mini-Zähltafel/Kegeln/3 Kugeln, „BK-Scoreboard / Version {APP_VERSION}“ (3.0.0, Nutzer-Foto).
+                     mit Mini-Zähltafel/Kegeln/3 Kugeln, „BK-Scoreboard / Version {APP_VERSION}“ (3.0) und darunter „powered by Kimi&AP“ (Nutzerwunsch).
                      Vereinslogo zusätzlich klein rechts in der Titelleiste (`TitleBar.set_logo`).
 bk/ui/game_screen.py Zählansicht + Wiedergabe-Modus
 bk/ui/archive_screen.py  Archivliste
@@ -146,7 +146,8 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 
 ## Wichtige config.py-Schalter
 KEY_*, SOUND_ENABLED, HALFTIME_SOUND, CELEBRATION_*, INPUT_LOCK_SECONDS, UNDO_LOCK_SECONDS, ABORT_CONFIRM_SECONDS, NUMPAD_ONLY, FULLSCREEN, HISTORY_LENGTH,
-APP_TITLE, APP_VERSION, CLUB_NAME, AUTO_ENABLE_NUMLOCK, NUMLOCK_CHECK_SECONDS, AUTOSAVE_SECONDS,
+STAY_ON_TOP (Fenster immer oben; `_open_external` setzt es aus, bis das Scoreboard wieder aktiv ist),
+HIDE_MOUSE_CURSOR (Override-Cursor BlankCursor, beim Schließen zurück), APP_TITLE, APP_VERSION, CLUB_NAME, AUTO_ENABLE_NUMLOCK, NUMLOCK_CHECK_SECONDS, AUTOSAVE_SECONDS,
 GAME_MODES, SHOW_UNAVAILABLE_MODES, PDF_ROWS_PER_BLOCK/BLOCKS_PER_ROW, SHOW_REPORT_AFTER_GAME,
 OPEN_PDF_AFTER_GAME, REPLAY_SECONDS_PER_STROKE, *_RETENTION_DAYS, Ordnerpfade (exe-aware).
 Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lesen.

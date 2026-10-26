@@ -18,9 +18,9 @@ import logging
 import time
 from datetime import datetime
 
-from PySide6.QtCore import QObject, Qt, QTimer, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QIcon, QKeyEvent, QPainter, QPixmap
-from PySide6.QtWidgets import QStackedWidget, QVBoxLayout, QWidget
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import QCursor, QDesktopServices, QIcon, QKeyEvent, QPainter, QPixmap
+from PySide6.QtWidgets import QApplication, QStackedWidget, QVBoxLayout, QWidget
 
 from .. import numlock, power
 from ..game import Game, GameError
@@ -133,6 +133,9 @@ class MainWindow(QWidget):
         self._started = False
         self._overlay_handler = None
         self._last_result_path: str | None = None
+        self._on_top_suspended = False   # „immer im Vordergrund“ kurz aus, solange ein geöffnetes PDF vorne ist
+        self._left_window = False
+        self._cursor_hidden = False
 
         self.setWindowTitle(f"{settings.app_title} {settings.app_version}")
         if settings.icon_path.is_file():
@@ -249,7 +252,17 @@ class MainWindow(QWidget):
     shutdown_supported = staticmethod(power.shutdown_supported)
     shutdown_computer = staticmethod(power.shutdown)
 
+    def changeEvent(self, event) -> None:  # noqa: N802
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.ActivationChange and self._on_top_suspended:
+            if not self.isActiveWindow():
+                self._left_window = True
+            elif self._left_window:          # zurück im Scoreboard -> wieder immer im Vordergrund
+                self._on_top_suspended = False
+                QTimer.singleShot(0, self._apply_window_mode)
+
     def closeEvent(self, event) -> None:  # noqa: N802
+        self._apply_cursor(False)
         if self.game_screen.has_live_game:      # nie bei einer Wiedergabe
             self.game_screen.stop()
             self.game_screen.persist_now()
@@ -303,9 +316,37 @@ class MainWindow(QWidget):
         """Erstes Anzeigen: Vollbild oder Fenster in der eingestellten Größe."""
         self._force_windowed = force_windowed
         self._apply_window_mode(first=True)
+        self._apply_cursor()
+
+    def _apply_cursor(self, hidden: bool | None = None) -> None:
+        """Mauszeiger im ganzen Programm aus-/einblenden (HIDE_MOUSE_CURSOR)."""
+        if hidden is None:
+            hidden = self._settings.hide_cursor
+        if hidden == self._cursor_hidden:
+            return
+        self._cursor_hidden = hidden
+        if hidden:
+            QApplication.setOverrideCursor(QCursor(Qt.CursorShape.BlankCursor))
+        else:
+            QApplication.restoreOverrideCursor()
+
+    @property
+    def stays_on_top(self) -> bool:
+        return bool(self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint)
+
+    def _open_external(self, path: str) -> None:
+        """Datei im Windows-Programm öffnen; „immer im Vordergrund“ ruht, bis das Scoreboard wieder aktiv ist."""
+        if self._settings.stay_on_top and self.isVisible():
+            self._on_top_suspended = True
+            self._left_window = False
+            self._apply_window_mode()
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
     def _apply_window_mode(self, first: bool = False) -> None:
         s = self._settings
+        on_top = s.stay_on_top and not self._on_top_suspended
+        if on_top != self.stays_on_top:
+            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, on_top)   # versteckt das Fenster -> unten neu zeigen
         if s.fullscreen and not self._force_windowed:
             self.showFullScreen()
             return
@@ -333,8 +374,11 @@ class MainWindow(QWidget):
         if old.club_logo_path != settings.club_logo_path:
             self._load_club_logo()
         self.numlock_guard.update_settings(settings.auto_enable_numlock, settings.numlock_check_seconds)
-        if (old.fullscreen, old.window_size) != (settings.fullscreen, settings.window_size) and self.isVisible():
+        if ((old.fullscreen, old.window_size, old.stay_on_top)
+                != (settings.fullscreen, settings.window_size, settings.stay_on_top) and self.isVisible()):
             self._apply_window_mode()
+        if self.isVisible():
+            self._apply_cursor()
         self._background = None
         for widget in [self] + self.findChildren(QWidget):
             widget.update()
@@ -588,7 +632,7 @@ class MainWindow(QWidget):
             self._show_screen(self.menu_screen)
         self.title_bar.set_title(f"Partie beendet: {state.mode.title}")
         if pdf_ok and self._settings.open_pdf_after_game and self._last_result_path:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(self._last_result_path))
+            self._open_external(self._last_result_path)
         if pdf_ok and self._settings.show_report_after_game:
             note = f"PDF automatisch gespeichert: {pdf_path.parent.name}\\{pdf_path.name}"
             if recovered:
