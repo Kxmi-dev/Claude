@@ -56,7 +56,7 @@ class MenuScreen(QWidget):
             elif mode == QUIT:
                 button = MenuButton("Beenden", True, parent=self)
             elif mode == SHUTDOWN:
-                button = MenuButton(SHUTDOWN_TEXT, True, parent=self)
+                button = MenuButton(SHUTDOWN_TEXT, True, parent=self, danger=True)
             else:
                 button = MenuButton(mode.title, mode.available,
                                     "" if mode.available else "in Vorbereitung", parent=self)

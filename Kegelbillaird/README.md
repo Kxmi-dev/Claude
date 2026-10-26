@@ -126,7 +126,7 @@ Datum und Uhrzeit werden automatisch erfasst und stehen im PDF.
 | Minus           | Summe aller Minuspunkte |
 | Eingabe         | BEREIT (Plus) / MINUS / GESPERRT mit Countdown-Balken / KORREKTUR? / ENDE |
 | Spieldauer      | Laufzeit der Partie |
-| Stoß-Raster     | ein Feld pro Stoß mit dem **Gesamtstand nach diesem Stoß** (3, 6, 9 …; umschaltbar auf Einzelstoß), **X** = Leerstoß, rot = Minus-Stoß; **blauer Rahmen** = nächster Stoß, **gelb** = Halbzeit und letzte 5 Stöße, kräftig gelb = Kästchen, das gerade korrigiert wird; rechts schwarz die **Punkte je Reihe** |
+| Stoß-Raster     | ein Feld pro Stoß mit dem **Gesamtstand nach diesem Stoß** (3, 6, 9 …; umschaltbar auf Einzelstoß), **X** = Leerstoß, rot = Minus-Stoß; **blauer Rahmen** = nächster Stoß, **gelb** = Halbzeit und letzte 5 Stöße, kräftig gelb = Kästchen, das gerade korrigiert wird; rechts daneben, ohne Kästchen direkt auf dem grauen Hintergrund, die **Punkte je Reihe** |
 
 ### Partieende und Auswertung
 Nach dem letzten Stoß bleibt die Zähltafel stehen („ENDE“) – ein Tippfehler kann noch mit

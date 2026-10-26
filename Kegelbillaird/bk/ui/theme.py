@@ -30,6 +30,8 @@ OUTLINE = QColor("#1a1a1a")        # dünne dunkle Konturen
 WHITE = QColor("#ffffff")
 BUTTON = QColor("#d2d2d2")         # nicht gewählter Menüknopf
 BUTTON_SELECTED = QColor("#fffff5")
+DANGER = QColor("#b3261e")         # roter Knopf „Beenden & Herunterfahren“
+DANGER_SELECTED = QColor("#e0352b")
 BUTTON_TEXT = QColor("#333333")     # dunkel = auch aus der Entfernung gut lesbar
 SHADOW = QColor("#696969")
 TEXT = QColor("#111111")
@@ -160,15 +162,19 @@ def draw_plate(painter: QPainter, rect: QRectF, text: str, text_ratio: float = 0
 
 
 def draw_menu_button(painter: QPainter, rect: QRectF, text: str, selected: bool,
-                     available: bool = True, subtitle: str = "") -> None:
-    """Menüknopf wie in der Vorlage: gewählt = hell mit Schatten, sonst grau."""
+                     available: bool = True, subtitle: str = "", danger: bool = False) -> None:
+    """Menüknopf wie in der Vorlage: gewählt = hell mit Schatten, sonst grau.
+    ``danger``: roter Knopf mit weißer Schrift (gewählt heller rot)."""
     radius = max(3.0, rect.height() * 0.11)
     if selected:
         offset = max(2.0, rect.height() * 0.06)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(SHADOW)
         painter.drawPath(rounded_path(rect.translated(offset, offset), radius))
-    painter.setBrush(BUTTON_SELECTED if selected else BUTTON)
+    if danger:
+        painter.setBrush(DANGER_SELECTED if selected else DANGER)
+    else:
+        painter.setBrush(BUTTON_SELECTED if selected else BUTTON)
     pen_w = max(1.0, rect.height() / 60)
     painter.setPen(QColor(OUTLINE) if available else QColor("#7a7a7a"))
     pen = painter.pen()
@@ -177,6 +183,8 @@ def draw_menu_button(painter: QPainter, rect: QRectF, text: str, selected: bool,
     painter.drawPath(rounded_path(rect, radius))
 
     text_color = TEXT if selected else BUTTON_TEXT
+    if danger:
+        text_color = WHITE
     if not available:
         text_color = QColor("#9a9a9a")
     main_rect = QRectF(rect)

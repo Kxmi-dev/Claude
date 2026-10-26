@@ -39,7 +39,7 @@ bk/settings.py       AppSettings aus config.py (neue Einträge per getattr mit D
 bk/logging_setup.py  logs/application.log (täglich neu), crash.log (faulthandler)
 bk/ui/main_window.py Bildschirmwechsel, Startprüfung, Abschluss, Archiv-Aktionen, NumLockGuard, Cleanup-Timer
 bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, Billiard vs Fußball (25 Stoß), Archiv, Einstellungen,
-                     Beenden, Beenden & Herunterfahren (2× Enter innerhalb 5 s)
+                     Beenden, Beenden & Herunterfahren (ROTER Knopf, `danger=True`; 2× Enter innerhalb 5 s)
                      Rechts `BrandPanel` (widgets): Vereinslogo im weißen Kasten, gezeichneter grüner Billardtisch
                      mit Mini-Zähltafel/Kegeln/3 Kugeln, „BK-Scoreboard / Version {APP_VERSION}“ (3.0.0, Nutzer-Foto).
                      Vereinslogo zusätzlich klein rechts in der Titelleiste (`TitleBar.set_logo`).
@@ -87,7 +87,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   Aktueller Stoß (rot getönt bei Minus-Modus), Letzte Stöße (5), Minus (Summe Minuspunkte),
   Eingabe (BEREIT / MINUS / GESPERRT + Countdown / KORREKTUR? / ENDE), Spieldauer, 10er-Raster: Kästchen zeigen
   den GESAMTSTAND nach dem Stoß (3, 6, 9; `grid_running_total`, umschaltbar auf Einzelstoß), Leerstoß = „X“,
-  Minus-Stoß rot; rechts Punkte je Reihe schwarz ohne Kasten. Halbzeit-Feld bleibt ab Halbzeit gelb.
+  Minus-Stoß rot; rechts Punkte je Reihe fett schwarz OHNE Kästchen/weißen Hintergrund (direkt auf Grau). Halbzeit-Feld bleibt ab Halbzeit gelb.
   Aktueller Stoß ohne „Stoß N“-Untertext (dafür Prognose/Halbzeit größer). Stoß-Anzahl = Zahl der GESPIELTEN Stöße (Start 0, kein „/ 100“), Aktueller Stoß ohne „+“
   (nur Minus mit Vorzeichen). Logo: „Version 3.0“, APP_VERSION 3.0.
 

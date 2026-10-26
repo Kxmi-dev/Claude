@@ -412,8 +412,9 @@ class MenuButton(_Painted):
     clicked = Signal()
 
     def __init__(self, text: str, available: bool = True, subtitle: str = "",
-                 parent: QWidget | None = None) -> None:
+                 parent: QWidget | None = None, danger: bool = False) -> None:
         super().__init__(parent)
+        self._danger = danger           # rot (z. B. „Beenden & Herunterfahren“)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self._text = text
         self._subtitle = subtitle
@@ -445,7 +446,8 @@ class MenuButton(_Painted):
         p = self._painter()
         off = max(2.0, self.height() * 0.07)
         rect = QRectF(0.5, 0.5, self.width() - off - 1, self.height() - off - 1)
-        theme.draw_menu_button(p, rect, self._text, self._selected, self._available, self._subtitle)
+        theme.draw_menu_button(p, rect, self._text, self._selected, self._available, self._subtitle,
+                               danger=self._danger)
         p.end()
 
 
@@ -640,8 +642,9 @@ class ScoreGrid(_Painted):
 
     Jedes Kästchen zeigt wahlweise den Gesamtstand nach dem Stoß (3, 6, 9 …) oder
     die Punkte des einzelnen Stoßes; ein Leerstoß (0) steht als „X“. Minus-Stöße
-    sind rot. Rechts neben jeder Reihe steht die Punktzahl dieser Reihe (schwarz,
-    ohne Kasten). Ein Kästchen, das korrigiert werden soll, ist gelb hinterlegt."""
+    sind rot. Ein Kästchen, das korrigiert werden soll, ist gelb hinterlegt.
+    Rechts neben jeder Reihe steht die Punktzahl dieser Reihe – ohne Kästchen,
+    direkt auf den grauen Hintergrund geschrieben."""
 
     SUM_WIDTH = 0.9           # Breite der Summen-Spalte in Kästchenbreiten
     EMPTY_MARK = "X"          # Leerstoß
@@ -710,8 +713,9 @@ class ScoreGrid(_Painted):
         return sums
 
     def _paint_row_sums(self, p: QPainter, left: float, right: float, ch: float) -> None:
+        """Reihensummen ohne Rahmen und Hintergrund rechts neben dem Raster."""
         width = right - left
-        p.setFont(theme.base_font(theme.fitted_font("\u221270", width * 0.88, ch * 0.56).pixelSize()))
+        p.setFont(theme.base_font(theme.fitted_font("\u221270", width * 0.88, ch * 0.56).pixelSize(), bold=True))
         for row, total in enumerate(self.row_sums()):
             if total is None:
                 continue
@@ -734,8 +738,8 @@ class ScoreGrid(_Painted):
         p.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
         w, h = self.width() - 1, self.height() - 1
         cw, ch = w / (self._columns + self.SUM_WIDTH), h / self._rows
-        grid_w = cw * self._columns                      # rechts davon: Reihensummen
-        p.fillRect(QRectF(0, 0, w, h), theme.WHITE)
+        grid_w = cw * self._columns                      # rechts davon: Reihensummen auf Grau
+        p.fillRect(QRectF(0, 0, grid_w, h), theme.WHITE)
         sample = "888" if self._running_total else "\u22127"
         value_px = theme.fitted_font(sample, cw * 0.86, ch * 0.8).pixelSize()   # Zahlen füllen die Kästchen
         small_px = max(6, int(ch * 0.25))
@@ -776,17 +780,16 @@ class ScoreGrid(_Painted):
                 p.setPen(self._line_pen(QColor("#9a9a9a")))
                 y = cell.bottom() - ch * 0.06
                 p.drawLine(int(cell.left() + cw * 0.18), int(y), int(cell.right() - cw * 0.1), int(y))
-        self._paint_row_sums(p, grid_w, w, ch)
         # Gitterlinien – alle mit derselben Stärke
         p.setPen(self._line_pen(theme.GRID_LINE))
         for c in range(1, self._columns):
             p.drawLine(round(c * cw), 0, round(c * cw), int(h))
         for r in range(1, self._rows):
-            p.drawLine(0, round(r * ch), int(w), round(r * ch))
+            p.drawLine(0, round(r * ch), round(grid_w), round(r * ch))
         p.setPen(self._line_pen(theme.GRID_OUTER))
         p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawRect(0, 0, int(w), int(h))
-        p.drawLine(round(grid_w), 0, round(grid_w), int(h))     # Trennlinie vor den Summen
+        p.drawRect(0, 0, round(grid_w), int(h))
+        self._paint_row_sums(p, grid_w, w, ch)
         # nächster Stoß
         current = len(self._values)
         if self._show_current and current < self._strokes:
