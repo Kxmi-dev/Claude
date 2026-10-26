@@ -524,8 +524,8 @@ class BrandPanel(_Painted):
         p.setFont(theme.fitted_font("BK-Scoreboard", inner_w, title_rect.height() * 0.95, bold=True))
         p.drawText(title_rect, Qt.AlignmentFlag.AlignCenter, "BK-Scoreboard")
         version = f"Version {self._version}"
-        p.setPen(theme.TEXT_MUTED)
-        p.setFont(theme.fitted_font(version, inner_w * 0.6, text_h * 0.3))
+        p.setPen(theme.TEXT)
+        p.setFont(theme.fitted_font(version, inner_w * 0.7, text_h * 0.34, bold=True))
         p.drawText(QRectF(pad, y + text_h * 0.6, inner_w, text_h * 0.4), Qt.AlignmentFlag.AlignCenter, version)
         p.end()
 
@@ -638,9 +638,14 @@ class LogoWidget(_Painted):
 class ScoreGrid(_Painted):
     """Raster mit einem Feld pro Stoß (z. B. 10 × 10 bei 100 Stoß).
 
-    Rechts neben jeder Reihe steht die Punktzahl dieser Reihe (Spalte „Σ“)."""
+    Jedes Kästchen zeigt wahlweise den Gesamtstand nach dem Stoß (3, 6, 9 …) oder
+    die Punkte des einzelnen Stoßes; ein Leerstoß (0) steht als „X“. Minus-Stöße
+    sind rot. Rechts neben jeder Reihe steht die Punktzahl dieser Reihe (schwarz,
+    ohne Kasten). Ein Kästchen, das korrigiert werden soll, ist gelb hinterlegt."""
 
-    SUM_WIDTH = 0.8           # Breite der Summen-Spalte in Kästchenbreiten (bewusst unauffällig)
+    SUM_WIDTH = 0.9           # Breite der Summen-Spalte in Kästchenbreiten
+    EMPTY_MARK = "X"          # Leerstoß
+    PENDING_TINT = QColor("#ffe14d")
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -651,6 +656,28 @@ class ScoreGrid(_Painted):
         self._highlight_last = 5
         self._values: list[int] = []
         self._show_current = True
+        self._running_total = False
+        self._pending: int | None = None
+
+    def set_running_total(self, running: bool) -> None:
+        """True = Kästchen zeigen den Gesamtstand, False = den einzelnen Stoß."""
+        if running != self._running_total:
+            self._running_total = running
+            self.update()
+
+    def set_pending(self, index: int | None) -> None:
+        """Kästchen (0-basiert), das gerade korrigiert werden soll – gelb hinterlegt (None = keins)."""
+        if index != self._pending:
+            self._pending = index
+            self.update()
+
+    def cell_texts(self) -> list[str]:
+        """Text jedes gewerteten Kästchens (so wie er gezeichnet wird)."""
+        texts, running = [], 0
+        for value in self._values:
+            running += value
+            texts.append(self.EMPTY_MARK if value == 0 else format_number(running if self._running_total else value))
+        return texts
 
     def configure(self, strokes: int, columns: int, halftime: int | None, highlight_last: int) -> None:
         self._strokes = strokes
@@ -684,12 +711,11 @@ class ScoreGrid(_Painted):
 
     def _paint_row_sums(self, p: QPainter, left: float, right: float, ch: float) -> None:
         width = right - left
-        p.fillRect(QRectF(left, 0, width, ch * self._rows), QColor("#f6f6f2"))
-        p.setFont(theme.base_font(theme.fitted_font("\u221270", width * 0.8, ch * 0.34).pixelSize()))
+        p.setFont(theme.base_font(theme.fitted_font("\u221270", width * 0.88, ch * 0.56).pixelSize()))
         for row, total in enumerate(self.row_sums()):
             if total is None:
                 continue
-            p.setPen(theme.MINUS if total < 0 else theme.TEXT_MUTED)
+            p.setPen(theme.MINUS if total < 0 else theme.TEXT)
             p.drawText(QRectF(left, row * ch, width, ch), Qt.AlignmentFlag.AlignCenter, format_number(total))
 
     def _line_pen(self, color: QColor) -> QPen:
@@ -710,9 +736,11 @@ class ScoreGrid(_Painted):
         cw, ch = w / (self._columns + self.SUM_WIDTH), h / self._rows
         grid_w = cw * self._columns                      # rechts davon: Reihensummen
         p.fillRect(QRectF(0, 0, w, h), theme.WHITE)
-        value_px = theme.fitted_font("\u22127", cw * 0.86, ch * 0.8).pixelSize()   # Zahlen füllen die Kästchen
+        sample = "888" if self._running_total else "\u22127"
+        value_px = theme.fitted_font(sample, cw * 0.86, ch * 0.8).pixelSize()   # Zahlen füllen die Kästchen
         small_px = max(6, int(ch * 0.25))
         running = 0
+        texts = self.cell_texts()
         for index in range(self._columns * self._rows):
             number = index + 1
             col, row = index % self._columns, index // self._columns
@@ -720,18 +748,25 @@ class ScoreGrid(_Painted):
             if number > self._strokes:
                 p.fillRect(cell, QColor("#e2e2e2"))
                 continue
-            if self._is_marked(number):
+            if index == self._pending:
+                p.fillRect(cell, self.PENDING_TINT)
+            elif self._is_marked(number):
                 p.fillRect(cell, theme.CELL_HIGHLIGHT)
             has_value = index < len(self._values)
             if has_value:
                 value = self._values[index]
                 running += value
-                subtotal = self._has_subtotal(number)
+                text = texts[index]
+                # im Gesamtpunkte-Modus steht der Zwischenstand schon im Kästchen
+                subtotal = self._has_subtotal(number) and not self._running_total
                 value_rect = QRectF(cell.left(), cell.top(), cell.width(),
                                     cell.height() * (0.72 if subtotal else 1.0))
-                p.setFont(theme.base_font(value_px * (0.72 if subtotal else 1.0)))
+                px = value_px * (0.72 if subtotal else 1.0)
+                if self._running_total or len(text) > len(sample):   # z. B. „−105“ – passend verkleinern
+                    px = min(px, theme.fitted_font(text, cw * 0.9, ch * 0.8).pixelSize())
+                p.setFont(theme.base_font(px))
                 p.setPen(theme.MINUS if value < 0 else (theme.TEXT_MUTED if value == 0 else theme.TEXT))
-                p.drawText(value_rect, Qt.AlignmentFlag.AlignCenter, format_number(value))
+                p.drawText(value_rect, Qt.AlignmentFlag.AlignCenter, text)
                 if subtotal:
                     p.setFont(theme.base_font(small_px, bold=True))
                     p.setPen(theme.TEXT)

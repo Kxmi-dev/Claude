@@ -9,8 +9,11 @@ Auswertung („Endergebnis“) einer Partie als eigener Bildschirm im Hauptfenst
     └──────────┘ └──────────┘ └─────────┘ └──────────┘
     Spielanalyse:  1er 2er 3er 4er 5er 6er 7er Leer Minus  (wie oft gestoßen)
     Statistik in drei Spalten (Stöße · Punkte · Halbzeit/Höchstwert/Korrekturen)
-    [ Partie speichern ] [ Partie drucken ] [ Neue Partie ] [ Hauptmenü ]
-    (aus dem Archiv: [ Partie speichern ] [ Partie drucken ] [ Zurück ])
+    [ Partie speichern ] [ Partie drucken ] [ Tabelle ansehen ] [ Neue Partie ] [ Hauptmenü ]
+    (aus dem Archiv ohne „Neue Partie“ und mit [ Zurück ])
+
+„Tabelle ansehen“ zeigt das fertige Stoß-Raster (mit Punkten je Reihe) an
+Stelle der Kennzahlen; derselbe Knopf („Auswertung“) oder [*] führt zurück.
 
 Nach Partie-Ende sind [Enter]/[*] und Mausklicks ``result_lock_seconds`` lang
 gesperrt – kein versehentlicher Doppeldruck direkt ins Hauptmenü.
@@ -36,7 +39,7 @@ from ..pdf_report import format_duration
 from ..settings import AppSettings
 from . import keymap, report_output, theme
 from .keymap import MenuKey, map_menu_key
-from .widgets import DisplayBox, MenuButton, Panel, Plate, _Painted, format_number
+from .widgets import DisplayBox, MenuButton, Panel, Plate, ScoreGrid, _Painted, format_number
 
 log = logging.getLogger(__name__)
 
@@ -194,7 +197,8 @@ class ResultScreen(QWidget):
     message = Signal(str, bool)        # Kurzmeldung für die Fußleiste
     footer_changed = Signal()
 
-    SAVE, PRINT, NEW_GAME, CLOSE = range(4)
+    SAVE, PRINT, TABLE, NEW_GAME, CLOSE = range(5)
+    TABLE_TEXT, BACK_TO_STATS_TEXT = "Tabelle ansehen", "Auswertung"
 
     def __init__(self, settings: AppSettings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -204,6 +208,7 @@ class ResultScreen(QWidget):
         self._close_label = "Hauptmenü"
         self._offer_new_game = False
         self._locked_until = 0.0
+        self._table_mode = False
 
         self._plate = Plate("Endergebnis", self)
         self._note = NoteLine(self)
@@ -220,8 +225,11 @@ class ResultScreen(QWidget):
         for box in self.analysis.values():
             box.text_ratio = 0.6
         self.stats = [StatsTable(self) for _ in range(3)]
+        self.grid = ScoreGrid(self)
+        self.grid.hide()
         self._buttons = [MenuButton(text, parent=self)
-                         for text in ("Partie speichern", "Partie drucken", "Neue Partie", "Hauptmenü")]
+                         for text in ("Partie speichern", "Partie drucken", self.TABLE_TEXT, "Neue Partie",
+                                      "Hauptmenü")]
         for index, button in enumerate(self._buttons):
             button.clicked.connect(lambda i=index: self._click(i))
         self._selected = self.CLOSE
@@ -241,9 +249,10 @@ class ResultScreen(QWidget):
         remaining = self.lock_remaining()
         if remaining > 0:
             return [f"Eingabe gesperrt – noch {int(remaining + 0.99)} s"]
+        back = "Auswertung" if self._table_mode else self._close_label
         return [f"Wählen mit  [{keymap.label('left')}]  /  [{keymap.label('right')}]",
                 f"Ausführen mit  [{keymap.label('enter')}]",
-                f"{self._close_label} mit  [{keymap.label_all('back')}]"]
+                f"{back} mit  [{keymap.label_all('back')}]"]
 
     @property
     def state(self) -> GameState | None:
@@ -254,6 +263,25 @@ class ResultScreen(QWidget):
 
     def button_texts(self) -> list[str]:
         return [self._buttons[i].text() for i in self._visible()]
+
+    @property
+    def table_mode(self) -> bool:
+        return self._table_mode
+
+    def set_table_mode(self, on: bool) -> None:
+        """Stoß-Raster statt Kennzahlen anzeigen (und zurück)."""
+        self._table_mode = on
+        self._buttons[self.TABLE].set_text(self.BACK_TO_STATS_TEXT if on else self.TABLE_TEXT)
+        stats_widgets = [*self.panels.values(), self.logo, self._analysis_plate,
+                         *self.analysis_panels.values(), *self.stats]
+        for widget in stats_widgets:
+            widget.setVisible(not on)
+        self.grid.setVisible(on)
+        if self._state is not None:
+            finished = self._state.status is GameStatus.FINISHED
+            self._plate.set_text("Tabelle" if on else ("Endergebnis" if finished else "Zwischenstand"))
+        self._relayout()
+        self.footer_changed.emit()
 
     def show_state(self, state: GameState, note: str = "", close_label: str = "Hauptmenü",
                    offer_new_game: bool = False, lock_seconds: float = 0.0) -> None:
@@ -287,6 +315,10 @@ class ResultScreen(QWidget):
         for table, rows in zip(self.stats, statistics(game)):
             table.set_rows(rows)
         self._sync_stats_font()
+        self.grid.configure(mode.strokes, mode.grid_columns, mode.halftime_after, mode.highlight_last)
+        self.grid.set_running_total(self._settings.grid_running_total)
+        self.grid.set_values(state.strokes, show_current=False)
+        self.set_table_mode(False)
 
         self._selected = self.CLOSE
         self._locked_until = time.monotonic() + max(0.0, lock_seconds)
@@ -335,7 +367,9 @@ class ResultScreen(QWidget):
             if not self._blocked():
                 self._activate(self._selected)
         elif key is MenuKey.BACK and not event.isAutoRepeat():
-            if not self._blocked():
+            if self._table_mode:
+                self.set_table_mode(False)
+            elif not self._blocked():
                 self.closed.emit()
         else:
             return False
@@ -352,6 +386,8 @@ class ResultScreen(QWidget):
             self.save_pdf()
         elif index == self.PRINT:
             self.print_report()
+        elif index == self.TABLE:
+            self.set_table_mode(not self._table_mode)
         elif index == self.NEW_GAME and self._state is not None:
             self.new_game_requested.emit(self._state.mode)
         else:
@@ -424,9 +460,11 @@ class ResultScreen(QWidget):
         for index, table in enumerate(self.stats):
             place(table, 40 + index * (column + 16), 412, column, 192)
         self._sync_stats_font()
+        # „Tabelle ansehen“: Raster an Stelle der Kennzahlen
+        place(self.grid, 92, 82, 840, 522)
         # Knöpfe
         visible = self._visible()
-        button_w, button_h, gap = 214, 60, 20
+        button_w, button_h, gap = (214, 60, 20) if len(visible) <= 4 else (176, 60, 14)
         start = (CONTENT_W - len(visible) * button_w - (len(visible) - 1) * gap) / 2
         for position, index in enumerate(visible):
             place(self._buttons[index], start + position * (button_w + gap), 622, button_w + 4, button_h + 4)

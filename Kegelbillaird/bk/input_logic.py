@@ -12,10 +12,13 @@ Ziffer 0–7           ergibt +0 … +7   (Plus ist immer voreingestellt)
 ``-`` → Ziffer 0–7   ergibt -0 … -7   (-0 wird als 0 gewertet);
                      danach steht der Modus automatisch wieder auf Plus
 ``+``                hebt einen gewählten Minus-Modus wieder auf
-``/``                letzte Wertung zurücknehmen
+``/``                letzte Wertung zurücknehmen (mit ``undo_confirm_seconds`` > 0:
+                     erst Abfrage, ``Enter`` bestätigt, jede andere Taste verwirft)
 ``*`` → ``-``        Partie abbrechen (jede andere Taste = nicht abbrechen)
+``Enter``            beendet eine laufende Sperre sofort (``enter_skips_lock``);
+                     sonst ``CONFIRM`` (z. B. Partie-Ende → Auswertung)
 
-Es gibt keine Bestätigungstaste: Die Ziffer schließt die Eingabe ab.
+Für eine Wertung gibt es keine Bestätigungstaste: Die Ziffer schließt die Eingabe ab.
 
 Zustände
 --------
@@ -23,6 +26,7 @@ BEREIT (PLUS)   Ziffer wird als Plus gewertet
 MINUS           ``-`` gewählt, die nächste Ziffer wird als Minus gewertet
 GESPERRT        nach einer Wertung für ``lock_seconds``
 ABBRUCH-FRAGE   nach ``*``; ``-`` bestätigt, alles andere verwirft
+KORREKTUR-FRAGE nach ``/``; ``Enter`` bestätigt, alles andere verwirft
 
 Regeln gegen Doppeleingaben
 ---------------------------
@@ -53,6 +57,7 @@ class GameKey(Enum):
     DIGIT = "digit"
     UNDO = "undo"
     ABORT = "abort"
+    ENTER = "enter"
 
 
 class Action(Enum):
@@ -66,6 +71,10 @@ class Action(Enum):
     IGNORED_LOCKED = "ignored_locked"      # Eingabesperre aktiv
     IGNORED_INVALID = "ignored_invalid"    # Ziffer außerhalb 0–7
     IGNORED_UNDO_LOCKED = "ignored_undo_locked"
+    UNDO_REQUESTED = "undo_requested"      # Korrektur-Frage anzeigen
+    UNDO_CANCELLED = "undo_cancelled"      # Korrektur verworfen
+    LOCK_SKIPPED = "lock_skipped"          # Sperre mit Enter beendet
+    CONFIRM = "confirm"                    # Enter ohne andere Bedeutung
 
 
 @dataclass(frozen=True)
@@ -83,6 +92,8 @@ class ScoreInputController:
         undo_lock_seconds: float,
         abort_confirm_seconds: float,
         clock: Callable[[], float] = time.monotonic,
+        undo_confirm_seconds: float = 0.0,
+        enter_skips_lock: bool = False,
     ) -> None:
         if lock_seconds < 0 or undo_lock_seconds < 0 or abort_confirm_seconds <= 0:
             raise ValueError("Ungültige Zeitwerte für die Eingabelogik.")
@@ -90,6 +101,8 @@ class ScoreInputController:
         self._undo_lock_seconds = float(undo_lock_seconds)
         self._abort_seconds = float(abort_confirm_seconds)
         self._clock = clock
+        self._undo_confirm_seconds = max(0.0, float(undo_confirm_seconds))
+        self._enter_skips_lock = bool(enter_skips_lock)
         self.reset()
 
     # --------------------------------------------------------------- Status
@@ -99,6 +112,7 @@ class ScoreInputController:
         self._lock_until = 0.0
         self._undo_lock_until = 0.0
         self._abort_until: float | None = None
+        self._undo_until: float | None = None
 
     @property
     def lock_seconds(self) -> float:
@@ -129,15 +143,30 @@ class ScoreInputController:
             return 0.0
         return max(0.0, self._abort_until - self._clock())
 
+    def undo_pending(self) -> bool:
+        return self._undo_until is not None and self._clock() < self._undo_until
+
     def check_timeouts(self) -> InputResult | None:
-        """Regelmäßig aufrufen: verwirft eine abgelaufene Abbruch-Frage."""
+        """Regelmäßig aufrufen: verwirft eine abgelaufene Abbruch- oder Korrektur-Frage."""
         if self._abort_until is not None and self._clock() >= self._abort_until:
             self._abort_until = None
             return InputResult(Action.ABORT_CANCELLED)
+        if self._undo_until is not None and self._clock() >= self._undo_until:
+            self._undo_until = None
+            return InputResult(Action.UNDO_CANCELLED)
         return None
 
     def cancel_abort(self) -> None:
         self._abort_until = None
+
+    def cancel_undo(self) -> None:
+        self._undo_until = None
+
+    def _undo(self, now: float) -> InputResult:
+        self._minus = False
+        self._lock_until = 0.0
+        self._undo_lock_until = now + self._undo_lock_seconds
+        return InputResult(Action.UNDO)
 
     # ------------------------------------------------------------ Eingabe
     def press(self, key: GameKey, digit: int | None = None) -> InputResult:
@@ -152,20 +181,40 @@ class ScoreInputController:
                 return InputResult(Action.ABORT_CANCELLED)
             self._abort_until = None  # abgelaufen -> Taste normal verarbeiten
 
+        # 1b) Offene Korrektur-Frage: nur Enter bestätigt, "/" (Prellen) lässt sie offen,
+        #     jede andere Taste verwirft sie (und wird nicht gewertet).
+        if self._undo_until is not None:
+            if now < self._undo_until:
+                if key is GameKey.UNDO:
+                    return InputResult(Action.UNDO_REQUESTED)
+                self._undo_until = None
+                if key is GameKey.ENTER:
+                    return self._undo(now)
+                return InputResult(Action.UNDO_CANCELLED)
+            self._undo_until = None
+
         # 2) Abbruch anfordern
         if key is GameKey.ABORT:
             self._minus = False
             self._abort_until = now + self._abort_seconds
             return InputResult(Action.ABORT_REQUESTED)
 
+        # 2b) Enter: Sperre überspringen, sonst nur "bestätigen"
+        if key is GameKey.ENTER:
+            if self._enter_skips_lock and now < self._lock_until:
+                self._lock_until = 0.0
+                return InputResult(Action.LOCK_SKIPPED)
+            return InputResult(Action.CONFIRM)
+
         # 3) Rücknahme
         if key is GameKey.UNDO:
             if now < self._undo_lock_until:
                 return InputResult(Action.IGNORED_UNDO_LOCKED)
-            self._minus = False
-            self._lock_until = 0.0
-            self._undo_lock_until = now + self._undo_lock_seconds
-            return InputResult(Action.UNDO)
+            if self._undo_confirm_seconds > 0:
+                self._minus = False
+                self._undo_until = now + self._undo_confirm_seconds
+                return InputResult(Action.UNDO_REQUESTED)
+            return self._undo(now)
 
         # 4) Modus wählen (auch während der Sperre erlaubt, siehe Moduldoku)
         if key is GameKey.MINUS:

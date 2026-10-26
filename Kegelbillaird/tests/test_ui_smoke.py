@@ -94,8 +94,13 @@ class UiSmokeTests(unittest.TestCase):
         self.score(window, -3)
         self.assertEqual(game.state.strokes, [5, -3])
         self.assertEqual(window.game_screen.score_box.text(), "2")
-        self.key(window, Qt.Key.Key_Slash)                       # Rücknahme
+        self.key(window, Qt.Key.Key_Slash)                       # Korrektur: erst Abfrage
+        self.assertEqual(game.state.strokes, [5, -3])
+        self.assertEqual(window.game_screen.status_box.text(), "KORREKTUR?")
+        self.assertEqual(window.game_screen.grid._pending, 1)    # Kästchen gelb hinterlegt
+        self.key(window, Qt.Key.Key_Enter)                       # bestätigt
         self.assertEqual(game.state.strokes, [5])
+        self.assertIsNone(window.game_screen.grid._pending)
         self.assertEqual(self.storage.load_active().state.strokes, [5])
         self.assertEqual(window.game_screen.strokes_box.text(), "1")         # gespielte Stöße
 
@@ -122,12 +127,16 @@ class UiSmokeTests(unittest.TestCase):
         self.assertTrue(game.is_complete)
         total = game.total
         QTest.qWait(300)
+        self.assertIs(window.stack.currentWidget(), window.game_screen)   # wartet auf [Enter]
+        self.assertEqual(window.game_screen.status_box.text(), "ENDE")
+        self.key(window, Qt.Key.Key_Enter)
         result = window.result_screen                             # Auswertung im Hauptfenster
         self.assertIs(window.stack.currentWidget(), result)
         self.assertEqual(result._plate._text, "Endergebnis")
         self.assertEqual(result.boxes["total"].text(), str(total).replace("-", "\u2212"))
         self.assertEqual(result.stats[0].rows()[0][:2], ("Ausgeführte Stöße", "50"))
-        self.assertEqual(result.button_texts(), ["Partie speichern", "Partie drucken", "Neue Partie", "Hauptmenü"])
+        self.assertEqual(result.button_texts(),
+                         ["Partie speichern", "Partie drucken", "Tabelle ansehen", "Neue Partie", "Hauptmenü"])
         pdfs = list(self.settings.results_dir.glob("BK50_*.pdf"))
         self.assertEqual(len(pdfs), 1)                            # PDF wurde automatisch gespeichert
         self.assertFalse(self.storage.has_active_files())
@@ -149,12 +158,16 @@ class UiSmokeTests(unittest.TestCase):
         self.assertEqual(game.played, 49)
         self.score(window, 7)
         self.assertTrue(game.is_complete)
-        self.key(window, Qt.Key.Key_Slash)                       # Korrektur in der Sperrzeit
+        self.key(window, Qt.Key.Key_Slash)                       # Korrektur nach dem letzten Stoß
+        self.key(window, Qt.Key.Key_Enter)                       # bestätigt (beendet die Partie nicht)
         QTest.qWait(int(self.LOCK * 1000) + 300)
         self.assertFalse(window.overlay.isVisible())
         self.assertEqual(game.played, 49)
+        self.assertIs(window.stack.currentWidget(), window.game_screen)
         self.score(window, 2)
         QTest.qWait(int(self.LOCK * 1000) + 300)
+        self.assertIs(window.stack.currentWidget(), window.game_screen)
+        self.key(window, Qt.Key.Key_Enter)                       # erst jetzt: Auswertung
         self.assertEqual(window.result_screen.boxes["total"].text(), "51")
 
     def test_result_screen_statistics_and_new_game(self):
@@ -165,7 +178,7 @@ class UiSmokeTests(unittest.TestCase):
         window = self.open_window()
         self.key(window, Qt.Key.Key_Enter)                       # PARTIE FORTSETZEN
         self.score(window, 5)
-        QTest.qWait(int(self.LOCK * 1000) + 300)
+        self.key(window, Qt.Key.Key_Enter)                       # Enter: Sperre aus + Auswertung
         result = window.result_screen
         self.assertIs(window.stack.currentWidget(), result)
         counts = {name: box.text() for name, box in result.analysis.items()}
@@ -243,6 +256,38 @@ class UiSmokeTests(unittest.TestCase):
         grid.set_values([1] * 10 + [-2, 3])
         self.assertEqual(grid.row_sums(), [10, 1, None])
 
+    def test_grid_running_total_and_empty_mark(self):
+        from bk.ui.widgets import ScoreGrid
+        grid = ScoreGrid()
+        grid.configure(25, 10, None, 5)
+        grid.set_values([3, 3, 3, 0, -2, 5])
+        self.assertEqual(grid.cell_texts(), ["3", "3", "3", "X", "\u22122", "5"])
+        grid.set_running_total(True)
+        self.assertEqual(grid.cell_texts(), ["3", "6", "9", "X", "7", "12"])
+        grid.resize(600, 200)
+        grid.grab()                                              # zeichnet ohne Fehler
+
+    def test_halftime_stays_yellow_and_enter_skips_lock(self):
+        from bk.ui.game_screen import HALFTIME_TINT
+        state = GameState.new(BK50)
+        state.strokes.extend([1] * 24)
+        self.storage.save_active(state)
+        window = self.open_window()
+        self.key(window, Qt.Key.Key_Enter)                       # PARTIE FORTSETZEN
+        screen = window.game_screen
+        self.assertNotEqual(screen.halftime_box._fill, HALFTIME_TINT)
+        self.score(window, 2)                                    # 25. Stoß = Halbzeit
+        self.assertEqual(screen.status_box.text(), "GESPERRT")
+        self.key(window, Qt.Key.Key_Enter)                       # Sperre sofort beenden
+        self.assertEqual(screen.status_box.text(), "BEREIT")
+        self.score(window, 4)
+        self.assertEqual(screen.game.played, 26)
+        QTest.qWait(500)
+        self.assertEqual(screen.halftime_box._fill, HALFTIME_TINT)   # bleibt gelb
+        self.key(window, Qt.Key.Key_Slash)
+        self.key(window, Qt.Key.Key_5)                           # andere Taste = keine Korrektur
+        self.assertEqual(screen.game.played, 26)
+
     def test_minus_mode_applies_to_one_stroke_only(self):
         window = self.open_window()
         game = self.start_game(window)
@@ -294,6 +339,13 @@ class UiSmokeTests(unittest.TestCase):
         entries = window.archive_screen._entries
         self.assertEqual([e.state.game_id for e in entries], [aborted.game_id, finished.game_id])
         self.assertEqual([e.status_label for e in entries], ["abgebrochen", "beendet"])
+        recent = window.archive_screen._recent                    # Abschnitt „Letzte Partien“
+        self.assertEqual([e.state.game_id for e in recent], [finished.game_id])
+        self.assertEqual(window.archive_screen.selected_entry().state.game_id, finished.game_id)
+        self.key(window, Qt.Key.Key_2)                           # weiter in die Gesamtliste
+        self.assertEqual(window.archive_screen.selected_entry().state.game_id, aborted.game_id)
+        self.key(window, Qt.Key.Key_8)                           # und zurück
+        self.assertEqual(window.archive_screen.selected_entry().state.game_id, finished.game_id)
         self.key(window, Qt.Key.Key_Asterisk)                    # [*] = zurück
         self.assertIs(window.stack.currentWidget(), window.menu_screen)
 
@@ -301,14 +353,21 @@ class UiSmokeTests(unittest.TestCase):
         from PySide6.QtPrintSupport import QPrinter
         finished, _ = self._archive_two_games()
         window = self.open_window()
-        self.open_archive(window)
-        self.key(window, Qt.Key.Key_2)                           # beendete Partie
+        self.open_archive(window)                                # beendete Partie ist oben vorgewählt
         self.key(window, Qt.Key.Key_Enter)
         self.assertEqual(window.overlay.content.choices, ["AUSWERTUNG ANZEIGEN", "WIEDERGABE", "ZURÜCK"])
         self.key(window, Qt.Key.Key_Enter)                       # AUSWERTUNG ANZEIGEN
         result = window.result_screen
         self.assertIs(window.stack.currentWidget(), result)      # kein Extra-Fenster
-        self.assertEqual(result.button_texts(), ["Partie speichern", "Partie drucken", "Zurück"])
+        self.assertEqual(result.button_texts(), ["Partie speichern", "Partie drucken", "Tabelle ansehen", "Zurück"])
+        self.key(window, Qt.Key.Key_4)                           # „Tabelle ansehen“
+        self.key(window, Qt.Key.Key_Enter)
+        self.assertTrue(result.table_mode)
+        self.assertTrue(result.grid.isVisible())
+        self.assertEqual(len(result.grid.cell_texts()), 50)
+        self.key(window, Qt.Key.Key_Asterisk)                    # zurück zur Auswertung, nicht ins Archiv
+        self.assertFalse(result.table_mode)
+        self.assertIs(window.stack.currentWidget(), result)
         self.assertEqual(result.stats[2].rows()[3], ("Korrekturen", "0", False))
         self.assertEqual(result.state.strokes, finished.strokes)
         saved = result.save_pdf(self.tmp.path / "usb" / "bericht")    # Endung wird ergänzt
@@ -330,7 +389,6 @@ class UiSmokeTests(unittest.TestCase):
         finished, _ = self._archive_two_games()
         window = self.open_window()
         self.open_archive(window)
-        self.key(window, Qt.Key.Key_2)
         self.key(window, Qt.Key.Key_Enter)
         self.key(window, Qt.Key.Key_2)                           # WIEDERGABE
         self.key(window, Qt.Key.Key_Enter)
@@ -365,6 +423,7 @@ class UiSmokeTests(unittest.TestCase):
         _, aborted = self._archive_two_games()
         window = self.open_window()
         self.open_archive(window)
+        self.key(window, Qt.Key.Key_2)                           # aus „Letzte Partien“ in die Gesamtliste
         self.key(window, Qt.Key.Key_Enter)                       # abgebrochene Partie (neueste)
         self.assertEqual(window.overlay.content.choices[2], "WEITERSPIELEN")
         self.key(window, Qt.Key.Key_2)

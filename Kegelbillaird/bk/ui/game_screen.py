@@ -18,10 +18,14 @@ Ablauf einer Wertung (ohne Bestätigungstaste)::
     Ziffer 0–7 (Plus)  bzw.  [−] → Ziffer 0–7 (Minus)
         → Wertung speichern → Punktestand → Stoßzähler → Spielstand sichern
         → Sperre (INPUT_LOCK_SECONDS) → BEREIT (wieder Plus)
+    [Enter] während der Sperre → sofort BEREIT (abschaltbar: ENTER_SKIPS_LOCK)
 
-Nach dem letzten Stoß läuft die normale Sperrzeit ab (in ihr ist [/]
-noch möglich); danach meldet die Ansicht ``completed`` und das
-Hauptfenster schließt die Partie ab.
+Korrektur: [/] markiert den letzten Stoß im Raster gelb und fragt nach;
+[Enter] nimmt ihn zurück, jede andere Taste (oder Zeitablauf) verwirft.
+
+Nach dem letzten Stoß bleibt die Zählansicht stehen („ENDE“, Korrektur mit [/]
+weiter möglich). Erst [Enter] meldet ``completed`` – dann schließt das
+Hauptfenster die Partie ab und zeigt die Auswertung.
 
 Wiedergabe (aus dem Archiv): Dieselbe Ansicht spielt eine gespeicherte
 Partie Stoß für Stoß ab. Dabei wird eine KOPIE angezeigt – es wird nichts
@@ -55,13 +59,12 @@ log = logging.getLogger(__name__)
 
 TICK_MS = 100
 MINUS_TINT = QColor("#fbe7e7")
-HALFTIME_TINT = QColor("#fff2a8")   # Halbzeit-Feld leuchtet kurz auf
-HALFTIME_FLASH_SECONDS = 4
+HALFTIME_TINT = QColor("#fff2a8")   # Halbzeit-Feld bleibt gelb, sobald die Halbzeit erreicht ist
 REPLAY_SPEEDS = (2.0, 1.2, 0.8, 0.5, 0.3, 0.15)   # Sekunden pro Stoß
 
 
 class GameScreen(QWidget):
-    completed = Signal()                 # alle Stöße gewertet, Sperrzeit abgelaufen
+    completed = Signal()                 # alle Stöße gewertet und mit [Enter] bestätigt
     abort_confirmed = Signal()           # Abbruch mit [*] + [−] bestätigt
     abort_prompt = Signal(bool, float)   # Abbruch-Frage anzeigen/aktualisieren, Restzeit
     message = Signal(str, bool)          # Kurzmeldung (Text, Warnung?)
@@ -76,8 +79,7 @@ class GameScreen(QWidget):
         self._settings = settings
         self._storage = storage
         self._clock = clock
-        self._controller = ScoreInputController(
-            settings.input_lock_seconds, settings.undo_lock_seconds, settings.abort_confirm_seconds, clock)
+        self._controller = self._new_controller(settings)
         self._game: Game | None = None
         self._completion_sent = False
         self._elapsed_base = 0.0
@@ -98,9 +100,14 @@ class GameScreen(QWidget):
         self._sound = SoundPlayer()
         self._last_image = None
         self._celebration = CelebrationOverlay(self)
-        self._flash_timer = QTimer(self)
-        self._flash_timer.setSingleShot(True)
-        self._flash_timer.timeout.connect(lambda: self.halftime_box.set_fill(None))
+        self._was_complete = False
+
+    def _new_controller(self, settings: AppSettings) -> ScoreInputController:
+        # Korrektur-Frage gilt so lange wie die Abbruch-Frage
+        return ScoreInputController(settings.input_lock_seconds, settings.undo_lock_seconds,
+                                    settings.abort_confirm_seconds, self._clock,
+                                    undo_confirm_seconds=settings.abort_confirm_seconds,
+                                    enter_skips_lock=settings.enter_skips_lock)
 
     # ================================================================ Aufbau
     def _spacer(self, w: float, h: float) -> QSpacerItem:
@@ -162,7 +169,7 @@ class GameScreen(QWidget):
         duration_row.addWidget(self.panels["duration"], 200)
         duration_row.addStretch(61)
         self._right.addLayout(duration_row, 3, 0, 1, 2)
-        for row, stretch in enumerate((150, 214, 152, 76)):   # Zeile 2 (Minus/Eingabe) größer
+        for row, stretch in enumerate((180, 184, 152, 76)):   # Prognose/Halbzeit größer, Aktueller Stoß kleiner
             self._right.setRowStretch(row, stretch)
         self._right.setColumnStretch(0, 1)
         self._right.setColumnStretch(1, 1)
@@ -230,9 +237,12 @@ class GameScreen(QWidget):
             return [f"Pause / Weiter mit  [{keymap.label('enter')}]",
                     f"Tempo mit  [{keymap.label('plus')}]  /  [{keymap.label('minus')}]",
                     f"Beenden mit  [{keymap.label_all('back')}]"]
+        if self._game is not None and self._game.is_complete and self._game.is_running:
+            return ["Partie beendet", f"Auswertung mit  [{keymap.label('enter')}]",
+                    f"Korrektur mit  [{keymap.label('undo')}]  &  [{keymap.label('enter')}]"]
         return ["Plus:  [0] bis [7]",
                 f"Minus:  [{keymap.label('minus')}]  und dann  [0] bis [7]",
-                f"Korrektur mit  [{keymap.label('undo')}]",
+                f"Korrektur mit  [{keymap.label('undo')}]  &  [{keymap.label('enter')}]",
                 f"Partie-Abbruch mit  [{keymap.label('abort')}]  &  [{keymap.label('minus')}]"]
 
     def start_game(self, game: Game) -> None:
@@ -240,10 +250,9 @@ class GameScreen(QWidget):
         self._end_replay()
         self._hide_extras()
         self._game = game
-        s = self._settings
-        self._controller = ScoreInputController(s.input_lock_seconds, s.undo_lock_seconds,
-                                                s.abort_confirm_seconds, self._clock)
+        self._controller = self._new_controller(self._settings)
         self._completion_sent = False
+        self._was_complete = game.is_complete
         self._elapsed_base = float(game.state.elapsed_seconds)
         self._session_start = self._clock()
         mode = game.state.mode
@@ -353,17 +362,30 @@ class GameScreen(QWidget):
         if event.isAutoRepeat():   # gedrückt gehaltene Taste nie mehrfach werten
             return True
         mapped = map_game_key(event, self._settings.numpad_only)
+        if mapped is None and map_menu_key(event) is MenuKey.ENTER:
+            mapped = (GameKey.ENTER, None)
         if mapped is None:
             if self._controller.abort_pending():   # jede andere Taste verwirft den Abbruch
                 self._controller.cancel_abort()
                 self._apply(InputResult(Action.ABORT_CANCELLED))
+            if self._controller.undo_pending():    # … und die Korrektur-Frage
+                self._controller.cancel_undo()
+                self._apply(InputResult(Action.UNDO_CANCELLED))
             return False
         key, digit = mapped
-        if key is GameKey.ABORT and self._game.is_complete:
-            self.message.emit("Alle Stöße gewertet – die Partie wird abgeschlossen.", False)
+        if key is GameKey.ABORT and self._game.is_complete and not self._controller.undo_pending():
+            self.message.emit(f"Alle Stöße gewertet – Auswertung mit [{keymap.label('enter')}].", False)
             return True
         self._apply(self._controller.press(key, digit))
         return True
+
+    def _finish(self) -> None:
+        """Partie-Ende mit [Enter] bestätigt -> Hauptfenster schließt ab und zeigt die Auswertung."""
+        self._completion_sent = True
+        self._tick.stop()
+        self._autosave.stop()
+        self._update_live()
+        self.completed.emit()
 
     def _apply(self, result: InputResult) -> None:
         game = self._game
@@ -384,8 +406,23 @@ class GameScreen(QWidget):
             if game.played == game.state.mode.halftime_after:
                 self._halftime_alert()
             if game.is_complete:
-                self.message.emit(f"Letzter Stoß gewertet – Korrektur mit [{keymap.label('undo')}] noch während der Sperrzeit möglich.",
-                                  False)
+                self.message.emit(f"Letzter Stoß gewertet – Auswertung mit [{keymap.label('enter')}], "
+                                  f"Korrektur mit [{keymap.label('undo')}].", False)
+        elif action is Action.UNDO_REQUESTED:
+            if game.played == 0:
+                self._controller.cancel_undo()
+                self.message.emit("Keine Wertung zum Zurücknehmen vorhanden.", True)
+            else:
+                value = format_points(game.state.strokes[-1])
+                self.message.emit(f"Stoß {game.played} ({value}) korrigieren?  Ja mit [{keymap.label('enter')}], "
+                                  "jede andere Taste = Nein.", True)
+        elif action is Action.UNDO_CANCELLED:
+            self.message.emit("Keine Korrektur – die Wertung bleibt stehen.", False)
+        elif action in (Action.LOCK_SKIPPED, Action.CONFIRM):
+            if game.is_complete:
+                log.info("Partie-Ende mit Enter bestätigt")
+                self._finish()
+                return
         elif action is Action.UNDO:
             try:
                 removed = game.undo()
@@ -419,8 +456,6 @@ class GameScreen(QWidget):
     # ================================================== Ton und Bilder (Zugabe)
     def _hide_extras(self) -> None:
         self._celebration.dismiss()
-        self._flash_timer.stop()
-        self.halftime_box.set_fill(None)
 
     def _celebrate(self, value: int) -> None:
         """Ton bei +6/+7, Bild/GIF bei +6/+7 bzw. −6/−7 (automatisch aus bilder/plus und bilder/minus).
@@ -450,11 +485,9 @@ class GameScreen(QWidget):
             log.exception("Bildeinblendung fehlgeschlagen")
 
     def _halftime_alert(self) -> None:
-        """Halbzeit: Ton (falls möglich) und das Halbzeit-Feld leuchtet kurz auf."""
+        """Halbzeit: Ton (falls möglich); das Halbzeit-Feld wird in ``refresh`` dauerhaft gelb."""
         cfg = self._settings
         try:
-            self.halftime_box.set_fill(HALFTIME_TINT)
-            self._flash_timer.start(int(HALFTIME_FLASH_SECONDS * 1000))
             self.play_sound(cfg.halftime_sound)
         except Exception:
             log.exception("Halbzeit-Hinweis fehlgeschlagen")
@@ -477,8 +510,8 @@ class GameScreen(QWidget):
         self.history_box.set_lines(settings.history_length)
         self._arrange_optional()
         if not self.has_live_game:
-            self._controller = ScoreInputController(
-                settings.input_lock_seconds, settings.undo_lock_seconds, settings.abort_confirm_seconds, self._clock)
+            self._controller = self._new_controller(settings)
+        self.refresh()
         self.footer_changed.emit()
 
     def resizeEvent(self, event) -> None:  # noqa: N802 (Qt-Name)
@@ -507,14 +540,6 @@ class GameScreen(QWidget):
         if self._controller.abort_pending():
             self.abort_prompt.emit(True, self._controller.abort_remaining())
         self._update_live()
-        game = self._game
-        if (game is not None and game.is_running and game.is_complete and not self._completion_sent
-                and not self._controller.is_locked() and not self._controller.abort_pending()):
-            self._completion_sent = True
-            self._tick.stop()
-            self._autosave.stop()
-            self._update_live()
-            self.completed.emit()
 
     def _update_live(self) -> None:
         """Zeitabhängige Anzeigen: Sperre, Spieldauer."""
@@ -534,12 +559,17 @@ class GameScreen(QWidget):
                 self.status_box.set_value("WIEDERGABE", theme.CURRENT, bold=True)
             self.status_box.set_progress(game.played / total, theme.CURRENT, speed)
             return
-        if ctrl.is_locked():
+        if ctrl.undo_pending():
+            self.status_box.set_value("KORREKTUR?", theme.WARNING, bold=True,
+                                      subtext=f"Ja = [{keymap.label('enter')}]")
+            self.status_box.set_progress(None)
+        elif ctrl.is_locked():
             remaining = f"{ctrl.lock_remaining():.1f} s".replace(".", ",")
             self.status_box.set_value("GESPERRT", theme.MINUS, bold=True)
             self.status_box.set_progress(ctrl.lock_fraction(), theme.MINUS, remaining)
         elif game.is_complete:
-            self.status_box.set_value("ENDE", theme.TEXT, bold=True)
+            self.status_box.set_value("ENDE", theme.TEXT, bold=True,
+                                      subtext=f"Auswertung = [{keymap.label('enter')}]")
             self.status_box.set_progress(None)
         elif ctrl.abort_pending():
             self.status_box.set_value("ABBRUCH?", theme.WARNING, bold=True)
@@ -566,6 +596,7 @@ class GameScreen(QWidget):
         self.prognosis_box.set_value("" if prog is None else format_number(prog))
         half = game.halftime_score
         self.halftime_box.set_value("" if half is None else format_number(half))
+        self.halftime_box.set_fill(HALFTIME_TINT if half is not None else None)   # bleibt gelb
         minus = game.minus_total
         self.minus_box.set_value(format_number(minus), theme.MINUS if minus < 0 else theme.TEXT_MUTED)
         # Aktueller Stoß: gewählter Minus-Modus oder zuletzt gewertete Wertung
@@ -575,12 +606,19 @@ class GameScreen(QWidget):
         elif game.last_value is not None:
             value = game.last_value
             color = theme.MINUS if value < 0 else (theme.TEXT_MUTED if value == 0 else theme.TEXT)
-            self.current_box.set_value(format_number(value), color, subtext=f"Stoß {game.played}")
+            self.current_box.set_value(format_number(value), color)
             self.current_box.set_fill(None)
         else:
             self.current_box.set_value("", subtext="")
             self.current_box.set_fill(None)
         self.history_box.set_entries([(e.number, e.value) for e in game.history(self._settings.history_length)])
         show_current = game.is_running and not game.is_complete and not self._replay_done()
+        self.grid.set_running_total(self._settings.grid_running_total)
         self.grid.set_values(state.strokes, show_current=show_current)
+        pending = self._controller.undo_pending() and game.played > 0 and not self.is_replay
+        self.grid.set_pending(game.played - 1 if pending else None)
+        complete = game.is_complete and game.is_running
+        if complete != self._was_complete:
+            self._was_complete = complete
+            self.footer_changed.emit()
         self._update_live()

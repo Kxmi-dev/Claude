@@ -72,6 +72,8 @@ class AppSettings:
     show_history: bool = True                            # Feld „Letzte Stöße“ anzeigen
     show_input_status: bool = True                       # Feld „Eingabe“ anzeigen
     result_lock_seconds: float = 5.0                     # Sperre der Auswertung nach Partie-Ende
+    enter_skips_lock: bool = True                        # [Enter] beendet die Sperre nach einer Wertung
+    grid_running_total: bool = True                      # Raster zeigt Gesamtpunkte (3, 6, 9) statt Einzelstoß
 
     @property
     def logo_path(self) -> Path:
@@ -137,6 +139,8 @@ class AppSettings:
             show_history=bool(getattr(cfg, "SHOW_HISTORY", True)),
             show_input_status=bool(getattr(cfg, "SHOW_INPUT_STATUS", True)),
             result_lock_seconds=float(getattr(cfg, "RESULT_LOCK_SECONDS", 5)),
+            enter_skips_lock=bool(getattr(cfg, "ENTER_SKIPS_LOCK", True)),
+            grid_running_total=bool(getattr(cfg, "GRID_RUNNING_TOTAL", True)),
         )
         settings.validate()
         return settings

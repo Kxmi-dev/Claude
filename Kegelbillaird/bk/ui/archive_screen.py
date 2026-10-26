@@ -1,5 +1,7 @@
 """
-Archiv: Liste aller gespeicherten Partien (beendet, abgebrochen, unterbrochen).
+Archiv: oben farbig abgesetzt die letzten drei abgeschlossenen Partien,
+darunter die Liste aller gespeicherten Partien (beendet, abgebrochen, unterbrochen).
+Die Auswahl läuft mit [8] / [2] durch beide Abschnitte.
 
 Bedienung: [8] / [2] wählen, [Enter] öffnen (Auswertung, Wiedergabe, Weiterspielen),
 [*] oder [Esc] zurück zum Hauptmenü. Maus: Zeile anklicken, Doppelklick öffnet, Mausrad blättert.
@@ -14,6 +16,7 @@ from PySide6.QtGui import QColor, QFontMetricsF, QKeyEvent, QPaintEvent
 from PySide6.QtWidgets import QWidget
 
 from ..game import Game
+from ..models import GameStatus
 from ..settings import AppSettings
 from ..storage import ArchiveEntry, GameStorage
 from . import theme
@@ -32,6 +35,8 @@ COLUMNS = (
     ("Stöße", 0.14, Qt.AlignmentFlag.AlignRight),
     ("Ergebnis", 0.15, Qt.AlignmentFlag.AlignRight),
 )
+RECENT_COUNT = 3
+RECENT_TINT = QColor("#e3f1dc")       # Abschnitt „Letzte Partien“ (hellgrün)
 STATUS_COLORS = {"beendet": QColor("#16803a"), "abgebrochen": theme.MINUS, "unterbrochen": QColor("#b86e00")}
 
 
@@ -49,18 +54,36 @@ class ArchiveList(_Painted):
     activated = Signal(int)
     selection_changed = Signal(int)
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None, fill: QColor | None = None,
+                 empty_text: str = "Noch keine Partien im Archiv.") -> None:
         super().__init__(parent)
         self._rows: list[list[str]] = []
         self._selected = 0
         self._top = 0
         self._row_rects: list[tuple[int, QRectF]] = []
+        self._fill = fill or theme.WHITE
+        self._empty_text = empty_text
+        self._active = True               # nur die aktive Liste zeigt die Auswahl
+        self.row_h: float | None = None   # feste Zeilenhöhe (sonst aus der Höhe berechnet)
+        self.fit_rows: list[list[str]] = []   # weitere Zeilen für eine gemeinsame Schriftgröße
 
     def set_rows(self, rows: list[list[str]], selected: int = 0) -> None:
         self._rows = rows
         self._selected = max(0, min(selected, len(rows) - 1))
         self._top = 0
         self.update()
+
+    def row_count(self) -> int:
+        return len(self._rows)
+
+    def set_active(self, active: bool) -> None:
+        self._active = active
+        self.update()
+
+    def select(self, index: int) -> None:
+        if self._rows:
+            self._selected = max(0, min(len(self._rows) - 1, index))
+            self.update()
 
     @property
     def selected(self) -> int:
@@ -78,7 +101,7 @@ class ArchiveList(_Painted):
         inner = theme.bezel_geometry(QRectF(self.rect()))[2]
         area = inner.adjusted(inner.width() * 0.025, inner.height() * 0.02, -inner.width() * 0.025,
                               -inner.height() * 0.02)
-        row_h = max(22.0, min(48.0, self.height() / 13.5))
+        row_h = self.row_h or max(22.0, min(48.0, self.height() / 13.5))
         header_h = row_h * 0.9
         visible = max(1, int((area.height() - header_h) // row_h))
         return area, row_h, header_h, visible
@@ -115,19 +138,19 @@ class ArchiveList(_Painted):
             body = QFontMetricsF(theme.base_font(font_px, bold=(column == 5)))
             head = QFontMetricsF(theme.base_font(font_px * 0.85, bold=True))
             needed = max([head.horizontalAdvance(title)]
-                         + [body.horizontalAdvance(row[column]) for row in self._rows])
+                         + [body.horizontalAdvance(row[column]) for row in self._rows + self.fit_rows])
             if needed > avail > 0:
                 factor = min(factor, avail / needed)
         return max(6, int(font_px * factor))
 
     def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802
         p = self._painter()
-        theme.draw_bezel(p, QRectF(self.rect()))
+        theme.draw_bezel(p, QRectF(self.rect()), self._fill)
         area, row_h, header_h, visible = self._metrics()
         self._row_rects = []
         if not self._rows:
             p.setPen(theme.TEXT_MUTED)
-            text = "Noch keine Partien im Archiv."
+            text = self._empty_text
             p.setFont(theme.fitted_font(text, area.width() * 0.8, row_h * 0.7))
             p.drawText(area, Qt.AlignmentFlag.AlignCenter, text)
             p.end()
@@ -160,11 +183,11 @@ class ArchiveList(_Painted):
         for index in range(self._top, min(len(self._rows), self._top + visible)):
             rect = QRectF(area.left(), y, area.width(), row_h * 0.92)
             self._row_rects.append((index, rect))
-            selected = index == self._selected
+            selected = index == self._selected and self._active
             if selected:
                 theme.draw_menu_button(p, rect.adjusted(0, 0, -3, -3), "", True)
             elif index % 2:
-                p.fillRect(rect, QColor("#f4f4f0"))
+                p.fillRect(rect, QColor(0, 0, 0, 12))
             x = area.left()
             for column, ((_, _, align), width) in enumerate(zip(COLUMNS, widths)):
                 text = self._rows[index][column]
@@ -198,9 +221,16 @@ class ArchiveScreen(QWidget):
         super().__init__(parent)
         self._storage = storage
         self._entries: list[ArchiveEntry] = []
+        self._recent: list[ArchiveEntry] = []
         self._plate = Plate("Archiv – gespeicherte Partien", self)
+        self._recent_plate = Plate("Letzte abgeschlossene Partien", self)
+        self._all_plate = Plate("Alle Partien", self)
+        self._recent_list = ArchiveList(self, RECENT_TINT, "Noch keine abgeschlossene Partie.")
         self._list = ArchiveList(self)
-        self._list.activated.connect(self._open)
+        self._in_recent = False
+        for widget, recent in ((self._recent_list, True), (self._list, False)):
+            widget.activated.connect(self._open)
+            widget.selection_changed.connect(lambda _i, r=recent: self._focus(r))
 
     # ------------------------------------------------------------- Anzeige
     def title(self) -> str:
@@ -215,17 +245,48 @@ class ArchiveScreen(QWidget):
         """Archiv neu einlesen; die bisherige Auswahl bleibt nach Möglichkeit erhalten."""
         previous = self.selected_entry()
         self._entries = self._storage.list_archive()
+        self._recent = [e for e in self._entries if e.state.status is GameStatus.FINISHED][:RECENT_COUNT]
         selected = 0
+        in_recent = bool(self._recent) and (previous is None or self._in_recent)
         if previous is not None:
-            for index, entry in enumerate(self._entries):
+            source = self._recent if in_recent else self._entries
+            for index, entry in enumerate(source):
                 if entry.path == previous.path:
                     selected = index
                     break
-        self._list.set_rows([entry_cells(e) for e in self._entries], selected)
+        all_rows = [entry_cells(e) for e in self._entries]
+        recent_rows = [entry_cells(e) for e in self._recent]
+        self._recent_list.set_rows(recent_rows, selected if in_recent else 0)
+        self._list.set_rows(all_rows, 0 if in_recent else selected)
+        self._recent_list.fit_rows, self._list.fit_rows = all_rows, recent_rows   # gleiche Schrift
+        self._focus(in_recent)
         count = len(self._entries)
         self._plate.set_text(f"Archiv – {count} gespeicherte Partie{'n' if count != 1 else ''}")
 
+    def _focus(self, recent: bool) -> None:
+        self._in_recent = recent and bool(self._recent)
+        self._recent_list.set_active(self._in_recent)
+        self._list.set_active(not self._in_recent)
+
+    def _step(self, delta: int) -> None:
+        """Auswahl verschieben – am Rand in den anderen Abschnitt wechseln."""
+        if self._in_recent:
+            if delta > 0 and self._recent_list.selected >= self._recent_list.row_count() - 1:
+                if self._entries:
+                    self._list.select(0)
+                    self._focus(False)
+                return
+            self._recent_list.step(delta)
+        else:
+            if delta < 0 and self._list.selected == 0 and self._recent:
+                self._recent_list.select(len(self._recent) - 1)
+                self._focus(True)
+                return
+            self._list.step(delta)
+
     def selected_entry(self) -> ArchiveEntry | None:
+        if self._in_recent:
+            return self._recent[self._recent_list.selected] if self._recent else None
         if not self._entries:
             return None
         return self._entries[self._list.selected]
@@ -238,9 +299,9 @@ class ArchiveScreen(QWidget):
     def handle_key(self, event: QKeyEvent) -> bool:
         key = map_menu_key(event)
         if key is MenuKey.UP:
-            self._list.step(-1)
+            self._step(-1)
         elif key is MenuKey.DOWN:
-            self._list.step(1)
+            self._step(1)
         elif key is MenuKey.ENTER and not event.isAutoRepeat():
             self._open()
         elif key is MenuKey.BACK:
@@ -257,6 +318,12 @@ class ArchiveScreen(QWidget):
         def place(widget: QWidget, x: float, y: float, w: float, h: float) -> None:
             widget.setGeometry(QRect(round(ox + x * unit), round(oy + y * unit), round(w * unit), round(h * unit)))
 
-        place(self._plate, 212, 26, 600, 47)
-        place(self._list, 40, 92, 944, 594)
+        place(self._plate, 212, 14, 600, 44)
+        row_h = max(22.0, min(48.0, 40 * unit))
+        for widget in (self._recent_list, self._list):
+            widget.row_h = row_h
+        place(self._recent_plate, 40, 70, 380, 32)
+        place(self._recent_list, 40, 106, 944, 186)
+        place(self._all_plate, 40, 304, 380, 32)
+        place(self._list, 40, 340, 944, 350)
         super().resizeEvent(event)

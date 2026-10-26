@@ -390,6 +390,11 @@ class SettingsScreen(QWidget):
             Item("Vereinslogo", logo_value, change_logo, None,
                  f"Bild in den Ordner „{self.settings.club_logo_dir.name}“ ziehen, dann hier auswählen "
                  "(PNG, JPG, GIF, BMP, WEBP, SVG, ICO …). Erscheint im Hauptmenü unter dem BK-Bild."),
+            Item("Raster zeigt", lambda: "Gesamtpunkte" if self.settings.grid_running_total else "Einzelstoß",
+                 lambda _d: self.set_value("grid_running_total", not self.settings.grid_running_total),
+                 lambda: self.set_value("grid_running_total", not self.settings.grid_running_total),
+                 "Gesamtpunkte = jedes Kästchen zeigt den Stand nach dem Stoß (3, 6, 9 …). "
+                 "Einzelstoß = die Punkte des Stoßes. Leerstoß = X."),
             self._bool_item("Feld „Letzte Stöße“ anzeigen", "show_history",
                             "Aus = „Aktueller Stoß“ wird dafür breiter."),
             self._number_item("Anzahl „Letzte Stöße“", "history_length", 1, 1, 10, str, integer=True),
@@ -440,6 +445,8 @@ class SettingsScreen(QWidget):
         return [
             self._number_item("Sperrzeit nach Wertung", "input_lock_seconds", 0.5, 0, 10,
                               hint="Schutz vor Doppeleingaben. Gilt ab der nächsten Partie."),
+            self._bool_item("Sperre mit [Enter] überspringen", "enter_skips_lock",
+                            "An = [Enter] schaltet nach einer Wertung sofort von GESPERRT auf BEREIT."),
             self._number_item("Sperre nach Korrektur", "undo_lock_seconds", 0.5, 0, 5),
             self._number_item("Wartezeit der Abbruch-Frage", "abort_confirm_seconds", 1, 1, 30),
             self._number_item("Sperre nach Partie-Ende", "result_lock_seconds", 1, 0, 30,

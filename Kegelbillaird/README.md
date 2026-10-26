@@ -97,10 +97,11 @@ Datum und Uhrzeit werden automatisch erfasst und stehen im PDF.
 | `0`–`7`            | Plus-Wertung +0 … +7 (z. B. `5` → **+5**) – Plus ist immer voreingestellt |
 | `-` dann `0`–`7`   | Minus-Wertung −0 … −7 (z. B. `-` `3` → **−3**; −0 zählt als 0) |
 | `+`                | hebt einen versehentlich gewählten Minus-Modus wieder auf  |
-| `/`                | letzte Wertung vollständig zurücknehmen (mehrfach möglich) |
+| `/` dann `Enter`   | Korrektur: `/` hinterlegt den letzten Stoß im Raster **gelb** und fragt „KORREKTUR?“; `Enter` nimmt ihn zurück, jede andere Taste = keine Korrektur (mehrfach möglich) |
+| `Enter`            | während „GESPERRT“: Sperre sofort beenden → BEREIT (abschaltbar); nach dem letzten Stoß: Auswertung |
 | `*` dann `-`       | Partie abbrechen (jede andere Taste = weiterspielen)       |
 
-* Es gibt **keine Bestätigungstaste** und **kein Backspace**: Die Ziffer schließt die Eingabe ab.
+* Für eine Wertung gibt es **keine Bestätigungstaste** und **kein Backspace**: Die Ziffer schließt die Eingabe ab.
 * Nach jeder Wertung ist die Eingabe **3 Sekunden gesperrt** („GESPERRT“ mit Countdown,
   danach „BEREIT“). `/` bleibt während der Sperre erlaubt, damit ein Fehler sofort
   korrigiert werden kann.
@@ -119,19 +120,19 @@ Datum und Uhrzeit werden automatisch erfasst und stehen im PDF.
 | Stoß - Anzahl   | Zahl der bereits gespielten Stöße (am Anfang `0`, nach dem 1. Stoß `1` …) |
 | Punktestand     | aktueller Gesamtstand |
 | Prognose        | aktueller Schnitt hochgerechnet auf die volle Stoßzahl |
-| Halbzeit        | Stand nach Stoß 50 (BK 100) bzw. 25 (BK 50) |
-| Aktueller Stoß  | letzte Wertung groß; nach `-` rot hinterlegt mit „Minus: Zahl 0 – 7“ |
+| Halbzeit        | Stand nach Stoß 50 (BK 100) bzw. 25 (BK 50); bleibt ab dann **gelb hinterlegt** |
+| Aktueller Stoß  | letzte Wertung groß (ohne Stoßnummer); nach `-` rot hinterlegt mit „Minus: Zahl 0 – 7“ |
 | Letzte Stöße    | die letzten fünf Wertungen („Stoß 47  +1“) |
 | Minus           | Summe aller Minuspunkte |
-| Eingabe         | BEREIT (Plus) / MINUS / GESPERRT mit Countdown-Balken |
+| Eingabe         | BEREIT (Plus) / MINUS / GESPERRT mit Countdown-Balken / KORREKTUR? / ENDE |
 | Spieldauer      | Laufzeit der Partie |
-| Stoß-Raster     | ein Feld pro Stoß; **blauer Rahmen** = nächster Stoß, **gelb** = Halbzeit und letzte 5 Stöße, kleine Zahl = Zwischenstand |
+| Stoß-Raster     | ein Feld pro Stoß mit dem **Gesamtstand nach diesem Stoß** (3, 6, 9 …; umschaltbar auf Einzelstoß), **X** = Leerstoß, rot = Minus-Stoß; **blauer Rahmen** = nächster Stoß, **gelb** = Halbzeit und letzte 5 Stöße, kräftig gelb = Kästchen, das gerade korrigiert wird; rechts schwarz die **Punkte je Reihe** |
 
 ### Partieende und Auswertung
-Nach dem letzten Stoß läuft noch die normale Sperrzeit ab – in dieser Zeit kann ein
-Tippfehler beim letzten Stoß mit `/` korrigiert werden. Danach wird die Partie
-automatisch abgeschlossen: Ergebnis speichern, **PDF automatisch in `results` ablegen**,
-Spielstand archivieren – und das Hauptfenster zeigt die **Auswertung** (kein Extra-Fenster).
+Nach dem letzten Stoß bleibt die Zähltafel stehen („ENDE“) – ein Tippfehler kann noch mit
+`/` + `Enter` korrigiert werden. **Erst mit `Enter`** wird die Partie abgeschlossen: Ergebnis
+speichern, **PDF automatisch in `results` ablegen**, Spielstand archivieren – und das
+Hauptfenster zeigt die **Auswertung** (kein Extra-Fenster).
 
 Die Auswertung („Endergebnis“) passt komplett auf einen Bildschirm (ohne Blättern):
 
@@ -145,6 +146,7 @@ Die Auswertung („Endergebnis“) passt komplett auf einen Bildschirm (ohne Bl�
 |-------|---------|
 | **Partie speichern** | speichert das PDF ohne Nachfrage im eingestellten PDF-Speicherort (Standard: „Dokumente“) |
 | **Partie drucken** | druckt sofort auf dem eingestellten Drucker bzw. dem **Windows-Standarddrucker** – ohne Druckdialog |
+| **Tabelle ansehen** | zeigt das fertige Stoß-Raster mit den Punkten je Reihe; „Auswertung“ bzw. `*`/`Esc` führt zurück |
 | **Neue Partie** | startet sofort dieselbe Spielart noch einmal (nur direkt nach einer Partie) |
 | **Hauptmenü** / **Zurück** | nach einer Partie ins Hauptmenü, sonst zurück ins Archiv bzw. zur Wiedergabe |
 
@@ -156,9 +158,10 @@ Das PDF selbst (automatisch gespeichert, „Partie speichern“ und Ausdruck) is
 Bedienung: `4` / `6` Knopf wählen, `Enter` ausführen, `*` oder `Esc` zurück – oder mit der Maus.
 
 ### Archiv
-Hauptmenü → **Archiv** zeigt alle gespeicherten Partien (neueste oben) mit Datum, Uhrzeit,
+Hauptmenü → **Archiv** zeigt oben, **grün abgesetzt, die letzten 3 abgeschlossenen Partien**
+und darunter alle gespeicherten Partien (neueste oben) mit Datum, Uhrzeit,
 Spielart, Status (beendet / abgebrochen / unterbrochen), Stoßzahl und Ergebnis.
-`8` / `2` wählen, `Enter` öffnet die Partie, `*` oder `Esc` führt zurück. Zur Auswahl stehen:
+`8` / `2` wählen (durch beide Abschnitte), `Enter` öffnet die Partie, `*` oder `Esc` führt zurück. Zur Auswahl stehen:
 
 * **AUSWERTUNG ANZEIGEN** – das Auswertung (Speichern, Drucken, Schließen)
 * **WIEDERGABE** – die Partie läuft Stoß für Stoß noch einmal auf der Zähltafel ab
@@ -181,9 +184,9 @@ Taste aufnehmen / Ton probehören · `*`/`Esc` zurück (bzw. die eingestellten T
 
 | Bereich | Einstellungen |
 |---------|---------------|
-| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Schriftgröße** (80–130 %), Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`), Anzahl „Letzte Stöße“, Felder **„Letzte Stöße“** und **„Eingabe“** ein-/ausblenden (der Nachbar wird dann breiter), **Beim Windows-Start öffnen** (Autostart) |
+| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Schriftgröße** (80–130 %), Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`), **Raster zeigt** Gesamtpunkte / Einzelstoß, Anzahl „Letzte Stöße“, Felder **„Letzte Stöße“** und **„Eingabe“** ein-/ausblenden (der Nachbar wird dann breiter), **Beim Windows-Start öffnen** (Autostart) |
 | Design | Farbschema **Klassisch** (Vorlage) oder **Eigene Farben**: Primärfarbe (Leisten, Hintergrund, gewählter Knopf) und Sekundärfarbe (Rahmen, Beschriftungen, Knöpfe, Linien) als R/G/B 0–255. Rot/Grün der Wertung bleiben immer gleich; auf dunklen Leisten wird die Schrift automatisch weiß |
-| Eingabe | Sperrzeit nach Wertung, Sperre nach Korrektur, Wartezeit der Abbruch-Frage, Nur Nummernblock, NumLock automatisch |
+| Eingabe | Sperrzeit nach Wertung, **Sperre mit `Enter` überspringen**, Sperre nach Korrektur, Sperre nach Partie-Ende, Wartezeit der Abbruch-Frage, Nur Nummernblock, NumLock automatisch |
 | Tasten | jede Aktion: `Enter`, dann die neue Taste drücken (doppelt belegte Tasten werden abgelehnt); `4`/`6` = Standard. Legende passt sich sofort an |
 | Töne | Töne an/aus, Lautstärke 0–100 %, Ton zur Halbzeit, Ton am Partie-Ende, Ton bei +6 / +7 – Auswahl aus allen `.wav`/`.mp3` im Ordner `sounds` |
 | Bilder | Bilder an/aus, Anzeigedauer, Übersicht „Bilder bei +6/+7“ und „−6/−7“ mit An/Aus je Bild |
@@ -194,7 +197,7 @@ Taste aufnehmen / Ton probehören · `*`/`Esc` zurück (bzw. die eingestellten T
 Ist `einstellungen.json` beschädigt, startet das Programm trotzdem (Sicherung bzw. Standardwerte) und zeigt einen Hinweis.
 
 **Töne:** Unter Windows werden `.wav` und `.mp3` mit der Windows-eigenen Tonausgabe (MCI) abgespielt, mit Lautstärke.
-Fehlt die Tonausgabe (z. B. Monitor ohne Lautsprecher), läuft alles normal weiter; das Halbzeit-Feld leuchtet trotzdem auf.
+Fehlt die Tonausgabe (z. B. Monitor ohne Lautsprecher), läuft alles normal weiter; das Halbzeit-Feld wird trotzdem gelb.
 
 **Bilder:** Bilder/GIFs einfach in `bilder\plus` (für +6/+7) bzw. `bilder\minus` (für −6/−7) legen – sie werden
 automatisch erkannt. Ist `minus` leer, werden die Plus-Bilder genommen. Eine Datei = immer diese, mehrere = zufällig.
@@ -225,7 +228,7 @@ Werte aus dem Einstellungsmenü haben Vorrang. Nach einer Änderung hier das Pro
 | `APP_TITLE`, `APP_VERSION`, `CLUB_NAME` | | Texte in Titelleiste und PDF |
 | `KEY_PLUS`, `KEY_MINUS`, `KEY_UNDO`, `KEY_ABORT` | `+` `-` `/` `*` | Tasten in der Partie: Plus, Minus (auch „Ja“ bei der Abbruch-Frage), Rücknahme, Partie abbrechen |
 | `KEY_UP`, `KEY_DOWN`, `KEY_LEFT`, `KEY_RIGHT`, `KEY_ENTER`, `KEY_BACK` | `8` `2` `4` `6` `Enter` `*`/`Esc` | Tasten in Menüs, Archiv, Auswertung und Wiedergabe |
-| `SOUND_ENABLED`, `HALFTIME_SOUND` | `True`, `"halbzeit.wav"` | Ton zur Halbzeit (WAV im Ordner `sounds`). Leerer Name = kein Ton. Ohne Tonausgabe läuft alles weiter, das Halbzeit-Feld leuchtet zusätzlich ca. 4 s gelb auf |
+| `SOUND_ENABLED`, `HALFTIME_SOUND` | `True`, `"halbzeit.wav"` | Ton zur Halbzeit (WAV im Ordner `sounds`). Leerer Name = kein Ton. Ohne Tonausgabe läuft alles weiter; das Halbzeit-Feld bleibt ab der Halbzeit gelb |
 | `CELEBRATION_ENABLED`, `CELEBRATION_VALUES`, `CELEBRATION_MINUS_VALUES` | `True`, `(6, 7)`, `(-6, -7)` | bei diesen Wertungen erscheint ein Bild aus `bilder\plus` bzw. `bilder\minus`; `()` = aus |
 | `END_SOUND`, `SOUND_VOLUME`, `WINDOW_SIZE` | `""`, `80`, `(1280, 800)` | Ende-Ton, Lautstärke, Fenstergröße (alles auch im Menü) |
 | `CELEBRATION_SOUND` | `""` | Ton bei +6 / +7 (Datei im Ordner `sounds`, auch im Menü) |
@@ -370,7 +373,7 @@ bk_scoreboard/
              ┌────────────┐
              ▼            │
   (neu) ─► RUNNING ───────┘
-             │  letzter Stoß + Sperrzeit abgelaufen      * dann -
+             │  letzter Stoß + [Enter]                   * dann -
              ├──────────────────────────────► FINISHED   (PDF, Archiv)
              └──────────────────────────────► ABORTED    (Archiv, kein PDF)
 ```

@@ -58,7 +58,7 @@ bk/media.py          Ton (winsound/Qt, fehlerfrei geschluckt) + Bildauswahl (1 D
 bk/ui/widgets.py, theme.py, keymap.py
 sounds/, bilder/     Ton- und Bilddateien neben der .exe (austauschbar, ohne Neubau)
 vereinslogo/         Vereinslogo (beliebiges Bildformat), Auswahl im Einstellungsmenü
-tests/               159 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
+tests/               165 Tests (Logik, Speicherung, PDF, Cleanup, NumLock-Guard, Qt-Oberfläche offscreen)
 ```
 Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), `results/` (PDF+JSON), `logs/`.
 
@@ -68,21 +68,27 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 - **Keine Bestätigungstaste, kein Backspace.** Nur Nummernblock-Tasten (`NUMPAD_ONLY`), Autorepeat ignoriert.
 - **Sperre** `INPUT_LOCK_SECONDS = 3` (oben in config.py) nach jeder Wertung, nicht blockierend (Timer/monotone Uhr).
   Ziffern gesperrt; `-`/`+` (Modusvorwahl) und `/` während der Sperre erlaubt.
-- `/` = letzte Wertung komplett zurück (inkl. Speicherung), hebt Sperre auf, eigene Prellsperre 1 s.
+- `/` = Korrektur MIT Abfrage: Kästchen im Raster kräftig gelb, „KORREKTUR?“; `Enter` bestätigt (letzte Wertung
+  komplett zurück inkl. Speicherung, hebt Sperre auf, Prellsperre 1 s), jede andere Taste/Zeitablauf
+  (`abort_confirm_seconds`) = keine Korrektur (Taste wird NICHT gewertet). Controller: `undo_confirm_seconds`.
+- `Enter` in der Partie (GameKey.ENTER über map_menu_key): während GESPERRT → sofort BEREIT (`enter_skips_lock`,
+  Einstellungen → Eingabe); nach dem letzten Stoß → Partie abschließen + Auswertung.
 - **Abbruch: `*` dann `-`** (statt Vorlage „[Num]&[-]“, weil NumLock-Taste mit Auto-NumLock kollidiert);
   jede andere Taste / 5 s Timeout = weiterspielen. Abbruch → Archiv, kein PDF.
 - **Kein Spielername**, kein Spielerdaten-Fenster: Menüauswahl + Enter startet sofort.
   PDF-Name: `BK50_2026-09-29_15-42.pdf`. Alte Spielstände mit `player_name` laden weiterhin.
-- Nach letztem Stoß läuft die Sperrzeit noch ab (Korrektur mit `/` möglich), dann automatisch:
-  Ergebnis-JSON + PDF in `results/`, Archiv „beendet“, **Auswertung** im Hauptfenster (kein Extra-Fenster).
+- Nach letztem Stoß bleibt die Zählansicht stehen („ENDE“, Korrektur weiter möglich); ERST `Enter` (Nutzerwunsch,
+  nicht automatisch): Ergebnis-JSON + PDF in `results/`, Archiv „beendet“, **Auswertung** im Hauptfenster.
 - Speichern nach JEDER Wertung/Rücknahme. Start: „Unterbrochene Partie gefunden“ →
   PARTIE FORTSETZEN / NEUE PARTIE (alte wird archiviert, nie gelöscht).
 - „2x 50 Stoß“ und „Zweikampf“ wurden auf Wunsch des Nutzers entfernt. Dafür gibt es
   **„Billiard vs Fußball“** (Schlüssel BK25): 25 Stoß, keine Halbzeit, Raster 5 × 5.
 - Anzeigen: Stoß-Anzahl (gespielte Stöße, Start 0), Punktestand, Prognose, Halbzeit (nach 50 bzw. 25),
   Aktueller Stoß (rot getönt bei Minus-Modus), Letzte Stöße (5), Minus (Summe Minuspunkte),
-  Eingabe (BEREIT / MINUS / GESPERRT + Countdown), Spieldauer, 10er-Raster mit Reihensumme rechts (Spalte Σ,
-  auch in der Auswertung). Stoß-Anzahl = Zahl der GESPIELTEN Stöße (Start 0, kein „/ 100“), Aktueller Stoß ohne „+“
+  Eingabe (BEREIT / MINUS / GESPERRT + Countdown / KORREKTUR? / ENDE), Spieldauer, 10er-Raster: Kästchen zeigen
+  den GESAMTSTAND nach dem Stoß (3, 6, 9; `grid_running_total`, umschaltbar auf Einzelstoß), Leerstoß = „X“,
+  Minus-Stoß rot; rechts Punkte je Reihe schwarz ohne Kasten. Halbzeit-Feld bleibt ab Halbzeit gelb.
+  Aktueller Stoß ohne „Stoß N“-Untertext (dafür Prognose/Halbzeit größer). Stoß-Anzahl = Zahl der GESPIELTEN Stöße (Start 0, kein „/ 100“), Aktueller Stoß ohne „+“
   (nur Minus mit Vorzeichen). Logo: „Version 3.0“, APP_VERSION 3.0.
 
 ## Einstellungsmenü (mit dem Nutzer abgestimmt)
@@ -113,24 +119,26 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 - Ungültig/doppelt belegt → Fehlermeldung beim Start (wie jeder config.py-Fehler).
 
 ## Ton & Bilder (reine Zugabe, stören die Partie nie)
-- Halbzeit (nach `halftime_after`): Ton `halftime_sound` + Halbzeit-Feld leuchtet 4 s gelb (auch ohne Tonausgabe).
+- Halbzeit (nach `halftime_after`): Ton `halftime_sound`; Halbzeit-Feld bleibt ab dann gelb (auch ohne Tonausgabe).
   Partie-Ende: `end_sound`. +6/+7 (`CELEBRATION_VALUES`): `celebration_sound` (auch wenn Bilder aus). Fehlende Datei/kein Audiogerät → nur Logeintrag.
 - +6/+7 (`CELEBRATION_VALUES`) → alle Bilder in `bilder/plus`; −6/−7 (`CELEBRATION_MINUS_VALUES`) → `bilder/minus`
-  (leer = Plus-Bilder). Eine Datei = immer diese, mehrere = zufällig. `/` blendet es sofort aus.
+  (leer = Plus-Bilder). Eine Datei = immer diese, mehrere = zufällig. Bestätigte Korrektur blendet es sofort aus.
+- Hauptmenü-Lesbarkeit: Knopfschrift fett, dunkel `BUTTON_TEXT #333333`, größer; „Version …“ fett schwarz.
 
 ## Auswertung & Archiv
 - **Kein Extra-Fenster** (Nutzerwunsch): `ResultScreen` im Stack, alles auf einem Bildschirm ohne Scrollen
   (Referenz 1024×702). Aufbau nach Nutzer-Foto („Endergebnis“): Halbzeit · Ergebnis · Spielzeit/Minus · LogoBox;
   Spielanalyse 1er–7er/Leer/Minus (Anzahl); Statistik 3 Spalten (`StatsTable`, gemeinsame große Schrift);
   Knöpfe Partie speichern / Partie drucken / Neue Partie (nur nach Partie, gleiche Spielart) / Hauptmenü
-  (Archiv: Zurück). Kein Raster/„Anzahl je Wertung“ mehr am Bildschirm. „Partie bearbeiten“ bewusst weggelassen.
+  (Archiv: Zurück) + **Tabelle ansehen** (Raster statt Kennzahlen, `*` zurück zur Auswertung). „Partie bearbeiten“ bewusst weggelassen.
 - **Sperre nach Partie-Ende** `result_lock_seconds` (Standard 5, Einstellungen → Eingabe): Enter/Back/Klick wirkungslos.
 - **Korrekturen** werden in `GameState.corrections` gezählt (`Game.undo`); alte Spielstände ohne Feld → None → „–“.
 - **Das PDF bleibt unverändert** (Nutzer: „so wie es jetzt ist“) – Formatierung nur auf ausdrücklichen Wunsch ändern.
   Einzige gewünschte Änderung bisher: Logo oben rechts = Vereinslogo statt BK-Scoreboard-Bild.
 - PDF enthält „**Anzahl je Wertung**“ (wie oft −7…+7 gestoßen) und gleich dicke Tabellenlinien
   (`LINE_WIDTH`, alle Maße ganze Punkte). Druck mit 4 px/pt. Zählansicht-Raster nutzt kosmetische Stifte.
-- Archiv (Hauptmenü): Liste aller Partien → AUSWERTUNG ANZEIGEN / WIEDERGABE (Stoß für Stoß,
+- Archiv (Hauptmenü): oben grün „Letzte abgeschlossene Partien“ (3, nur beendet), darunter alle Partien;
+  Auswahl läuft mit 8/2 durch beide Listen (Start oben) → AUSWERTUNG ANZEIGEN / WIEDERGABE (Stoß für Stoß,
   speichert nie etwas) / WEITERSPIELEN (nur abgebrochene/unterbrochene).
 - **Aufräumen** beim Start + alle 6 h: `ARCHIVE_RETENTION_DAYS = 30`, `LOG_RETENTION_DAYS = 30`,
   `RESULTS_RETENTION_DAYS = 0` (PDFs nie löschen). Aktive Partie / aktuelles Log nie.

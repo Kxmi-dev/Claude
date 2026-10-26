@@ -32,6 +32,9 @@ ABORT_CONFIRM_SECONDS = 5
 # versehentlichem Doppeldruck direkt ins Hauptmenü). 0 = keine Sperre.
 RESULT_LOCK_SECONDS = 5
 
+# True = [Enter] beendet die Sperrzeit nach einer Wertung sofort (GESPERRT -> BEREIT).
+ENTER_SKIPS_LOCK = True
+
 # True  = während der Partie zählen nur Tasten des Nummernblocks.
 # False = zusätzlich die Ziffern-/Zeichentasten der normalen Tastatur.
 NUMPAD_ONLY = True
@@ -58,6 +61,10 @@ FONT_SCALE = 100
 # Felder in der Zählansicht ein-/ausblenden (auch im Einstellungsmenü unter „Anzeige“)
 SHOW_HISTORY = True          # „Letzte Stöße“
 SHOW_INPUT_STATUS = True     # „Eingabe“ (BEREIT / MINUS / GESPERRT)
+
+# Raster: True = jedes Kästchen zeigt den Gesamtstand (3, 6, 9 …), False = den einzelnen Stoß.
+# Leerstöße (0) stehen in beiden Fällen als „X“ im Raster.
+GRID_RUNNING_TOTAL = True
 
 # ---------------------------------------------------------------------
 #  TASTENBELEGUNG

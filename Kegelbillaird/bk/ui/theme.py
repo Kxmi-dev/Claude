@@ -30,7 +30,7 @@ OUTLINE = QColor("#1a1a1a")        # dünne dunkle Konturen
 WHITE = QColor("#ffffff")
 BUTTON = QColor("#d2d2d2")         # nicht gewählter Menüknopf
 BUTTON_SELECTED = QColor("#fffff5")
-BUTTON_TEXT = QColor("#808080")
+BUTTON_TEXT = QColor("#333333")     # dunkel = auch aus der Entfernung gut lesbar
 SHADOW = QColor("#696969")
 TEXT = QColor("#111111")
 TEXT_MUTED = QColor("#6d6d6d")
@@ -182,13 +182,13 @@ def draw_menu_button(painter: QPainter, rect: QRectF, text: str, selected: bool,
     main_rect = QRectF(rect)
     if subtitle:
         main_rect.setHeight(rect.height() * 0.72)
-    font = fitted_font(text, rect.width() * 0.88, rect.height() * (0.50 if subtitle else 0.56))
+    font = fitted_font(text, rect.width() * 0.88, rect.height() * (0.54 if subtitle else 0.6), bold=True)
     painter.setFont(font)
     painter.setPen(text_color)
     painter.drawText(main_rect, Qt.AlignmentFlag.AlignCenter, text)
     if subtitle:
         sub_rect = QRectF(rect.left(), rect.top() + rect.height() * 0.62, rect.width(), rect.height() * 0.32)
-        painter.setFont(fitted_font(subtitle, rect.width() * 0.85, sub_rect.height() * 0.7))
+        painter.setFont(fitted_font(subtitle, rect.width() * 0.85, sub_rect.height() * 0.78))
         painter.drawText(sub_rect, Qt.AlignmentFlag.AlignCenter, subtitle)
 
 

@@ -129,6 +129,8 @@ class KeyBindingUiTests(unittest.TestCase):
         self.key(window, Qt.Key.Key_Slash, keypad=True)          # altes Zeichen tut nichts mehr
         self.assertEqual(screen.game.played, 1)
         self.key(window, Qt.Key.Key_U)                           # neue Rücknahme-Taste (kein Nummernblock nötig)
+        self.assertEqual(screen.game.played, 1)                  # erst Abfrage …
+        self.key(window, Qt.Key.Key_Space)                       # … bestätigt mit der Enter-Taste
         self.assertEqual(screen.game.played, 0)
 
         self.key(window, Qt.Key.Key_F10)                         # Abbruch-Frage

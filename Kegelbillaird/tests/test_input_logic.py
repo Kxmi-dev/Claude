@@ -194,5 +194,46 @@ class AbortTests(unittest.TestCase):
         self.assertEqual(ctrl.press(D, 2).value, 2)
 
 
+class UndoConfirmAndEnterTests(unittest.TestCase):
+    E = GameKey.ENTER
+
+    def make(self, skip=True):
+        clock = FakeClock()
+        return ScoreInputController(3.0, 1.0, 5.0, clock, undo_confirm_seconds=5.0, enter_skips_lock=skip), clock
+
+    def test_undo_needs_enter(self):
+        ctrl, _ = self.make()
+        ctrl.press(D, 4)
+        self.assertEqual(ctrl.press(U).action, Action.UNDO_REQUESTED)
+        self.assertTrue(ctrl.undo_pending())
+        self.assertEqual(ctrl.press(U).action, Action.UNDO_REQUESTED)    # Prellen: Frage bleibt offen
+        self.assertEqual(ctrl.press(self.E).action, Action.UNDO)
+        self.assertFalse(ctrl.undo_pending())
+        self.assertFalse(ctrl.is_locked())                              # korrigierter Stoß sofort möglich
+
+    def test_other_key_or_timeout_cancels_undo(self):
+        ctrl, clock = self.make()
+        ctrl.press(U)
+        self.assertEqual(ctrl.press(D, 3).action, Action.UNDO_CANCELLED)  # Ziffer wird NICHT gewertet
+        clock.advance(1.5)
+        ctrl.press(U)
+        clock.advance(5.1)
+        self.assertEqual(ctrl.check_timeouts().action, Action.UNDO_CANCELLED)
+        self.assertEqual(ctrl.press(self.E).action, Action.CONFIRM)
+
+    def test_enter_skips_lock(self):
+        ctrl, _ = self.make()
+        ctrl.press(D, 2)
+        self.assertEqual(ctrl.press(D, 2).action, Action.IGNORED_LOCKED)
+        self.assertEqual(ctrl.press(self.E).action, Action.LOCK_SKIPPED)
+        self.assertEqual(ctrl.press(D, 2).action, Action.SCORE)
+
+    def test_enter_skip_can_be_switched_off(self):
+        ctrl, _ = self.make(skip=False)
+        ctrl.press(D, 2)
+        self.assertEqual(ctrl.press(self.E).action, Action.CONFIRM)
+        self.assertTrue(ctrl.is_locked())
+
+
 if __name__ == "__main__":
     unittest.main()

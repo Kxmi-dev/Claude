@@ -171,8 +171,8 @@ class MediaUiTests(unittest.TestCase):
         screen = self.screen()
         self.press(screen, 7)
         self.assertTrue(screen._celebration.isVisible())
-        screen.handle_key(QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Slash, Qt.KeyboardModifier.KeypadModifier,
-                                    "", False))
+        for key in (Qt.Key.Key_Slash, Qt.Key.Key_Enter):         # Korrektur + Bestätigung
+            screen.handle_key(QKeyEvent(QEvent.Type.KeyPress, key, Qt.KeyboardModifier.KeypadModifier, "", False))
         self.assertFalse(screen._celebration.isVisible())
 
     def test_missing_disabled_or_broken_images_do_not_disturb(self):
