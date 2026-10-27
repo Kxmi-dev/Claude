@@ -11,6 +11,9 @@ public class CheckItem
     public string Dn { get; set; } = "";
     public bool Selected { get; set; }
     public string? Password { get; set; }
+    /// <summary>DNS-Datei dieses Standorts (Name oder "keine").</summary>
+    public string Dns { get; set; } = LdsSteps.NoDns;
+    public string[] DnsChoices { get; } = [LdsSteps.NoDns, .. LdsSteps.KnownDnsNames];
     public string Hint => string.IsNullOrEmpty(Password) ? "" : "Passwort hinterlegt";
 }
 
@@ -21,26 +24,23 @@ public partial class MainWindow : Window
     private readonly List<Profile> _profiles = ProfileStore.Load();
     private readonly List<CheckItem> _locations = [];
     private readonly List<CheckItem> _users = [];
-    private readonly List<CheckItem> _dnsFiles = LdsSteps.KnownDnsNames.Select(n => new CheckItem { Name = n, Selected = true }).ToList();
     private readonly UIElement[] _pages;
     private const int MaxBatBytes = 1024 * 1024;
     private int _step;
     private bool _connected;
     private List<string> _wantedLocations = [];
+    private Dictionary<string, string> _wantedDns = [];
 
     public MainWindow()
     {
         InitializeComponent();
         _pages = [Page1, Page2, Page3, Page4];
 
-        var domainJoined = !string.Equals(Environment.UserDomainName, Environment.MachineName, StringComparison.OrdinalIgnoreCase);
-        CurrentUserCheck.Content = $"Mit meinem Windows-Konto anmelden ({Environment.UserDomainName}\\{Environment.UserName})";
+        // Der eigene Windows-Benutzername steht gleich drin, ohne Passwort gilt die aktuelle Anmeldung (SSO).
         ConnUserBox.Text = Environment.UserName;
-        CurrentUserCheck.IsChecked = domainJoined;
-        CurrentUserCheck_Changed(this, new RoutedEventArgs());
+        NewUserBox.Text = Environment.UserName;
 
         OutputBox.Text = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-        DnsList.ItemsSource = _dnsFiles;
         ProfileBox.ItemsSource = _profiles;
         ProfileBox.SelectedIndex = 0;
         ShowStep(0);
@@ -90,13 +90,18 @@ public partial class MainWindow : Window
         DomainBox.Text = p.Domain;
         BaseOuBox.Text = p.BaseOu;
         _wantedLocations = [.. p.SelectedLocations];
+        _wantedDns = new Dictionary<string, string>(p.LocationDns, StringComparer.OrdinalIgnoreCase);
 
         _users.Clear();
         foreach (var name in p.Users.Union(p.SelectedUsers))
             _users.Add(new CheckItem { Name = name, Selected = p.SelectedUsers.Contains(name) });
         RefreshUsers();
 
-        foreach (var l in _locations) l.Selected = _wantedLocations.Contains(l.Name);
+        foreach (var l in _locations)
+        {
+            l.Selected = _wantedLocations.Contains(l.Name);
+            l.Dns = WantedDnsFor(l.Name);
+        }
         RefreshLocations();
     }
 
@@ -122,6 +127,9 @@ public partial class MainWindow : Window
         profile.SelectedLocations = _locations.Count > 0
             ? _locations.Where(l => l.Selected).Select(l => l.Name).ToList()
             : _wantedLocations;
+        profile.LocationDns = _locations.Count > 0
+            ? _locations.ToDictionary(l => l.Name, l => l.Dns)
+            : new Dictionary<string, string>(_wantedDns);
 
         ProfileStore.Save(_profiles);
         ProfileBox.Items.Refresh();
@@ -140,24 +148,24 @@ public partial class MainWindow : Window
 
     // ---------- Schritt 1: Verbindung ----------
 
-    private void CurrentUserCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        var own = CurrentUserCheck.IsChecked == true;
-        ConnUserBox.IsEnabled = !own;
-        ConnPasswordBox.IsEnabled = !own;
-    }
+    /// <summary>Gespeicherte Zuordnung aus dem Profil, sonst Namensregel (LNWS zu LNRE), sonst keine.</summary>
+    private string WantedDnsFor(string location) =>
+        _wantedDns.TryGetValue(location, out var dns) && (dns == LdsSteps.NoDns || LdsSteps.KnownDnsNames.Contains(dns))
+            ? dns
+            : LdsSteps.DefaultDnsFor(location, LdsSteps.KnownDnsNames) ?? LdsSteps.NoDns;
 
     private async void Connect_Click(object sender, RoutedEventArgs e)
     {
         var domain = DomainBox.Text.Trim();
         var baseOu = BaseOuBox.Text.Trim();
-        var own = CurrentUserCheck.IsChecked == true;
+        // Leeres Passwort: mit der aktuellen Windows-Anmeldung verbinden (SSO).
+        var own = ConnPasswordBox.Password.Length == 0;
         var user = own ? null : ConnUserBox.Text.Trim();
         var password = own ? null : ConnPasswordBox.Password;
 
-        if (domain.Length == 0 || baseOu.Length == 0 || (!own && (user!.Length == 0 || password!.Length == 0)))
+        if (domain.Length == 0 || baseOu.Length == 0 || (!own && user!.Length == 0))
         {
-            ConnStatus.Text = "Bitte Domäne, Basis-OU, Benutzer und Passwort ausfüllen.";
+            ConnStatus.Text = "Bitte Domäne, Basis-OU und, falls ein Passwort eingegeben ist, den Benutzer ausfüllen.";
             return;
         }
 
@@ -170,7 +178,7 @@ public partial class MainWindow : Window
 
             _locations.Clear();
             foreach (var l in found)
-                _locations.Add(new CheckItem { Name = l.Name, Dn = l.Dn, Selected = _wantedLocations.Contains(l.Name) });
+                _locations.Add(new CheckItem { Name = l.Name, Dn = l.Dn, Selected = _wantedLocations.Contains(l.Name), Dns = WantedDnsFor(l.Name) });
             RefreshLocations();
 
             _connected = true;
@@ -231,6 +239,12 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) OutputBox.Text = dialog.FolderName;
     }
 
+    private void BrowseRegFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { InitialDirectory = RegFolderBox.Text };
+        if (dialog.ShowDialog(this) == true) RegFolderBox.Text = dialog.FolderName;
+    }
+
     private void BrowseBat_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "Batch-Datei (*.bat;*.cmd)|*.bat;*.cmd" };
@@ -266,10 +280,10 @@ public partial class MainWindow : Window
             $"EXE:\n{ExeNameBox.Text}\n\n" +
             $"Domäne:\n{DomainBox.Text}\n\n" +
             $"Benutzer:\n{string.Join("\n", _users.Where(u => u.Selected).Select(u => u.Name + (u.Password is null ? "" : " (Passwort hinterlegt)")))}\n\n" +
-            $"Standorte:\n{string.Join("\n", _locations.Where(l => l.Selected).Select(l => l.Name))}\n\n" +
-            $"Standard-Nachlauf (LDS): {(LdsCheck.IsChecked == true ? "ja" : "nein")}\n" +
+            $"Standorte (DNS-Datei):\n{string.Join("\n", _locations.Where(l => l.Selected).Select(l => l.Name + " (" + l.Dns + ")"))}\n\n" +
+            $"Standard-Ablauf (LDS): {(LdsCheck.IsChecked == true ? "ja" : "nein")}\n" +
             $"EXE löscht sich selbst: {(SelfDeleteCheck.IsChecked == true ? "ja" : "nein")}\n" +
-            $"DNS-Dateien: {string.Join(", ", _dnsFiles.Where(d => d.Selected).Select(d => d.Name))}\n\n" +
+            $"Registry-Ordner: {RegFolderBox.Text}\n\n" +
             $"Zusätzliches Skript:\n{(BatBox.Text.Length == 0 ? "keines" : Path.GetFileName(BatBox.Text))}";
     }
 
@@ -296,6 +310,27 @@ public partial class MainWindow : Window
             catch (Exception ex) { BuildStatus.Text = $"Die .bat-Datei konnte nicht gelesen werden.\n\nDetails: {ex.Message}"; return; }
         }
 
+        var selectedLocations = _locations.Where(l => l.Selected).ToList();
+        var locationDns = selectedLocations.Where(l => l.Dns != LdsSteps.NoDns).ToDictionary(l => l.Name, l => l.Dns, StringComparer.OrdinalIgnoreCase);
+        var dnsNames = locationDns.Values.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+        var regFiles = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        if (LdsCheck.IsChecked == true)
+        {
+            var missing = new List<string>();
+            foreach (var name in LdsSteps.StartupRegs.Concat(dnsNames.Select(LdsSteps.DnsRegName)))
+            {
+                var file = Path.Combine(RegFolderBox.Text.Trim(), name);
+                if (File.Exists(file)) regFiles[name] = File.ReadAllBytes(file);
+                else missing.Add(file);
+            }
+            if (missing.Count > 0)
+            {
+                BuildStatus.Text = "Diese Registry-Dateien fehlen:\n" + string.Join("\n", missing);
+                return;
+            }
+        }
+
         var withPassword = _users.Where(u => u.Selected && u.Password is not null).ToList();
         if (withPassword.Count > 0 && MessageBox.Show(this,
                 $"Für {string.Join(", ", withPassword.Select(u => u.Name))} wird das Passwort verschlüsselt in die EXE gelegt.\n\n" +
@@ -319,10 +354,12 @@ public partial class MainWindow : Window
             _locations.Where(l => l.Selected).Select(l => new LocationEntry(l.Name, l.Dn)).ToArray(),
             script,
             LdsCheck.IsChecked == true,
-            _dnsFiles.Where(d => d.Selected).Select(d => d.Name).ToArray(),
+            dnsNames,
             key,
             sealedPasswords,
-            SelfDeleteCheck.IsChecked == true);
+            SelfDeleteCheck.IsChecked == true,
+            locationDns,
+            regFiles);
 
         try
         {

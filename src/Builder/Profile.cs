@@ -12,6 +12,8 @@ public class Profile
     public List<string> Users { get; set; } = [];
     public List<string> SelectedUsers { get; set; } = [];
     public List<string> SelectedLocations { get; set; } = [];
+    /// <summary>Standortname zu DNS-Name (oder "keine").</summary>
+    public Dictionary<string, string> LocationDns { get; set; } = [];
 }
 
 public static class Defaults

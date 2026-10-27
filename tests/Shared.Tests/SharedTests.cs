@@ -92,13 +92,56 @@ public class SharedTests
         => Assert.Equal(gueltig, LdsSteps.IsValidDnsName(name));
 
     [Fact]
-    public void Nachlauf_nach_Neustart_importiert_OES_und_gewaehlte_DNS_Datei()
+    public void DNS_Reg_Dateien_heissen_DNS_Bindestrich_Name()
     {
-        var script = LdsSteps.Build("LNBE");
-        Assert.Contains(@"C:\LDS\REG\OES.reg", script);
-        Assert.Contains(@"C:\LDS\REG\DNS LNBE.reg", script);
-        Assert.Contains("ZENworkspassivLogin.reg", script);
-        Assert.DoesNotContain("DNS ", LdsSteps.Build());
+        Assert.Equal(@"REG\DNS-LNBE.reg", LdsSteps.DnsRegName("LNBE"));
+        Assert.Contains(@"REG\OES.reg", LdsSteps.StartupRegs);
+        Assert.Equal(3, LdsSteps.KnownDnsNames.Length);
+    }
+
+    [Fact]
+    public void Zuordnung_Standort_zu_DNS_und_Reg_Dateien_bleiben_in_der_EXE_erhalten()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(path, [0x4D, 0x5A]);
+            var reg = new Dictionary<string, byte[]> { [@"REG\OES.reg"] = [1, 2, 3, 255] };
+            var dns = new Dictionary<string, string> { ["LNWS"] = "LNRE" };
+            ConfigPayload.AppendTo(path, new JoinConfig("d", "o", ["u"], [], null, true, ["LNRE"], null, null, false, dns, reg));
+
+            var read = ConfigPayload.ReadFrom(path)!;
+            Assert.Equal("LNRE", read.LocationDns["lnws"]);
+            Assert.Equal(new byte[] { 1, 2, 3, 255 }, read.RegFiles[@"REG\OES.reg"]);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void Kopie_fuer_den_Nachlauf_enthaelt_kein_Passwort_und_keinen_Schluessel()
+    {
+        var key = SecretBox.NewKey();
+        var passwords = new Dictionary<string, byte[]> { ["test-wadm"] = SecretBox.Seal("Geheim123!", key) };
+        var config = new JoinConfig("ad.lkds.de", "o", ["test-wadm"], [], "@echo hi"u8.ToArray(), true, null, key, passwords, true);
+
+        var source = Path.GetTempFileName();
+        var copy = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(source, [0x4D, 0x5A, 9, 9, 9]);
+            ConfigPayload.AppendTo(source, config);
+
+            ConfigPayload.CopyWithoutSecrets(source, copy);
+
+            var read = ConfigPayload.ReadFrom(copy)!;
+            Assert.Equal("ad.lkds.de", read.Domain);
+            Assert.True(read.RunLdsSteps);
+            Assert.Equal("@echo hi"u8.ToArray(), read.PostScript);
+            Assert.Null(read.Key);
+            Assert.False(read.HasPassword("test-wadm"));
+            Assert.Equal(new byte[] { 0x4D, 0x5A, 9, 9, 9 }, File.ReadAllBytes(copy).Take(5).ToArray());
+        }
+        finally { File.Delete(source); File.Delete(copy); }
     }
 
     [Fact]
@@ -154,17 +197,19 @@ public class SharedTests
     }
 
     [Fact]
-    public void Aufraeumen_loescht_nur_die_genannten_Eintraege_unter_LDS()
+    public void Aufraeumen_betrifft_nur_Eintraege_unter_LDS_und_enthaelt_alle_Programme_und_Reg_Dateien()
     {
-        var script = LdsSteps.Build();
-        Assert.Contains(@"del /f /q ""C:\LDS\sysprep.bat""", script);
-        Assert.Contains(@"del /f /q ""C:\LDS\unattend.xml""", script);
-        Assert.Contains(@"del /f /q ""C:\LDS\install_Windows 10 Enterprise.clg""", script);
-        Assert.Contains(@"rmdir /s /q ""C:\LDS\part""", script);
-
-        // Jede Lösch-Anweisung bezieht sich ausschließlich auf einen der vier erlaubten Pfade.
-        var allowed = LdsSteps.CleanupFiles.Concat(LdsSteps.CleanupFolders).ToList();
-        foreach (var line in script.Split('\n').Where(l => l.Contains("del /f") || l.Contains("rmdir")))
-            Assert.Contains(allowed, p => line.Contains("\"" + p + "\""));
+        var files = LdsSteps.CleanupFiles().ToList();
+        Assert.All(files.Concat(LdsSteps.CleanupFolders).Concat(LdsSteps.CleanupFoldersIfEmpty),
+            p => Assert.StartsWith(@"C:\LDS", p));
+        Assert.Contains(@"C:\LDS\zenworks.exe", files);
+        Assert.Contains(@"C:\LDS\REG\OES.reg", files);
+        Assert.Contains(@"C:\LDS\REG\DNS-LNRE.reg", files);
+        Assert.Contains(@"C:\LDS\sysprep.bat", files);
+        Assert.Contains(@"C:\LDS\bitdef", LdsSteps.CleanupFolders);
+        Assert.Contains(@"C:\LDS\part", LdsSteps.CleanupFolders);
+        // C:\LDS selbst darf nur gelöscht werden, wenn es leer ist.
+        Assert.DoesNotContain(@"C:\LDS", LdsSteps.CleanupFolders);
+        Assert.Equal(@"C:\LDS", LdsSteps.CleanupFoldersIfEmpty.Last());
     }
 }
