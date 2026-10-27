@@ -18,6 +18,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj" />
     <!-- Microsoft-Paket für LDAP-Abfragen; in .NET selbst nicht enthalten -->
     <PackageReference Include="System.DirectoryServices" Version="9.0.0" />
