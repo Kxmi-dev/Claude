@@ -1,4 +1,4 @@
-# Baut Join-Vorlage und Builder als Single-File-EXEs. Benötigt das .NET SDK 10.
+# Baut Join-Vorlage und Builder als Single-File-EXEs. Benötigt das .NET SDK 9.
 $ErrorActionPreference = 'Stop'
 $out = Join-Path $PSScriptRoot 'artifacts'
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }

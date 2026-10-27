@@ -1,13 +1,13 @@
 # LKDS AD Join Builder
 
-Zwei kleine WPF-Anwendungen (.NET 10, keine Zusatzpakete außer `System.DirectoryServices`):
+Zwei kleine WPF-Anwendungen (.NET 9, keine Zusatzpakete außer `System.DirectoryServices`):
 
 - **Builder** (`src/Builder`) – liest Standorte aus dem AD und erzeugt individuelle Join-EXEs.
 - **JoinApp** (`src/JoinApp`) – die Vorlage für die Join-EXE; führt den Domain Join durch.
 - **Shared** (`src/Shared`) – Konfigurationsmodell und Einbetten/Lesen der Konfiguration.
 
 ## Voraussetzungen
-- Windows 10/11 x64, zum Bauen das .NET SDK 10.
+- Windows 10/11 x64, zum Bauen das .NET SDK 9.
 - Builder-Rechner: Domänenmitglied oder Netzzugriff auf den DC.
 
 ## Bauen
