@@ -21,24 +21,26 @@ Ergebnis: `artifacts/LKDS-Join-Builder/` mit `LKDS-Join-Builder.exe` und `JoinAp
 1. **AD-Verbindung:** Der Benutzer wird automatisch mit der aktuellen Windows-Anmeldung vorbelegt. Ohne Passwort verbindet sich der Builder mit dieser Anmeldung (SSO); mit Passwort mit den eingegebenen Daten. Das Passwort wird nie gespeichert.
 2. **Standorte:** Alle OUs direkt unter der Basis-OU erscheinen automatisch; per Checkbox auswählen.
 3. **Benutzer:** Join-Konten hinzufügen/entfernen/auswählen (mindestens eines).
-4. **EXE erstellen:** Dateiname und Ausgabeordner wählen, Zusammenfassung prüfen, „EXE erstellen“.
+4. **EXE erstellen:** Dateiname, Ausgabeordner und Reg-Ordner (z. B. `C:\LDS`, daraus werden die Reg-Dateien eingebettet; fehlt eine, wird nicht gebaut) wählen, Zusammenfassung prüfen, „EXE erstellen“.
 Profile (Domäne, Basis-OU, Benutzer, Standorte) liegen in `%AppData%\LKDS-Join-Builder\settings.json`.
 
 ## Join-EXE verwenden
-Auf den Ziel-PC kopieren, doppelklicken (UAC bestätigen). Beim Start:
-1. Programme starten: `C:\LDS\zenworks.exe`, `C:\LDS\bitdef\epskit_x64.exe /silent /bdparams`
-2. Reg-Dateien importieren: `ZENworkspassivLogin.reg`, `eml.reg`, `Credential-Guard.reg`, `REG\OES.reg` (alle unter `C:\LDS`)
+Voraussetzung: `C:\LDS\zenworks.exe` und `C:\LDS\bitdef\` liegen auf dem PC (vom Image). Die EXE selbst muss auf einer lokalen Platte liegen (z. B. `C:\LDS`), nicht auf USB oder Netzlaufwerk. Doppelklick, UAC bestätigen.
 
-Beim Klick auf „COMPUTER JOINEN“ wird zuerst die DNS-Reg-Datei des Standorts importiert
-(`LNBE` → `C:\LDS\REG\DNS-LNBE.reg`, `LNWS` → `C:\LDS\REG\DNS-LNRE.reg`), danach erfolgt der Join in die gewählte OU; anschließend wird ein Neustart angeboten.
-Fehlende Dateien werden unter „Details“ gemeldet. Log: `%ProgramData%\LKDS-Join\join.log`.
-Die Listen stehen in `src/JoinApp/Preparation.cs`.
+**Phase 1 (erster Start):**
+1. Beim Start werden die in die EXE eingebetteten Reg-Dateien importiert (`ZENworkspassivLogin.reg`, `eml.reg`, `Credential-Guard.reg`, `REG\OES.reg`).
+2. „COMPUTER JOINEN“: erst die DNS-Reg des Standorts (`LNBE` → `REG\DNS-LNBE.reg`, `LNWS` → `REG\DNS-LNRE.reg`), dann der Join in die gewählte OU.
+3. Bei Erfolg legt die EXE einen geplanten Task (SYSTEM, beim Systemstart, `LKDS-Join-Post`) an und startet **sofort** neu.
 
-## Wie die Konfiguration in die EXE kommt
-Der Builder kopiert `JoinApp.template` und hängt die Konfiguration (JSON, ohne Passwort) ans Dateiende. Die fertige EXE ist eine einzelne Datei ohne Zusatzdateien.
+**Phase 2 (nach dem Neustart, ohne Anmeldung und ohne Fenster):**
+1. Der Task startet die EXE mit `--post`. Sie wartet bis zu 3 Minuten auf Domäne/Netz und startet dann `C:\LDS\zenworks.exe` und `C:\LDS\bitdef\epskit_x64.exe /silent /bdparams` gleichzeitig.
+2. ZENworks startet nach etwa 5 Minuten selbst neu. Beim nächsten Start läuft der Task erneut und macht anhand einer Marke in `HKLM\SOFTWARE\LKDS-Join` weiter, ohne die Programme nochmal zu starten.
+3. Aufräumen, sobald kein Installer mehr läuft und frühestens 8 Minuten nach dem Start (wenn Bitdefender und ZENworks in der Programmliste stehen; sonst nach 20 Minuten; spätestens nach 90 Minuten bzw. 5 Startversuchen): `zenworks.exe`, `bitdef\`, Reg-Dateien in `C:\LDS`, die Join-EXE, die Tasks, die Registry-Marke, Log und .NET-Temp-Ordner werden gelöscht. `C:\LDS` selbst nur, wenn sie danach leer ist. Das erledigt ein einmaliger Hilfs-Task (`LKDS-Join-Cleanup`), weil sich die laufende EXE nicht selbst löschen kann.
+
+Schlägt etwas fehl, wird trotzdem aufgeräumt; dann muss von Hand installiert werden. Log (bis zum Aufräumen): `%ProgramData%\LKDS-Join\join.log`.
 
 ## AD-Berechtigungen
 Das Join-Konto braucht in der Ziel-OU das Recht „Computerobjekte erstellen“ (und Schreibrechte auf diese). Der Builder braucht nur Leserechte auf die Basis-OU.
 
 ## Sicherheit
-Passwörter werden nie gespeichert, geloggt, eingebettet oder per Kommandozeile übergeben. Benutzernamen und OUs sind eingebettet und nicht geheim. Die Join-EXE importiert Reg-Dateien und startet Programme mit Administratorrechten – die Dateien in `C:\LDS` sollten nur für Administratoren beschreibbar sein.
+Passwörter werden nie gespeichert, geloggt, eingebettet oder per Kommandozeile übergeben. Benutzernamen und OUs sind eingebettet und nicht geheim. Die Join-EXE importiert Reg-Dateien und startet Programme mit Administratorrechten (Phase 2 als SYSTEM) – `C:\LDS` und der Ordner der EXE sollten nur für Administratoren beschreibbar sein.

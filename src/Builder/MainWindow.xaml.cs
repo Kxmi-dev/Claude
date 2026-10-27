@@ -22,6 +22,7 @@ public partial class MainWindow : Window
         // AD-Kennung durchschleifen: aktueller Windows-Benutzer
         UserBox.Text = Environment.UserName;
         OutputBox.Text = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+        RegFolderBox.Text = settings.RegFolder;
 
         var known = settings.KnownUsers.Count > 0 ? settings.KnownUsers : new List<string> { "test-wadm" };
         users = known.Select(n => new CheckItem { Name = n, IsSelected = n == known[0] }).ToList();
@@ -155,6 +156,7 @@ public partial class MainWindow : Window
     void PersistSettings()
     {
         settings.KnownUsers = users.Select(u => u.Name).ToList();
+        settings.RegFolder = RegFolderBox.Text.Trim();
         try { SettingsStore.Save(settings); }
         catch (Exception ex) { MessageBox.Show(this, "Einstellungen konnten nicht gespeichert werden:\n" + ex.Message, Title); }
     }
@@ -167,6 +169,12 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) OutputBox.Text = dialog.FolderName;
     }
 
+    void BrowseReg_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog { Title = "Ordner mit den Reg-Dateien wählen" };
+        if (dialog.ShowDialog(this) == true) RegFolderBox.Text = dialog.FolderName;
+    }
+
     void Selection_Changed(object sender, RoutedEventArgs e) => UpdateSummary();
     void FileNameBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) => UpdateSummary();
 
@@ -177,6 +185,7 @@ public partial class MainWindow : Window
         SummaryText.Text =
             $"EXE: {FileNameBox.Text}\n" +
             $"Domäne: {DomainBox.Text}\n" +
+            $"Reg-Ordner: {RegFolderBox.Text}\n" +
             $"Benutzer: {Join(users.Where(u => u.IsSelected).Select(u => u.Name))}\n" +
             $"Standorte: {Join(locations.Where(l => l.IsSelected).Select(l => l.Name))}";
     }
@@ -191,7 +200,8 @@ public partial class MainWindow : Window
             selectedUsers.Count == 0 ? "Bitte mindestens einen Benutzer auswählen." :
             selectedLocations.Count == 0 ? "Bitte mindestens einen Standort auswählen (zuerst mit dem AD verbinden)." :
             fileName.Length == 0 || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ? "Der Dateiname ist ungültig." :
-            !Directory.Exists(folder) ? "Der Ausgabeordner existiert nicht." : null;
+            !Directory.Exists(folder) ? "Der Ausgabeordner existiert nicht." :
+            !Directory.Exists(RegFolderBox.Text.Trim()) ? "Der Reg-Ordner existiert nicht." : null;
         if (problem != null) { MessageBox.Show(this, problem, Title, MessageBoxButton.OK, MessageBoxImage.Warning); return; }
 
         var config = new JoinConfig
@@ -204,7 +214,7 @@ public partial class MainWindow : Window
 
         try
         {
-            string target = JoinExeGenerator.Create(folder, fileName, config);
+            string target = JoinExeGenerator.Create(folder, fileName, config, RegFolderBox.Text.Trim());
             PersistSettings();
             MessageBox.Show(this, $"Die Join-EXE wurde erstellt:\n{target}", Title, MessageBoxButton.OK, MessageBoxImage.Information);
         }

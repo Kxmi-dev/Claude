@@ -23,4 +23,5 @@ public class BuilderSettings
 {
     public List<Profile> Profiles { get; set; } = new();
     public List<string> KnownUsers { get; set; } = new();
+    public string RegFolder { get; set; } = @"C:\LDS";
 }

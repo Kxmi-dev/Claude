@@ -111,6 +111,15 @@
                         <TextBox x:Name="OutputBox" />
                         <Button Grid.Column="1" Content="Durchsuchen" Margin="8,0,0,0" Click="Browse_Click" />
                     </Grid>
+                    <TextBlock Style="{StaticResource Label}" Text="Reg-Ordner (Quelle der Reg-Dateien, werden in die EXE eingebettet)" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="RegFolderBox" />
+                        <Button Grid.Column="1" Content="Durchsuchen" Margin="8,0,0,0" Click="BrowseReg_Click" />
+                    </Grid>
                     <TextBlock Style="{StaticResource Label}" Text="Zusammenfassung" />
                     <Border Background="#F5F6F8" CornerRadius="6" Padding="12">
                         <TextBlock x:Name="SummaryText" TextWrapping="Wrap" />

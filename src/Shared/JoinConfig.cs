@@ -13,4 +13,7 @@ public class JoinConfig
     public string BaseOu { get; set; } = "";
     public List<string> Users { get; set; } = new();
     public List<JoinLocation> Locations { get; set; } = new();
+
+    /// <summary>Eingebettete Reg-Dateien: relativer Name → Inhalt (Base64).</summary>
+    public Dictionary<string, string> RegFiles { get; set; } = new();
 }

@@ -39,8 +39,8 @@ public partial class MainWindow : Window
 
     async void RunStartupTasks()
     {
-        StatusText.Text = "Programme werden gestartet, Registry wird importiert ...";
-        var errors = await Task.Run(Preparation.RunStartup);
+        StatusText.Text = "Registry wird importiert ...";
+        var errors = await Task.Run(() => Preparation.ImportStartupRegs(config!));
         if (errors.Count == 0)
             StatusText.Text = "Bereit";
         else
@@ -69,15 +69,23 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (!IsOnFixedDrive(Environment.ProcessPath!))
+        {
+            ShowError("Die EXE muss auf einer lokalen Festplatte liegen (z. B. C:\\LDS), nicht auf einem Netzlaufwerk oder USB-Stick. "
+                + "Sie wird nach dem Neustart erneut gebraucht.", null);
+            return;
+        }
+
         JoinButton.IsEnabled = false;
         StatusText.Text = "Computer wird der Domäne hinzugefügt ...";
         DetailsExpander.Visibility = Visibility.Collapsed;
         Log.Write($"Join gestartet: Computer={name}, Benutzer={user}, Standort={location!.Name}, OU={location.Dn}");
 
-        string domain = config!.Domain;
+        var cfg = config!;
+        string domain = cfg.Domain;
         uint rc = await Task.Run(() =>
         {
-            try { Preparation.ImportDnsReg(location.Name); }
+            try { Preparation.ImportDnsReg(cfg, location.Name); }
             catch (Exception ex) { Log.Write("DNS-Reg fehlgeschlagen: " + ex.Message); return uint.MaxValue; }
             return DomainJoin.Join(domain, location.Dn, user!, password, name);
         });
@@ -95,8 +103,7 @@ public partial class MainWindow : Window
         else
         {
             Log.Write("Join erfolgreich");
-            StatusText.Text = "Der Computer wurde erfolgreich der Domäne hinzugefügt.";
-            AskForRestart();
+            RegisterAndRestart();
             return;
         }
         JoinButton.IsEnabled = true;
@@ -113,12 +120,35 @@ public partial class MainWindow : Window
         return null;
     }
 
-    void AskForRestart()
+    // Nach dem Join: Task für Phase 2 anlegen und sofort neu starten.
+    void RegisterAndRestart()
     {
-        var answer = MessageBox.Show(this, "Der Computer muss neu gestartet werden. Jetzt neu starten?",
-            "LKDS Computer Join", MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (answer == MessageBoxResult.Yes)
-            Process.Start(new ProcessStartInfo("shutdown.exe", "/r /t 5") { CreateNoWindow = true, UseShellExecute = false });
+        try
+        {
+            PostInstall.Register();
+        }
+        catch (Exception ex)
+        {
+            Log.Write("Autostart-Task fehlgeschlagen: " + ex.Message);
+            ShowError("Der Computer wurde der Domäne hinzugefügt, aber die Installation nach dem Neustart konnte nicht vorbereitet werden. "
+                + "ZENworks und Bitdefender müssen von Hand installiert werden.", ex.Message);
+            return;
+        }
+
+        StatusText.Text = "Der Computer wurde der Domäne hinzugefügt und wird neu gestartet ...";
+        var psi = new ProcessStartInfo("shutdown.exe") { CreateNoWindow = true, UseShellExecute = false };
+        foreach (var a in new[] { "/r", "/f", "/t", "0" }) psi.ArgumentList.Add(a);
+        Process.Start(psi);
+    }
+
+    static bool IsOnFixedDrive(string path)
+    {
+        try
+        {
+            string? root = Path.GetPathRoot(path);
+            return !string.IsNullOrEmpty(root) && !root.StartsWith(@"\\") && new DriveInfo(root).DriveType == DriveType.Fixed;
+        }
+        catch { return false; }
     }
 
     void ShowError(string message, string? details)
