@@ -169,3 +169,10 @@ Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lese
 - NumLock-Automatik, Drucken auf echtem Drucker, Ton (MCI), Druckerauswahl und die .exe wurden nur unter
   Linux/simuliert getestet –
   Rückmeldung vom Windows-PC des Nutzers steht aus.
+
+## Vorgemerkte Wünsche (29.10.2026 – NOCH NICHT BAUEN, erst mit dem Nutzer besprechen)
+1. **Sound-Tasten („Sonstiges“)**: In den Einstellungen unter „Töne“ einen Bereich „Sonstiges“. Dort beliebig
+   viele freie Tasten mit einem Ton belegen: Eintrag anklicken → Programm wartet auf einen Tastendruck → übernimmt
+   ihn sofort. Beliebig viele Einträge, auch Tastenkombinationen (z. B. Strg+F1). Ton je Taste aus `sounds`.
+2. **Ton am Partie-Ende**: kommt bisher erst mit [Enter] zur Auswertung (`main_window`, nach `_complete_finished_state`).
+   Soll stattdessen SOFORT mit der Eingabe des letzten Stoßes (z. B. 100.) kommen.
