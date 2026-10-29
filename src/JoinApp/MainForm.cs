@@ -65,6 +65,7 @@ public class MainForm : Form
         _userBox.SelectedIndex = 0;
         UpdatePasswordField();
         foreach (var l in _config.Locations) _locationBox.Items.Add(l.Name);
+        _dnsBox.Items.Add(LdsSteps.NoDns);
         _dnsBox.Items.AddRange(_config.DnsOptions);
         if (_locationBox.Items.Count > 0) _locationBox.SelectedIndex = 0;
         SelectDefaultDns();
@@ -117,7 +118,7 @@ public class MainForm : Form
         _locationBox.DropDownStyle = ComboBoxStyle.DropDownList;
         if (showDns)
         {
-            AddField(table, "DNS-Einstellung (Registry nach dem Neustart)", _dnsBox);
+            AddField(table, "DNS-Einstellung (Registry vor dem Join)", _dnsBox);
             _dnsBox.DropDownStyle = ComboBoxStyle.DropDownList;
             _locationBox.SelectedIndexChanged += (_, _) => SelectDefaultDns();
         }
@@ -197,14 +198,26 @@ public class MainForm : Form
         if (_config.RunLdsSteps && _config.DnsOptions.Length > 0)
         {
             dnsName = _dnsBox.SelectedItem as string;
-            if (dnsName is null || !LdsSteps.IsValidDnsName(dnsName)) { ShowStatus("Bitte eine DNS-Einstellung auswählen.", ""); return; }
+            if (dnsName == LdsSteps.NoDns) dnsName = null;
+            else if (dnsName is null || !LdsSteps.IsValidDnsName(dnsName)) { ShowStatus("Bitte eine DNS-Einstellung auswählen.", ""); return; }
         }
         name = name.ToUpperInvariant();
         var password = saved ?? _passwordBox.Text;
 
         _joinButton.Enabled = false;
 
-        ShowStatus("Computer wird der Domäne hinzugefügt …", "");
+        // Erster Start: Registry-Dateien importieren (DNS zuerst, damit die Domäne gefunden wird).
+        var regDetails = "";
+        var regInfo = "";
+        if (_config.RunLdsSteps)
+        {
+            ShowStatus("Registry-Dateien werden importiert …", "");
+            var regErrors = await Task.Run(() => Preparation.ImportRegs(_config, dnsName));
+            if (regErrors.Count > 0) regDetails = "Reg-Import: " + string.Join(" | ", regErrors);
+            regInfo = $"Registry: {Preparation.Imported} Datei(en) importiert.";
+        }
+
+        ShowStatus("Computer wird der Domäne hinzugefügt …", regDetails);
 
         var result = await Task.Run(() => DomainJoiner.Join(_config.Domain, location.Dn, user, password, name));
         _passwordBox.Clear();
@@ -222,72 +235,41 @@ public class MainForm : Form
 
         var message = result.Message;
         var details = result.Details;
-        if (result.Success)
+        if (regDetails.Length > 0) message += " Nicht alle Registry-Dateien konnten importiert werden.";
+        if (regDetails.Length > 0) details = (details.Length > 0 ? details + " | " : "") + regDetails;
+        else if (regInfo.Length > 0) details = (details.Length > 0 ? details + " | " : "") + regInfo;
+        if (!result.Success)
         {
-            var firewallError = await Task.Run(Firewall.OpenPort445);
-            if (firewallError is null)
-            {
-                details += " | Firewall: Port 445 (eingehend, Domänenprofil) geöffnet.";
-            }
-            else
-            {
-                message += " Port 445 konnte nicht geöffnet werden.";
-                details += $" | Firewall-Fehler: {firewallError}";
-            }
-
-            var script = BuildPostScript(dnsName);
-            if (script is not null)
-            {
-                var scriptError = await Task.Run(() => PostScript.Schedule(script));
-                if (scriptError is null)
-                {
-                    details += " | Nachlauf-Skript: wird beim nächsten Start als SYSTEM ausgeführt.";
-                }
-                else
-                {
-                    message += " Das Skript für den Neustart konnte nicht eingerichtet werden.";
-                    details += $" | Skript-Fehler: {scriptError}";
-                }
-            }
+            ShowStatus(message, details);
+            _joinButton.Enabled = true;
+            return;
         }
-        ShowStatus(message, details);
 
-        if (result.Success)
+        var firewallError = await Task.Run(Firewall.OpenPort445);
+        if (firewallError is null)
         {
-            var restart = MessageBox.Show(this, "Der Computer muss neu gestartet werden. Jetzt neu starten?",
-                "Neustart", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (restart == DialogResult.Yes)
-                Process.Start(new ProcessStartInfo("shutdown", "/r /t 15") { CreateNoWindow = true, UseShellExecute = false });
-
-            // Ganz zuletzt: EXE von der Platte entfernen, damit auch ein hinterlegtes Passwort nicht zurückbleibt.
-            if (_config.SelfDelete)
-            {
-                SelfDelete.Start(Application.ExecutablePath);
-                Close();
-            }
+            details += " | Firewall: Port 445 (eingehend, Domänenprofil) geöffnet.";
         }
         else
         {
-            _joinButton.Enabled = true;
+            message += " Port 445 konnte nicht geöffnet werden.";
+            details += $" | Firewall-Fehler: {firewallError}";
         }
-    }
 
-    /// <summary>Fester LDS-Ablauf (falls gewählt) gefolgt vom optionalen freien Skript.</summary>
-    private byte[]? BuildPostScript(string? dnsName)
-    {
-        var parts = new List<byte[]>();
-        if (_config!.RunLdsSteps) parts.Add(Encoding.ASCII.GetBytes(LdsSteps.Build(dnsName)));
-        if (_config.PostScript is { Length: > 0 } custom) parts.Add(custom);
-        if (parts.Count == 0) return null;
-
-        using var ms = new MemoryStream();
-        foreach (var part in parts)
+        // Nachlauf nach dem Neustart einrichten (Programme starten, aufräumen). Erst danach wird neu gestartet.
+        if (_config.RunLdsSteps || _config.PostScript is { Length: > 0 } || _config.SelfDelete)
         {
-            ms.Write(part, 0, part.Length);
-            var newline = Encoding.ASCII.GetBytes("\r\n");
-            ms.Write(newline, 0, newline.Length);
+            var postError = await Task.Run(() => PostInstall.Register(_config));
+            if (postError is not null)
+            {
+                ShowStatus(message + " Der Nachlauf nach dem Neustart konnte nicht eingerichtet werden, deshalb wird nicht automatisch neu gestartet.",
+                    details + $" | Nachlauf-Fehler: {postError}");
+                return;
+            }
         }
-        return ms.ToArray();
+
+        ShowStatus(message + " Der Computer startet jetzt neu.", details);
+        Process.Start(new ProcessStartInfo("shutdown", "/r /t 0") { CreateNoWindow = true, UseShellExecute = false });
     }
 
     /// <summary>Ist für den Benutzer ein Passwort hinterlegt, entfällt die Eingabe.</summary>
@@ -305,8 +287,13 @@ public class MainForm : Form
     private void SelectDefaultDns()
     {
         if (_config is null || _locationBox.SelectedIndex < 0 || _dnsBox.Items.Count == 0) return;
-        var wanted = LdsSteps.DefaultDnsFor(_config.Locations[_locationBox.SelectedIndex].Name, _config.DnsOptions);
-        _dnsBox.SelectedItem = wanted ?? _config.DnsOptions[0];
+        var locationName = _config.Locations[_locationBox.SelectedIndex].Name;
+        // Im Builder eingestellte Zuordnung hat Vorrang, sonst die Namensregel (LNWS zu LNRE).
+        var wanted = _config.LocationDns.TryGetValue(locationName, out var configured)
+            ? configured
+            : LdsSteps.DefaultDnsFor(locationName, _config.DnsOptions);
+        _dnsBox.SelectedItem = wanted ?? LdsSteps.NoDns;
+        if (_dnsBox.SelectedIndex < 0) _dnsBox.SelectedItem = LdsSteps.NoDns;
     }
 
     private void ShowStatus(string message, string details)

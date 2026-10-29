@@ -31,6 +31,8 @@ public static class ConfigPayload
             foreach (var pw in config.SealedPasswords)
                 sb.Append("Pw=").Append(pw.Key).Append(Separator).Append(Convert.ToBase64String(pw.Value)).Append('\n');
         }
+        foreach (var d in config.LocationDns) sb.Append("LocDns=").Append(d.Key).Append(Separator).Append(d.Value).Append('\n');
+        foreach (var r in config.RegFiles) sb.Append("Reg=").Append(r.Key).Append(Separator).Append(Convert.ToBase64String(r.Value)).Append('\n');
         if (config.PostScript is { Length: > 0 }) sb.Append("Script=").Append(Convert.ToBase64String(config.PostScript)).Append('\n');
 
         var text = Encoding.UTF8.GetBytes(sb.ToString());
@@ -66,6 +68,39 @@ public static class ConfigPayload
         return Parse(text);
     }
 
+    /// <summary>
+    /// Kopiert die EXE ohne Passwörter und Schlüssel: Die Kopie für den Nachlauf braucht nur Domäne, Schalter und Skript.
+    /// </summary>
+    public static void CopyWithoutSecrets(string sourceExe, string targetExe)
+    {
+        var config = ReadFrom(sourceExe) ?? throw new InvalidOperationException("Keine Konfiguration in der EXE gefunden.");
+        long programLength;
+        using (var fs = new FileStream(sourceExe, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+        {
+            var trailerSize = Magic.Length + sizeof(int);
+            var tail = ReadAt(fs, fs.Length - trailerSize, trailerSize);
+            programLength = fs.Length - trailerSize - BitConverter.ToInt32(tail, 0);
+        }
+
+        using (var input = new FileStream(sourceExe, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+        using (var output = new FileStream(targetExe, FileMode.Create, FileAccess.Write))
+        {
+            var buffer = new byte[81920];
+            var remaining = programLength;
+            while (remaining > 0)
+            {
+                var n = input.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining));
+                if (n <= 0) throw new EndOfStreamException();
+                output.Write(buffer, 0, n);
+                remaining -= n;
+            }
+        }
+
+        var slim = new JoinConfig(config.Domain, config.BaseOu, new string[0], new LocationEntry[0], config.PostScript,
+            config.RunLdsSteps, null, null, null, config.SelfDelete);
+        AppendTo(targetExe, slim);
+    }
+
     private static JoinConfig Parse(string text)
     {
         string domain = "", baseOu = "";
@@ -77,6 +112,8 @@ public static class ConfigPayload
         var dnsOptions = new List<string>();
         byte[]? secretKey = null;
         var passwords = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        var locationDns = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var regFiles = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var line in text.Split('\n'))
         {
@@ -95,6 +132,14 @@ public static class ConfigPayload
                     var pw = value.Split(Separator);
                     if (pw.Length == 2) passwords[pw[0]] = Convert.FromBase64String(pw[1]);
                     break;
+                case "LocDns":
+                    var ld = value.Split(Separator);
+                    if (ld.Length == 2) locationDns[ld[0]] = ld[1];
+                    break;
+                case "Reg":
+                    var rf = value.Split(Separator);
+                    if (rf.Length == 2) regFiles[rf[0]] = Convert.FromBase64String(rf[1]);
+                    break;
                 case "SelfDelete": selfDelete = value == "1"; break;
                 case "LdsSteps": ldsSteps = value == "1"; break;
                 case "Script": script = Convert.FromBase64String(value); break;
@@ -104,7 +149,7 @@ public static class ConfigPayload
                     break;
             }
         }
-        return new JoinConfig(domain, baseOu, users.ToArray(), locations.ToArray(), script, ldsSteps, dnsOptions.ToArray(), secretKey, passwords, selfDelete);
+        return new JoinConfig(domain, baseOu, users.ToArray(), locations.ToArray(), script, ldsSteps, dnsOptions.ToArray(), secretKey, passwords, selfDelete, locationDns, regFiles);
     }
 
     private static byte[] ReadAt(FileStream fs, long position, int count)

@@ -37,11 +37,17 @@ public class JoinConfig
     public Dictionary<string, byte[]> SealedPasswords { get; }
     /// <summary>Die Join-EXE löscht sich nach erfolgreichem Join selbst.</summary>
     public bool SelfDelete { get; }
+    /// <summary>Standortname zu DNS-Name (z. B. LNWS zu LNRE). Standorte ohne Eintrag bekommen keine Vorauswahl.</summary>
+    public Dictionary<string, string> LocationDns { get; }
+    /// <summary>Eingebettete Reg-Dateien: Pfad relativ zu C:\LDS (z. B. REG\OES.reg) zu Dateiinhalt.</summary>
+    public Dictionary<string, byte[]> RegFiles { get; }
 
     public JoinConfig(string domain, string baseOu, string[] users, LocationEntry[] locations, byte[]? postScript = null, bool runLdsSteps = false, string[]? dnsOptions = null,
         byte[]? key = null, Dictionary<string, byte[]>? sealedPasswords = null,
-        bool selfDelete = false)
+        bool selfDelete = false, Dictionary<string, string>? locationDns = null, Dictionary<string, byte[]>? regFiles = null)
     {
+        LocationDns = locationDns ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        RegFiles = regFiles ?? new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
         Domain = domain;
         BaseOu = baseOu;
         Users = users;

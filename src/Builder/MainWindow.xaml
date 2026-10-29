@@ -38,11 +38,12 @@
                         <TextBlock Text="Basis-OU" Style="{StaticResource Label}"/>
                         <TextBox x:Name="BaseOuBox"/>
 
-                        <CheckBox x:Name="CurrentUserCheck" Margin="0,16,0,0" Checked="CurrentUserCheck_Changed" Unchecked="CurrentUserCheck_Changed"/>
-                        <TextBlock Text="Benutzer" Style="{StaticResource Label}"/>
+                        <TextBlock Text="Benutzer" Style="{StaticResource Label}" Margin="0,16,0,4"/>
                         <TextBox x:Name="ConnUserBox"/>
                         <TextBlock Text="Passwort (wird nie gespeichert)" Style="{StaticResource Label}"/>
                         <PasswordBox x:Name="ConnPasswordBox"/>
+                        <TextBlock Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"
+                                   Text="Passwort leer lassen: Der Builder verbindet sich mit der aktuellen Windows-Anmeldung (SSO)."/>
 
                         <Button Content="Mit Active Directory verbinden" Style="{StaticResource Primary}"
                                 Margin="0,20,0,0" HorizontalAlignment="Left" Click="Connect_Click"/>
@@ -56,12 +57,20 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Welche Standorte soll die EXE enthalten?" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <TextBlock Text="Welche Standorte soll die EXE enthalten, und welche DNS-Datei gehört zu welchem Standort?" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,12"/>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <ItemsControl x:Name="LocationList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <CheckBox IsChecked="{Binding Selected}" Content="{Binding Name}" ToolTip="{Binding Dn}"/>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox IsChecked="{Binding Selected}" Content="{Binding Name}" ToolTip="{Binding Dn}" VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Column="1" Width="110" ItemsSource="{Binding DnsChoices}" SelectedItem="{Binding Dns}"
+                                                  ToolTip="DNS-Datei für diesen Standort"/>
+                                    </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -127,26 +136,24 @@
                             <Button Grid.Column="1" Content="Auswählen …" Margin="8,0,0,0" Click="BrowseFolder_Click"/>
                         </Grid>
                         <CheckBox x:Name="LdsCheck" IsChecked="True" Margin="0,16,0,0" Checked="LdsCheck_Changed" Unchecked="LdsCheck_Changed"
-                                  Content="Standard-Nachlauf nach dem Neustart (Programme und Registry aus C:\LDS)"/>
-                        <TextBlock Text="Startet ZENworks und Bitdefender und importiert OES.reg, die gewählte DNS-Datei und die übrigen .reg-Dateien und räumt danach in C:\LDS auf (sysprep.bat, unattend.xml, install_Windows 10 Enterprise.clg, Ordner part). Läuft einmalig als SYSTEM."
+                                  Content="Standard-Ablauf (Registry vor dem Join, Programme aus C:\LDS nach dem Neustart)"/>
+                        <TextBlock Text="Importiert die Registry-Dateien vor dem Join, startet nach dem Neustart ZENworks und Bitdefender gleichzeitig (als SYSTEM, ohne Fenster, ohne Anmeldung) und räumt danach alles auf: Programme, Registry-Dateien, Join-EXE, Tasks und Marken. Auch bei einem Fehler wird aufgeräumt, dann wird von Hand installiert."
                                    Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="22,0,0,0"/>
                         <CheckBox x:Name="SelfDeleteCheck" IsChecked="True" Margin="0,16,0,0" Checked="LdsCheck_Changed" Unchecked="LdsCheck_Changed"
-                                  Content="Join-EXE löscht sich nach erfolgreichem Join selbst"/>
-                        <TextBlock Text="Empfohlen, vor allem mit hinterlegtem Passwort. Nach einem Fehler bleibt die EXE bestehen, damit man es erneut versuchen kann."
+                                  Content="Join-EXE entfernt sich nach dem Neustart selbst"/>
+                        <TextBlock Text="Empfohlen, vor allem mit hinterlegtem Passwort. Nach einem Fehler beim Join bleibt die EXE bestehen, damit man es erneut versuchen kann."
                                    Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="22,0,0,0"/>
-                        <TextBlock Text="DNS-Dateien zur Auswahl in der Join-EXE (C:\LDS\REG\DNS ….reg)" Style="{StaticResource Label}"/>
-                        <ItemsControl x:Name="DnsList">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <CheckBox IsChecked="{Binding Selected}" Content="{Binding Name}" Margin="0,2,20,2"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <TextBlock Text="Die Join-EXE wählt je nach Standort eine davon vor (LNBE: LNBE, LNWS: LNRE), man kann sie dort ändern. OES.reg wird immer importiert."
-                                   Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap"/>
+                        <TextBlock Text="Ordner mit den Registry-Dateien (werden in die EXE eingebettet)" Style="{StaticResource Label}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="RegFolderBox" Text="C:\LDS" TextChanged="Summary_Changed"/>
+                            <Button Grid.Column="1" Content="Auswählen …" Margin="8,0,0,0" Click="BrowseRegFolder_Click"/>
+                        </Grid>
+                        <TextBlock Text="Erwartet werden ZENworkspassivLogin.reg, eml.reg, Credential-Guard.reg, REG\OES.reg und REG\DNS-….reg für die oben zugeordneten Standorte. Auf dem Zielrechner werden sie beim ersten Start der EXE vor dem Join importiert."
+                                   Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"/>
                         <TextBlock Text="Zusätzliches Skript (optional, .bat)" Style="{StaticResource Label}"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -158,7 +165,7 @@
                             <Button Grid.Column="1" Content="Auswählen …" Margin="8,0,0,0" Click="BrowseBat_Click"/>
                             <Button Grid.Column="2" Content="Entfernen" Margin="8,0,0,0" Click="ClearBat_Click"/>
                         </Grid>
-                        <TextBlock Text="Läuft einmalig beim nächsten Start als SYSTEM, nicht als angemeldeter Benutzer. Keine Passwörter in die .bat schreiben, sie steht lesbar in der EXE."
+                        <TextBlock Text="Läuft einmalig nach dem Neustart als SYSTEM, nicht als angemeldeter Benutzer. Keine Passwörter in die .bat schreiben, sie steht lesbar in der EXE."
                                    Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"/>
                         <TextBlock Text="Zusammenfassung" Style="{StaticResource Label}" Margin="0,20,0,4"/>
                         <Border BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="4" Padding="12">
