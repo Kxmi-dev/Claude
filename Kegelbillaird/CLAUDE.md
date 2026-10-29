@@ -176,3 +176,9 @@ Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lese
    ihn sofort. Beliebig viele Einträge, auch Tastenkombinationen (z. B. Strg+F1). Ton je Taste aus `sounds`.
 2. **Ton am Partie-Ende**: kommt bisher erst mit [Enter] zur Auswertung (`main_window`, nach `_complete_finished_state`).
    Soll stattdessen SOFORT mit der Eingabe des letzten Stoßes (z. B. 100.) kommen.
+   Bei einer späteren Korrektur des letzten Stoßes NICHT noch einmal abspielen (Nutzer bestätigt).
+3. **Bilder/Ton nach Korrektur**: Nach übernommener Korrektur (CORRECTION_CONFIRMED in `game_screen._apply`) den
+   NEUEN Wert wie einen normalen Stoß behandeln → `_celebrate(neuer Wert)`: z. B. +5 → +6/+7 = Plus-Bild (+ Ton),
+   −5 → −6/−7 = Minus-Bild. Neuer Wert „normal“ → nichts. Halbzeit- und Ende-Ton dabei NICHT wiederholen.
+   Plan wurde dem Nutzer schon gezeigt; er will alles zusammen besprechen.
+- Offene Frage an den Nutzer: Sound-Tasten nur während der Partie oder überall (auch im Menü)?
