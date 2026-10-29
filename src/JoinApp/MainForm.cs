@@ -208,11 +208,13 @@ public class MainForm : Form
 
         // Erster Start: Registry-Dateien importieren (DNS zuerst, damit die Domäne gefunden wird).
         var regDetails = "";
+        var regInfo = "";
         if (_config.RunLdsSteps)
         {
             ShowStatus("Registry-Dateien werden importiert …", "");
             var regErrors = await Task.Run(() => Preparation.ImportRegs(_config, dnsName));
             if (regErrors.Count > 0) regDetails = "Reg-Import: " + string.Join(" | ", regErrors);
+            regInfo = $"Registry: {Preparation.Imported} Datei(en) importiert.";
         }
 
         ShowStatus("Computer wird der Domäne hinzugefügt …", regDetails);
@@ -235,6 +237,7 @@ public class MainForm : Form
         var details = result.Details;
         if (regDetails.Length > 0) message += " Nicht alle Registry-Dateien konnten importiert werden.";
         if (regDetails.Length > 0) details = (details.Length > 0 ? details + " | " : "") + regDetails;
+        else if (regInfo.Length > 0) details = (details.Length > 0 ? details + " | " : "") + regInfo;
         if (!result.Success)
         {
             ShowStatus(message, details);
