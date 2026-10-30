@@ -181,4 +181,6 @@ Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lese
    NEUEN Wert wie einen normalen Stoß behandeln → `_celebrate(neuer Wert)`: z. B. +5 → +6/+7 = Plus-Bild (+ Ton),
    −5 → −6/−7 = Minus-Bild. Neuer Wert „normal“ → nichts. Halbzeit- und Ende-Ton dabei NICHT wiederholen.
    Plan wurde dem Nutzer schon gezeigt; er will alles zusammen besprechen.
+4. **Spieldauer stoppt beim letzten Stoß**: Bisher läuft die Zeit weiter, bis [Enter] zur Auswertung gedrückt
+   wird. Soll mit der Eingabe des letzten Stoßes (z. B. 100.) sofort stehen bleiben (wie der Ende-Ton).
 - Offene Frage an den Nutzer: Sound-Tasten nur während der Partie oder überall (auch im Menü)?
