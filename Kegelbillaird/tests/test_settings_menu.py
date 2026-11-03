@@ -115,6 +115,12 @@ class SettingsMenuTests(unittest.TestCase):
         self.store.load()
         self.storage = GameStorage(self.base.data_dir, self.base.results_dir)
         self.storage.ensure_directories()
+        # Echte NumLock-Prüfung aus (wie auf Nicht-Windows): auf einem Rechner mit NumLock AUS
+        # (z. B. GitHub-Build) würde sonst die NumLock-Warnung die Fußleiste überdecken.
+        from unittest import mock
+        patcher = mock.patch("bk.numlock.is_supported", return_value=False)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         from bk.ui.main_window import MainWindow
         self.window = MainWindow(self.base, self.storage, self.store)
         self.window.resize(1280, 800)
