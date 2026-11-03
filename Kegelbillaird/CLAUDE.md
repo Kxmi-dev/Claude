@@ -183,4 +183,16 @@ Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lese
    Plan wurde dem Nutzer schon gezeigt; er will alles zusammen besprechen.
 4. **Spieldauer stoppt beim letzten Stoß**: Bisher läuft die Zeit weiter, bis [Enter] zur Auswertung gedrückt
    wird. Soll mit der Eingabe des letzten Stoßes (z. B. 100.) sofort stehen bleiben (wie der Ende-Ton).
-- Offene Frage an den Nutzer: Sound-Tasten nur während der Partie oder überall (auch im Menü)?
+5. **Mehrere Stöße korrigierbar (wieder)**: Nicht mehr nur der letzte Stoß. Vorschlag an den Nutzer: im
+   Korrekturfenster mit erneutem [/] einen Stoß weiter zurück (Stoß 100 → 99 → 98 …), gewählter Stoß im Raster
+   markiert; Fenster zeigt Stoß-Nr., alte Punktzahl, neue Eingabe; Ziffer + [Enter] übernimmt, [*] bricht ab.
+   (Undo-Sperre für schnelles zweites [/] muss im Korrekturfenster dann entfallen.) Bilder nach Korrektur (Punkt 3)
+   gelten für jeden korrigierten Stoß; Halbzeit-/Ende-Ton nie wiederholen.
+6. **„PC ausschalten“**: Menüeintrag „Beenden & Herunterfahren“ heißt nur noch „PC ausschalten“; EIN Klick/[Enter]
+   genügt, keine 2. Bestätigung mehr (SHUTDOWN_ARM in `menu_screen.py` entfällt).
+7. **Bilder je Wochentag**: In den Einstellungen Felder Montag … Sonntag; je Tag einstellbar, ob GIFs/Bilder
+   (Plus/Minus-Feier) kommen oder nicht.
+8. **Startbild im Hauptmenü** (`widgets.py` `_draw_table`): aktuell 7 Kegel (6 weiß + 1 rot) → nur 5 Kegel
+   (Kreuz: 4 weiß + roter König in der Mitte); Bild insgesamt etwas schöner gestalten.
+- Offene Fragen an den Nutzer: Sound-Tasten nur während der Partie oder überall (auch im Menü)?
+  Bleibt „Beenden“ (nur Programm schließen) zusätzlich? Wochentage: nur Bilder oder auch deren Ton?
