@@ -75,20 +75,22 @@ def pick_image(files: Sequence[Path], last: Path | None = None,
 
 
 Backend = Callable[[Path, int], None]
+Stopper = Callable[[], None]
 
 
 class SoundPlayer:
     """Spielt eine .wav/.mp3-Datei mit Lautstärke (0–100) ab, ohne je einen Fehler nach außen zu geben."""
 
-    def __init__(self, backend: Backend | None = None) -> None:
+    def __init__(self, backend: Backend | None = None, stopper: Stopper | None = None) -> None:
         self._backend = backend
+        self._stopper = stopper
         self._loaded = backend is not None
 
     def play(self, path: Path | None, volume: int = 100) -> bool:
         if path is None or volume <= 0:
             return False
         if not self._loaded:
-            self._backend = _default_backend()
+            self._backend, self._stopper = _default_backend()
             self._loaded = True
         if self._backend is None:
             log.warning("Keine Tonausgabe verfügbar – %s wird nicht abgespielt", path.name)
@@ -100,12 +102,21 @@ class SoundPlayer:
             log.warning("Ton konnte nicht abgespielt werden (%s): %s", path.name, exc)
             return False
 
+    def stop(self) -> None:
+        """Laufenden Ton beenden (für die Spieldauer der Sound-Tasten); Fehler werden nur geloggt."""
+        if self._stopper is None:
+            return
+        try:
+            self._stopper()
+        except Exception as exc:
+            log.warning("Ton konnte nicht gestoppt werden: %s", exc)
 
-def _default_backend() -> Backend | None:
+
+def _default_backend() -> tuple[Backend | None, Stopper | None]:
     """Windows: MCI (wav + mp3 + Lautstärke, hängt ohne Audiogerät nicht), Rückfall winsound (nur wav).
     Andere Systeme (Entwicklung): Qt QSoundEffect (nur wav), nur wenn ein Audiogerät vorhanden ist."""
     if sys.platform == "win32":
-        return _windows_backend
+        return _windows_backend, _windows_stop
     return _qt_backend()
 
 
@@ -138,6 +149,15 @@ def _windows_backend(path: Path, volume: int) -> None:
         _winsound_backend(path, volume)
 
 
+def _windows_stop() -> None:
+    try:
+        _mci(f"close {_MCI_ALIAS}")
+    except RuntimeError:
+        pass                              # war schon zu Ende / nie geöffnet
+    import winsound
+    winsound.PlaySound(None, 0)           # evtl. laufenden winsound-Rückfall beenden
+
+
 def _winsound_backend(path: Path, volume: int) -> None:
     import winsound
     if path.suffix.lower() != ".wav":
@@ -146,13 +166,13 @@ def _winsound_backend(path: Path, volume: int) -> None:
     winsound.PlaySound(str(path), winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_NODEFAULT)
 
 
-def _qt_backend() -> Backend | None:
+def _qt_backend() -> tuple[Backend | None, Stopper | None]:
     try:
         from PySide6.QtCore import QUrl
         from PySide6.QtMultimedia import QMediaDevices, QSoundEffect
     except Exception as exc:   # Modul fehlt oder lässt sich nicht laden
         log.warning("Qt Multimedia nicht verfügbar: %s", exc)
-        return None
+        return None, None
     holder: list = []
 
     def play_qt(path: Path, volume: int) -> None:
@@ -166,4 +186,8 @@ def _qt_backend() -> Backend | None:
         holder[:] = [effect]   # Objekt am Leben halten, bis es spielt
         effect.play()
 
-    return play_qt
+    def stop_qt() -> None:
+        for effect in holder:
+            effect.stop()
+
+    return play_qt, stop_qt

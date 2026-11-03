@@ -41,7 +41,7 @@ bk/ui/main_window.py Bildschirmwechsel, Startprüfung, Abschluss, Archiv-Aktione
 bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, Billiard vs Fußball (25 Stoß), Archiv, Einstellungen,
                      Beenden, PC ausschalten (ROTER Knopf, `danger=True`; EIN Klick/Enter genügt, Nutzerwunsch)
                      Rechts `BrandPanel` (widgets): Vereinslogo im weißen Kasten, gezeichneter Billardtisch (Holzbande,
-                     Mini-Zähltafel, 5 Kegel als Kreuz mit rotem König, 3 Kugeln), „BK-Scoreboard / Version {APP_VERSION}“ (3.0) und darunter „powered by Kimi&AP“ (Nutzerwunsch).
+                     Mini-Zähltafel, 5 stehende Holzkegel (Ahorn) als Kreuz, König gleiche Holzfarbe, nur etwas größer (Nutzerwunsch), 3 Kugeln), „BK-Scoreboard / Version {APP_VERSION}“ (3.0) und darunter „powered by Kimi&AP“ (Nutzerwunsch).
                      Vereinslogo zusätzlich klein rechts in der Titelleiste (`TitleBar.set_logo`).
 bk/ui/game_screen.py Zählansicht + Wiedergabe-Modus
 bk/ui/archive_screen.py  Archivliste
@@ -130,8 +130,15 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   (leer = Plus-Bilder). Eine Datei = immer diese, mehrere = zufällig. Bestätigte Korrektur blendet es sofort aus.
 - **Sound-Tasten** (`sound_keys`, Einstellungen → Töne → Sonstiges): (Kombination wie „Ctrl+F1“, Ton). Aufnahme
   wartet auf die eigentliche Taste (Strg/Alt/Umschalt allein zählen nicht, `keymap.combo_name`); vom Programm
-  belegte Tasten ohne Modifier werden abgelehnt (`keymap.is_reserved`). Wirken ÜBERALL (`MainWindow._play_sound_key`,
-  vor jeder anderen Tastenverarbeitung), nicht während einer Tastenaufnahme.
+  in der Partie belegte Tasten ohne Modifier werden abgelehnt (`keymap.reserved_use` nennt den Zweck: Ziffern 0–7 +
+  Plus/Minus/Korrektur/Abbruch/Enter/Zurück). **Wirken NUR in der Partie** (Zählansicht, keine Wiedergabe, keine offene
+  Abfrage; `MainWindow._play_sound_key`, dort vor der übrigen Tastenverarbeitung) – Nutzerwunsch 03.11.2026, damit
+  **8 und 9** als Sound-Tasten gehen; in Menüs bleibt 8 = hoch.
+  **Spieldauer je Sound-Taste** (Nutzerwunsch 03.11.2026): Eintrag (Taste, Ton, Sekunden), 0 = ganz, 1–60 s
+  (`SOUND_KEY_MAX_SECONDS`, ganze Sekunden), Menü „Spieldauer“ [4]/[6] im Kreis, [Enter] = probehören mit Dauer.
+  Alte 2er-Einträge laden als 0 (`settings.sound_key_entry`). Stopp: `GameScreen._sound_stop` (QTimer, jeder neue
+  Ton verwirft ihn) → `SoundPlayer.stop()` (Windows: MCI close + winsound PlaySound(None); Qt: QSoundEffect.stop).
+  Stopp unter Windows noch nicht am echten PC getestet.
 - **Wochentage** (`extras_weekdays`, Mo … So, Einstellungen → Wochentage, `AppSettings.extras_today`): schalten NUR
   Bilder/GIFs und Sound-Tasten. Halbzeit-, Ende- und +6/+7-Ton kommen immer (Nutzerwunsch).
 - Hauptmenü-Lesbarkeit: Knopfschrift fett, dunkel `BUTTON_TEXT #333333`, größer; „Version …“ fett schwarz.
@@ -166,7 +173,9 @@ Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lese
 ## Arbeitsweise
 - **WICHTIG (ausdrücklicher Nutzerwunsch): Bei JEDER Änderung zuerst schreiben, WAS gebaut werden soll
   (kurzer Plan), und erst nach dem „ja“ des Nutzers umsetzen.** Auch bei kleinen Wünschen nie direkt loslegen.
-- **Nie einen Windows-/GitHub-Build starten** (Nutzerwunsch) – der Nutzer baut selbst mit `build_exe.bat`.
+- **Windows-/GitHub-Build nur auf ausdrücklichen Wunsch** des Nutzers. Normal baut er selbst mit `build_exe.bat`.
+  GitHub: Workflow „Windows-Programm bauen“ (`.github/workflows/build-windows.yml` im Repo Kxmi-dev/Claude, Branch
+  claude/wizardly-feynman-pliv2i), startet NUR von Hand (`gh workflow run`), ZIP als Artefakt (30 Tage), nichts wird ins Repo geschrieben.
 - **Nicht die ganze Testsuite laufen lassen** (Nutzerwunsch) – nur die Tests, die zu den geänderten Stellen gehören (z. B. einzelne Testklassen/-methoden).
 - Tests: `python main.py --selftest` (oder `python -m unittest discover -s tests -t .`);
   UI-Tests laufen mit `QT_QPA_PLATFORM=offscreen`. Vor Auslieferung immer alle Tests grün + `pyflakes`.

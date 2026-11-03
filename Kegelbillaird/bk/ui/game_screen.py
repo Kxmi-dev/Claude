@@ -105,6 +105,9 @@ class GameScreen(QWidget):
         self._replay_timer = QTimer(self)
         self._replay_timer.timeout.connect(self._replay_step)
         self._sound = SoundPlayer()
+        self._sound_stop = QTimer(self)               # Spieldauer der Sound-Tasten
+        self._sound_stop.setSingleShot(True)
+        self._sound_stop.timeout.connect(lambda: self._sound.stop())
         self._last_image = None
         self._celebration = CelebrationOverlay(self)
         self._was_complete = False
@@ -558,8 +561,10 @@ class GameScreen(QWidget):
         except Exception:
             log.exception("Halbzeit-Hinweis fehlgeschlagen")
 
-    def play_sound(self, name: str) -> bool:
-        """Ton aus dem Ordner sounds mit eingestellter Lautstärke (leerer Name = kein Ton)."""
+    def play_sound(self, name: str, seconds: int = 0) -> bool:
+        """Ton aus dem Ordner sounds mit eingestellter Lautstärke (leerer Name = kein Ton).
+        seconds > 0: nach so vielen Sekunden stoppen (Spieldauer der Sound-Tasten), 0 = ganz abspielen.
+        Jeder neue Ton ersetzt den alten und verwirft dessen Stopp-Zeit."""
         cfg = self._settings
         if not cfg.sound_enabled or not name:
             return False
@@ -567,7 +572,11 @@ class GameScreen(QWidget):
         if path is None:
             log.warning("Tondatei nicht gefunden: %s", name)
             return False
-        return self._sound.play(path, cfg.sound_volume)
+        self._sound_stop.stop()
+        played = self._sound.play(path, cfg.sound_volume)
+        if played and seconds > 0:
+            self._sound_stop.start(int(seconds * 1000))
+        return played
 
     def set_settings(self, settings: AppSettings) -> None:
         """Geänderte Einstellungen übernehmen (Zeiten erst ab der nächsten Partie, falls eine läuft)."""

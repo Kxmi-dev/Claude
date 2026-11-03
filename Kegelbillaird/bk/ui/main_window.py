@@ -298,18 +298,20 @@ class MainWindow(QWidget):
             return True
 
     def _play_sound_key(self, event: QKeyEvent) -> bool:
-        """Sound-Tasten („Sonstiges“): gelten überall – außer während eine Taste aufgenommen wird
-        und an Wochentagen, an denen sie ausgeschaltet sind."""
+        """Sound-Tasten („Sonstiges“): gelten NUR in der Partie (Zählansicht, keine Wiedergabe, keine
+        offene Abfrage) – in Menüs behalten die Tasten ihre normale Aufgabe (z. B. 8 = hoch).
+        An Wochentagen, an denen sie ausgeschaltet sind, spielen sie nicht."""
         entries = self._settings.sound_keys
-        if not entries or self.settings_screen.capturing:
+        if (not entries or self.stack.currentWidget() is not self.game_screen or self.game_screen.is_replay
+                or self.overlay.interactive):
             return False
         combo = keymap.combo_name(event)
-        sound = next((v for k, v in entries if k == combo), None) if combo else None
-        if sound is None:
+        entry = next((e for e in entries if e[0] == combo), None) if combo else None
+        if entry is None:
             return False
         if not event.isAutoRepeat() and self._settings.extras_today():
             try:
-                self.game_screen.play_sound(sound)
+                self.game_screen.play_sound(entry[1], entry[2])
             except Exception:
                 log.exception("Sound-Taste %s fehlgeschlagen", combo)
         return True

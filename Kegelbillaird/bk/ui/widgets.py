@@ -537,7 +537,7 @@ class BrandPanel(_Painted):
 
     def _draw_table(self, p: QPainter, rect: QRectF) -> None:
         """Gezeichneter Billardtisch: Holzbande, Tuch mit Lichtschein, kleine Zähltafel,
-        fünf Kegel als Kreuz (vier weiße, roter König in der Mitte) und drei Kugeln."""
+        fünf Holzkegel als Kreuz (König in der Mitte, etwas größer) und drei Kugeln."""
         from PySide6.QtGui import QLinearGradient, QRadialGradient
         unit_w = rect.width()
         radius = unit_w * 0.05
@@ -599,15 +599,16 @@ class BrandPanel(_Painted):
         for c in range(1, 4):
             p.drawLine(int(card.left() + c * cw), int(card.top()), int(card.left() + c * cw), int(card.bottom()))
         p.drawLine(int(card.left()), int(card.top() + ch), int(card.right()), int(card.top() + ch))
-        # Kegel-Kreuz: 4 weiße Kegel um den roten König
+        # Kegel-Kreuz leicht schräg von vorn: 4 Holzkegel um den (größeren) König,
+        # von hinten nach vorn gezeichnet, damit sich die Kegel richtig überdecken
         cx = cloth_rect.left() + cw_all * 0.77
-        cy = card.center().y()
-        gap = min(cw_all * 0.1, ch_all * 0.2)
-        pin = gap * 0.34
-        for dx, dy, color in ((0, -1, "#f7f7f2"), (-1, 0, "#f7f7f2"), (1, 0, "#f7f7f2"), (0, 1, "#f7f7f2"),
-                              (0, 0, "#d32f2f")):
-            self._draw_pin(p, QPointF(cx + dx * gap, cy + dy * gap), pin * (1.12 if color == "#d32f2f" else 1.0),
-                           QColor(color))
+        gap = min(cw_all * 0.11, ch_all * 0.185)
+        cy = cloth_rect.top() + ch_all * 0.39        # Fußpunkt des Königs
+        depth = gap * 0.75                           # Tiefe der Kreuz-Achse (Perspektive)
+        height = gap * 1.15
+        for dx, dy, king in sorted(((0, -1, False), (-1, 0, False), (1, 0, False), (0, 1, False), (0, 0, True)),
+                                   key=lambda pin: (pin[1], pin[2])):
+            self._draw_pin(p, QPointF(cx + dx * gap, cy + dy * depth), height * (1.1 if king else 1.0))
         # drei Kugeln
         ball = ch_all * 0.2
         by = cloth_rect.top() + ch_all * 0.66
@@ -630,26 +631,63 @@ class BrandPanel(_Painted):
         p.setBrush(QColor(255, 255, 255, 170))
         p.drawEllipse(QRectF(center.x() - size * 0.24, center.y() - size * 0.3, size * 0.16, size * 0.11))
 
-    @staticmethod
-    def _draw_pin(p: QPainter, center: QPointF, radius: float, base: QColor) -> None:
-        """Kegel von oben: Schatten, Fuß, Körper mit Glanz und Kopf."""
-        from PySide6.QtGui import QRadialGradient
+    # Holzfarben aller Kegel inkl. König (links Schattenkante … Glanz … rechts Schattenkante)
+    PIN_WOOD = ("#7a4b22", "#c08447", "#f2d19a", "#d9a866", "#9a6430")
+
+    @classmethod
+    def _draw_pin(cls, p: QPainter, foot: QPointF, height: float) -> None:
+        """Stehender Holzkegel von der Seite: Schatten, gedrechselter Körper (Fuß, Bauch,
+        Hals, Kopf) mit Rundungs-Farbverlauf, Maserung und Zierring am Hals."""
+        from PySide6.QtGui import QLinearGradient, QPainterPath
+        b = height * 0.18                     # halbe Breite am Bauch
+        x0, y0 = foot.x(), foot.y()
+
+        def pt(dx: float, up: float) -> QPointF:
+            return QPointF(x0 + dx * b, y0 - up * height)
+
+        # Schatten auf dem Tuch (Licht von links oben)
         p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QColor(0, 0, 0, 85))
-        p.drawEllipse(QPointF(center.x() + radius * 0.35, center.y() + radius * 0.45), radius * 1.05, radius * 1.05)
-        body = QRadialGradient(center.x() - radius * 0.35, center.y() - radius * 0.4, radius * 1.4)
-        body.setColorAt(0, base.lighter(130))
-        body.setColorAt(0.6, base)
-        body.setColorAt(1, base.darker(150))
-        p.setPen(QPen(base.darker(185), max(1.0, radius * 0.08)))
+        p.setBrush(QColor(0, 0, 0, 70))
+        p.drawEllipse(QPointF(x0 + b * 0.45, y0 + b * 0.05), b * 1.25, b * 0.32)
+        # Umriss: rechte Seite hoch, linke Seite gespiegelt zurück
+        path = QPainterPath(pt(-0.62, 0))
+        path.quadTo(pt(0, -0.035), pt(0.62, 0))
+        right = (((0.9, 0.08), (1.0, 0.2), (1.0, 0.32)),
+                 ((1.0, 0.48), (0.38, 0.56), (0.36, 0.72)),
+                 ((0.35, 0.78), (0.6, 0.8), (0.6, 0.87)),
+                 ((0.6, 0.95), (0.32, 1.0), (0.0, 1.0)))
+        for c1, c2, end in right:
+            path.cubicTo(pt(*c1), pt(*c2), pt(*end))
+        previous = [(0.62, 0)] + [seg[2] for seg in right[:-1]]
+        for (c1, c2, _), start in zip(reversed(right), reversed(previous)):
+            path.cubicTo(pt(-c2[0], c2[1]), pt(-c1[0], c1[1]), pt(-start[0], start[1]))
+        path.closeSubpath()
+        colors = cls.PIN_WOOD
+        body = QLinearGradient(x0 - b, 0, x0 + b, 0)
+        for pos, color in zip((0.0, 0.22, 0.38, 0.62, 1.0), colors):
+            body.setColorAt(pos, QColor(color))
+        p.setPen(QPen(QColor(colors[0]).darker(130), max(0.8, b * 0.07)))
         p.setBrush(body)
-        p.drawEllipse(center, radius, radius)
-        head = QRadialGradient(center.x() - radius * 0.15, center.y() - radius * 0.2, radius * 0.6)
-        head.setColorAt(0, QColor(255, 255, 255))
-        head.setColorAt(1, base.darker(115))
+        p.drawPath(path)
+        # Maserung + Zierring nur innerhalb des Kegels
+        p.save()
+        p.setClipPath(path)
+        grain = QColor(colors[0])
+        grain.setAlpha(70)
+        p.setPen(QPen(grain, max(0.6, b * 0.05)))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        for dx, bend in ((-0.55, 0.12), (-0.2, -0.1), (0.15, 0.14), (0.5, -0.08), (0.8, 0.1)):
+            line = QPainterPath(pt(dx * 0.7, 0))
+            line.cubicTo(pt(dx + bend, 0.3), pt(dx * 0.4 - bend, 0.6), pt(dx * 0.5, 1.0))
+            p.drawPath(line)
+        p.setPen(QPen(QColor(colors[0]), max(0.8, b * 0.09)))
+        p.drawLine(pt(-0.5, 0.7), pt(0.5, 0.7))
+        # Glanzlicht am Bauch und am Kopf
         p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(head)
-        p.drawEllipse(center, radius * 0.45, radius * 0.45)
+        p.setBrush(QColor(255, 255, 255, 90))
+        p.drawEllipse(QRectF(x0 - b * 0.55, y0 - height * 0.5, b * 0.28, height * 0.3))
+        p.drawEllipse(QRectF(x0 - b * 0.35, y0 - height * 0.95, b * 0.22, height * 0.07))
+        p.restore()
 
 
 class LogoWidget(_Painted):

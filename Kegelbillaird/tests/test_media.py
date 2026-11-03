@@ -81,6 +81,17 @@ class MediaLogicTests(unittest.TestCase):
         self.assertFalse(player.play(Path("x.mp3"), 0))          # Lautstärke 0 = kein Ton
         self.assertEqual(played, [(Path("x.mp3"), 40)])
 
+    def test_sound_stop(self):
+        stopped = []
+        player = SoundPlayer(lambda path, volume: None, lambda: stopped.append(True))
+        player.stop()
+        self.assertEqual(stopped, [True])
+        SoundPlayer(lambda path, volume: None).stop()               # ohne Stopp-Funktion: kein Fehler
+
+        def broken():
+            raise OSError("weg")
+        SoundPlayer(lambda path, volume: None, broken).stop()       # Fehler wird geschluckt
+
 
 @unittest.skipIf(QApplication is None, "PySide6 nicht installiert")
 class MediaUiTests(unittest.TestCase):
@@ -271,6 +282,24 @@ class MediaUiTests(unittest.TestCase):
         self.assertEqual(screen.game.state.strokes[-1], 4)
         self.assertEqual(len(screen.played_sounds), 1)                # Ende-Ton nicht noch einmal
         self.assertEqual(screen.current_elapsed(), stopped)
+
+    def test_sound_key_duration_stops_sound(self):
+        """Spieldauer: Ton wird nach x Sekunden gestoppt; ein neuer Ton verwirft die alte Stopp-Zeit."""
+        screen = self.screen()
+        stops = []
+        screen._sound = SoundPlayer(lambda path, volume: None, lambda: stops.append(True))
+        self.assertTrue(screen.play_sound("h.wav", 1))
+        self.assertTrue(screen._sound_stop.isActive())
+        self.assertEqual(screen._sound_stop.interval(), 1000)
+        screen._sound_stop.setInterval(30)                            # Test: nicht 1 s warten
+        screen._sound_stop.start()
+        QTest.qWait(120)
+        self.assertEqual(stops, [True])
+        screen.play_sound("h.wav", 1)
+        screen.play_sound("h.wav")                                    # ganz: alter Stopp verworfen
+        self.assertFalse(screen._sound_stop.isActive())
+        self.assertFalse(screen.play_sound("fehlt.wav", 5))
+        self.assertFalse(screen._sound_stop.isActive())
 
     def test_halftime_without_sound_file_or_disabled_still_works(self):
         for kw in ({"halftime_sound": "fehlt.wav"}, {"halftime_sound": ""}, {"sound_enabled": False}):

@@ -180,12 +180,24 @@ def combo_label(combo: str) -> str:
     return combo.replace("Ctrl+", "Strg+").replace("Shift+", "Umschalt+")
 
 
-def is_reserved(event: QKeyEvent) -> bool:
-    """True, wenn die Taste (ohne Strg/Alt/Umschalt) schon eine Aufgabe im Programm hat:
-    Ziffern, Nummernblock, alle Tasten der Tastenbelegung."""
+SCORE_DIGITS = range(8)        # 0–7 = Wertung
+_IN_GAME_ACTIONS = ("plus", "minus", "undo", "abort", "enter", "back")   # in der Zählansicht benutzt
+
+
+def reserved_use(event: QKeyEvent) -> str | None:
+    """Wofür die Taste (ohne Strg/Alt/Umschalt) IN DER PARTIE schon benutzt wird – oder None, wenn frei.
+    Sound-Tasten wirken nur in der Partie; reine Menütasten (Standard 8 = hoch) sind deshalb frei.
+    Belegt: Wertungsziffern 0–7 (auch Nummernblock ohne NumLock) und die Partie-Tasten
+    (Plus, Minus, Korrektur, Abbruch, Enter, Zurück)."""
     if event.modifiers() & _COMBO_MODIFIERS:
-        return False
+        return None
     key = int(event.key())
-    if key in _DIGITS or (is_keypad(event) and key in _NUMPAD_NAVIGATION):
-        return True
-    return any(key in keys for keys in _active.by_action.values())
+    if _DIGITS.get(key, 9) in SCORE_DIGITS or (is_keypad(event) and _NUMPAD_NAVIGATION.get(key, 9) in SCORE_DIGITS):
+        return "Wertung"
+    actions = [ACTIONS[a][1] for a in _IN_GAME_ACTIONS if key in _active.by_action[a]]
+    return " / ".join(actions) if actions else None
+
+
+def is_reserved(event: QKeyEvent) -> bool:
+    """True, wenn die Taste (ohne Strg/Alt/Umschalt) schon eine Aufgabe im Programm hat."""
+    return reserved_use(event) is not None

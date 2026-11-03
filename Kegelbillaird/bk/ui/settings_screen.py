@@ -27,7 +27,7 @@ from PySide6.QtWidgets import QFileDialog, QInputDialog, QWidget
 from ..autostart import Autostart, AutostartError
 from ..keys import ACTIONS, DEFAULT_NAMES, KeyBindings
 from ..media import list_images, list_logos, list_sounds
-from ..settings import FONT_SCALES, AppSettings
+from ..settings import FONT_SCALES, SOUND_KEY_MAX_SECONDS, AppSettings
 from ..user_settings import UserSettingsStore
 from . import keymap, theme
 from .keymap import MenuKey, map_menu_key
@@ -231,7 +231,7 @@ class SettingsScreen(QWidget):
         self._reset_timer.setSingleShot(True)
         self._reset_timer.timeout.connect(self._disarm_reset)
         # austauschbar (Tests): Ton probehören, Eingabefenster, Druckerliste
-        self.preview_sound: Callable[[str], bool] = lambda _name: False
+        self.preview_sound: Callable[..., bool] = lambda _name, _seconds=0: False
         self.ask_text: Callable[[str, str, str], str | None] = self._ask_text
         self.ask_int: Callable[[str, str, int, int, int], int | None] = self._ask_int
         self.ask_folder: Callable[[str, str], str | None] = self._ask_folder
@@ -535,22 +535,29 @@ class SettingsScreen(QWidget):
     def _cycle_sound(self, current: str, delta: int) -> str:
         return _cycle([""] + list_sounds(self.settings.sounds_dir), current, delta)
 
-    def _set_sound_keys(self, entries: list[tuple[str, str]]) -> bool:
-        return self.set_value("sound_keys", tuple((k, v) for k, v in entries))
+    def _set_sound_keys(self, entries: list[tuple[str, str, int]]) -> bool:
+        return self.set_value("sound_keys", tuple(tuple(e) for e in entries))
+
+    @staticmethod
+    def _duration_label(seconds: int) -> str:
+        return "ganz" if seconds <= 0 else f"{seconds} s"
 
     def _page_sound_keys(self) -> list[Item]:
         items = [Item("+ Neue Sound-Taste", lambda: "", None, lambda: self._start_capture(SOUND_CAPTURE + "neu"),
                       "[Enter] (oder Doppelklick) und dann die gewünschte Taste bzw. Tastenkombination drücken, "
                       "z. B. [F5] oder [Strg]+[1]. Sie wird sofort übernommen.")]
-        for index, (combo, _sound) in enumerate(self.settings.sound_keys):
+        for index, (combo, _sound, _seconds) in enumerate(self.settings.sound_keys):
             def change(delta: int, i=index) -> None:
                 entries = list(self.settings.sound_keys)
-                entries[i] = (entries[i][0], self._cycle_sound(entries[i][1], delta))
+                entries[i] = (entries[i][0], self._cycle_sound(entries[i][1], delta), entries[i][2])
                 self._set_sound_keys(entries)
 
             def value(i=index) -> str:
                 entries = self.settings.sound_keys
-                return (entries[i][1] or "(kein Ton)") if i < len(entries) else ""
+                if i >= len(entries):
+                    return ""
+                text = entries[i][1] or "(kein Ton)"
+                return text + (f"  ({entries[i][2]} s)" if entries[i][1] and entries[i][2] else "")
 
             items.append(Item(f"[{keymap.combo_label(combo)}]", value, change,
                               lambda i=index: self.open_page("Sound-Taste", lambda: self._page_sound_key(i)),
@@ -565,15 +572,25 @@ class SettingsScreen(QWidget):
         def sound() -> str:
             return self.settings.sound_keys[index][1] if index < len(self.settings.sound_keys) else ""
 
+        def seconds() -> int:
+            return self.settings.sound_keys[index][2] if index < len(self.settings.sound_keys) else 0
+
         def change(delta: int) -> None:
             current = list(self.settings.sound_keys)
-            current[index] = (current[index][0], self._cycle_sound(current[index][1], delta))
+            current[index] = (current[index][0], self._cycle_sound(current[index][1], delta), current[index][2])
+            self._set_sound_keys(current)
+
+        def change_duration(delta: int) -> None:
+            # ganz (0) -> 1 s -> … -> 60 s -> ganz (im Kreis)
+            current = list(self.settings.sound_keys)
+            new = (current[index][2] + delta) % (SOUND_KEY_MAX_SECONDS + 1)
+            current[index] = (current[index][0], current[index][1], new)
             self._set_sound_keys(current)
 
         def preview() -> None:
             if not sound():
                 self.notice.emit("Kein Ton ausgewählt.", True)
-            elif not self.preview_sound(sound()):
+            elif not self.preview_sound(sound(), seconds()):
                 self.notice.emit("Ton kann nicht abgespielt werden (Töne aus, Datei fehlt oder keine Tonausgabe).",
                                  True)
 
@@ -591,6 +608,9 @@ class SettingsScreen(QWidget):
                  "[Enter] und dann die neue Taste bzw. Tastenkombination drücken."),
             Item("Ton", lambda: sound() or "(kein Ton)", change, preview,
                  f"Alle .wav/.mp3 im Ordner „{self.settings.sounds_dir.name}“. [Enter] = probehören."),
+            Item("Spieldauer", lambda: self._duration_label(seconds()), change_duration, preview,
+                 f"[4]/[6] = wie lange der Ton spielt: „ganz“ oder 1 … {SOUND_KEY_MAX_SECONDS} Sekunden, "
+                 "danach wird er gestoppt. [Enter] = probehören."),
             Item("Sound-Taste löschen", lambda: "", None, delete),
         ]
 
@@ -726,20 +746,21 @@ class SettingsScreen(QWidget):
         if combo is None:
             self.notice.emit("Diese Taste kann nicht belegt werden.", True)
             return
-        if keymap.is_reserved(event):
-            self.notice.emit(f"[{keymap.combo_label(combo)}] wird schon vom Programm benutzt – bitte eine "
+        use = keymap.reserved_use(event)
+        if use is not None:
+            self.notice.emit(f"[{keymap.combo_label(combo)}] wird schon vom Programm benutzt ({use}) – bitte eine "
                              "andere Taste oder eine Kombination mit Strg / Alt wählen.", True)
             return
         entries = list(self.settings.sound_keys)
         index = None if target == "neu" else int(target)
-        if any(k == combo for i, (k, _v) in enumerate(entries) if i != index):
+        if any(e[0] == combo for i, e in enumerate(entries) if i != index):
             self.notice.emit(f"[{keymap.combo_label(combo)}] ist schon eine Sound-Taste.", True)
             return
         if index is None:
             sounds = list_sounds(self.settings.sounds_dir)
-            entries.append((combo, sounds[0] if sounds else ""))
+            entries.append((combo, sounds[0] if sounds else "", 0))
         else:
-            entries[index] = (combo, entries[index][1])
+            entries[index] = (combo, entries[index][1], entries[index][2])
         if self._set_sound_keys(entries):
             self.notice.emit(f"Sound-Taste [{keymap.combo_label(combo)}] übernommen"
                              + (" – Ton mit [4]/[6] wählen." if index is None else "."), False)

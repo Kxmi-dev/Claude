@@ -116,8 +116,9 @@ END_SOUND = ""               # Ton am Partie-Ende
 CELEBRATION_SOUND = ""       # Ton bei +6 / +7 (Datei im Ordner sounds), "" = kein Ton
 SOUND_VOLUME = 80            # Lautstärke 0 … 100 %
 
-# Sound-Tasten („Sonstiges“): freie Tasten/Tastenkombinationen spielen überall im Programm einen Ton.
-# Am einfachsten im Menü belegen (Einstellungen → Töne → Sonstiges). Format: (("Ctrl+F1", "tusch.wav"), …)
+# Sound-Tasten („Sonstiges“): freie Tasten/Tastenkombinationen spielen in der Partie einen Ton.
+# Am einfachsten im Menü belegen (Einstellungen → Töne → Sonstiges).
+# Format: (("Ctrl+F1", "tusch.wav", 5), …) – die Zahl = Spieldauer in Sekunden (0 oder weglassen = ganz)
 SOUND_KEYS = ()
 
 # Wochentage Montag … Sonntag: An = an diesem Tag kommen die Bilder/GIFs und die Sound-Tasten.

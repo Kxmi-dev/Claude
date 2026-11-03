@@ -77,7 +77,7 @@ class AppSettings:
     stay_on_top: bool = True                             # Fenster immer im Vordergrund
     hide_cursor_seconds: float = 5.0                     # Mauszeiger nach x s ohne Mausbewegung ausblenden (0 = nie)
     correction_step_lock_seconds: float = 0.3            # Sperre für [/] (einen Stoß zurück) im Korrekturfenster
-    sound_keys: tuple[tuple[str, str], ...] = ()         # Sound-Tasten: (Tastenkombination, Tondatei)
+    sound_keys: tuple[tuple[str, str, int], ...] = ()    # Sound-Tasten: (Tastenkombination, Tondatei, Sekunden; 0 = ganz)
     extras_weekdays: tuple[bool, ...] = (True,) * 7      # Mo … So: Bilder und Sound-Tasten an diesem Tag
 
     @property
@@ -149,7 +149,7 @@ class AppSettings:
             stay_on_top=bool(getattr(cfg, "STAY_ON_TOP", True)),
             hide_cursor_seconds=max(0.0, float(getattr(cfg, "HIDE_CURSOR_SECONDS", 5))),
             correction_step_lock_seconds=float(getattr(cfg, "CORRECTION_STEP_LOCK_SECONDS", 0.3)),
-            sound_keys=tuple((str(k), str(v)) for k, v in getattr(cfg, "SOUND_KEYS", ())),
+            sound_keys=tuple(sound_key_entry(e) for e in getattr(cfg, "SOUND_KEYS", ())),
             extras_weekdays=tuple(bool(v) for v in getattr(cfg, "EXTRAS_WEEKDAYS", (True,) * 7)),
         )
         settings.validate()
@@ -164,9 +164,11 @@ class AppSettings:
             raise ValueError("CORRECTION_STEP_LOCK_SECONDS muss zwischen 0 und 5 liegen.")
         if len(self.extras_weekdays) != 7:
             raise ValueError("EXTRAS_WEEKDAYS braucht 7 Werte (Montag bis Sonntag).")
-        combos = [combo for combo, _sound in self.sound_keys]
+        combos = [entry[0] for entry in self.sound_keys]
         if any(not combo for combo in combos) or len(combos) != len(set(combos)):
             raise ValueError("SOUND_KEYS: jede Taste darf nur einmal vorkommen.")
+        if any(not 0 <= entry[2] <= SOUND_KEY_MAX_SECONDS for entry in self.sound_keys):
+            raise ValueError(f"SOUND_KEYS: Spieldauer muss zwischen 0 (ganz) und {SOUND_KEY_MAX_SECONDS} Sekunden liegen.")
         if self.abort_confirm_seconds <= 0:
             raise ValueError("ABORT_CONFIRM_SECONDS muss größer als 0 sein.")
         if self.numlock_check_seconds <= 0 or self.autosave_seconds <= 0:
@@ -226,6 +228,17 @@ class AppSettings:
 
 THEME_MODES = ("klassisch", "eigen")
 FONT_SCALES = (80, 90, 100, 110, 120, 130)
+SOUND_KEY_MAX_SECONDS = 60      # Spieldauer einer Sound-Taste: 0 = ganz, sonst 1 … 60 Sekunden
+
+
+def sound_key_entry(entry) -> tuple[str, str, int]:
+    """Sound-Taste als (Taste, Ton, Sekunden). Alte Einträge (Taste, Ton) bekommen 0 = ganz abspielen."""
+    if not isinstance(entry, (list, tuple)) or len(entry) not in (2, 3):
+        raise ValueError("Sound-Taste braucht Taste und Ton (und optional die Spieldauer in Sekunden)")
+    seconds = entry[2] if len(entry) == 3 else 0
+    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or int(seconds) != seconds:
+        raise ValueError("Spieldauer der Sound-Taste muss eine ganze Zahl (Sekunden) sein")
+    return str(entry[0]), str(entry[1]), int(seconds)
 
 
 def _size(value) -> tuple[int, int]:

@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .keys import ACTIONS, KeyBindings, normalize
-from .settings import AppSettings
+from .settings import AppSettings, sound_key_entry
 
 log = logging.getLogger(__name__)
 
@@ -75,14 +75,15 @@ def _bools(count: int) -> Callable[[Any], tuple[bool, ...]]:
     return convert
 
 
-def _sound_keys(value: Any) -> tuple[tuple[str, str], ...]:
+def _sound_keys(value: Any) -> tuple[tuple[str, str, int], ...]:
     if not isinstance(value, (list, tuple)):
         raise ValueError("keine Liste")
     result = []
     for entry in value:
-        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+        if not isinstance(entry, (list, tuple)) or len(entry) not in (2, 3):
             raise ValueError("Sound-Taste braucht Taste und Ton")
-        result.append((_str(entry[0]), _str(entry[1])))
+        combo, sound, seconds = sound_key_entry(entry)      # alt (Taste, Ton) -> 0 = ganz
+        result.append((_str(combo), _str(sound), seconds))
     return tuple(result)
 
 
