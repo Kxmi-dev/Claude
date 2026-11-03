@@ -194,5 +194,12 @@ Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lese
    (Plus/Minus-Feier) kommen oder nicht.
 8. **Startbild im Hauptmenü** (`widgets.py` `_draw_table`): aktuell 7 Kegel (6 weiß + 1 rot) → nur 5 Kegel
    (Kreuz: 4 weiß + roter König in der Mitte); Bild insgesamt etwas schöner gestalten.
-- Offene Fragen an den Nutzer: Sound-Tasten nur während der Partie oder überall (auch im Menü)?
-  Bleibt „Beenden“ (nur Programm schließen) zusätzlich? Wochentage: nur Bilder oder auch deren Ton?
+- **Antworten des Nutzers (03.11.2026)**:
+  - Vorschlag Mehrfach-Korrektur (erneutes [/] = einen Stoß zurück) passt.
+  - Die Sperre für [/] im Korrekturfenster soll in den Einstellungen EINSTELLBAR sein (eigener Wert, 0 = aus;
+    zusätzlich zur bestehenden „Sperre nach Korrektur“ / `undo_lock_seconds`).
+  - Sound-Tasten: in den Einstellungen belegbar, gelten ÜBERALL (auch Menü, Einstellungen, Archiv).
+  - „Beenden“ (nur Programm schließen) bleibt zusätzlich zu „PC ausschalten“.
+  - Wochentage schalten nur: Plus/Minus-Bilder (GIFs) und die Sound-Tasten aus „Sonstiges“. Halbzeit-Ton,
+    Ende-Ton und der Ton bei +6/+7 kommen IMMER, unabhängig vom Wochentag.
+  - Liste noch nicht freigegeben – vor dem Bauen Gesamtplan zeigen und auf „ja“ warten.
