@@ -220,6 +220,58 @@ class MediaUiTests(unittest.TestCase):
             self.assertEqual(quiet.played_sounds, [])
             self.assertEqual(quiet.game.played, 1)
 
+    def keys(self, screen, *keys):
+        for key in keys:
+            screen.handle_key(QKeyEvent(QEvent.Type.KeyPress, key, Qt.KeyboardModifier.KeypadModifier, "", False))
+
+    def test_correction_to_six_shows_image_and_plays_sound(self):
+        (self.tmp.path / "sounds" / "jubel.mp3").write_bytes(b"x")
+        jubel = self.tmp.path / "sounds" / "jubel.mp3"
+        screen = self.screen(dataclasses.replace(self.settings, celebration_sound="jubel.mp3",
+                                                 correction_step_lock_seconds=0))
+        self.press(screen, 5)
+        self.press(screen, -5)
+        self.press(screen, 2)
+        self.keys(screen, Qt.Key.Key_Slash, Qt.Key.Key_Slash, Qt.Key.Key_Slash, Qt.Key.Key_6, Qt.Key.Key_Enter)
+        self.assertEqual(screen.game.state.strokes, [6, -5, 2])       # Stoß 1 (früherer Stoß) korrigiert
+        self.assertTrue(screen._celebration.isVisible())
+        self.assertEqual(screen.played_sounds, [jubel])
+        screen._celebration.dismiss()
+        QTest.qWait(int(self.settings.undo_lock_seconds * 1000) + 60)   # Sperre nach Korrektur
+        self.keys(screen, Qt.Key.Key_Slash, Qt.Key.Key_Slash, Qt.Key.Key_Minus, Qt.Key.Key_6, Qt.Key.Key_Enter)
+        self.assertEqual(screen.game.state.strokes, [6, -6, 2])
+        self.assertTrue(screen._celebration.isVisible())               # −5 → −6 = Minus-Bild
+        self.assertEqual(screen.played_sounds, [jubel])                # Ton nur bei +6/+7
+
+    def test_weekdays_switch_only_images(self):
+        import datetime
+        (self.tmp.path / "sounds" / "jubel.mp3").write_bytes(b"x")
+        days = [True] * 7
+        days[datetime.date.today().weekday()] = False
+        screen = self.screen(dataclasses.replace(self.settings, celebration_sound="jubel.mp3",
+                                                 extras_weekdays=tuple(days)))
+        self.press(screen, 7)
+        self.assertFalse(screen._celebration.isVisible())             # heute keine Bilder
+        self.assertEqual(len(screen.played_sounds), 1)                # Ton bei +7 kommt immer
+
+    def test_end_sound_and_clock_stop_with_last_stroke(self):
+        from bk.game import Game
+        (self.tmp.path / "sounds" / "ende.wav").write_bytes(b"x")
+        screen = self.screen(dataclasses.replace(self.settings, end_sound="ende.wav", halftime_sound=""))
+        state = GameState.new(BK50)
+        state.strokes = [1] * 49
+        screen.start_game(Game(state))
+        self.press(screen, 3)
+        self.assertTrue(screen.game.is_complete)
+        self.assertEqual(screen.played_sounds, [self.tmp.path / "sounds" / "ende.wav"])
+        stopped = screen.current_elapsed()
+        QTest.qWait(250)
+        self.assertEqual(screen.current_elapsed(), stopped)           # Zeit steht
+        self.keys(screen, Qt.Key.Key_Slash, Qt.Key.Key_4, Qt.Key.Key_Enter)
+        self.assertEqual(screen.game.state.strokes[-1], 4)
+        self.assertEqual(len(screen.played_sounds), 1)                # Ende-Ton nicht noch einmal
+        self.assertEqual(screen.current_elapsed(), stopped)
+
     def test_halftime_without_sound_file_or_disabled_still_works(self):
         for kw in ({"halftime_sound": "fehlt.wav"}, {"halftime_sound": ""}, {"sound_enabled": False}):
             screen = self.screen(dataclasses.replace(self.settings, **kw))

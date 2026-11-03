@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QRect, QTimer, Signal
+from PySide6.QtCore import QRect, Signal
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QWidget
 
@@ -31,8 +31,7 @@ SETTINGS = "settings"
 QUIT = "quit"
 SHUTDOWN = "shutdown"
 EXTRA_ENTRIES = (ARCHIVE, SETTINGS, QUIT, SHUTDOWN)
-SHUTDOWN_ARM_SECONDS = 5          # so lange gilt der erste [Enter]-Druck bei „Beenden & Herunterfahren“
-SHUTDOWN_TEXT = "Beenden & Herunterfahren"
+SHUTDOWN_TEXT = "PC ausschalten"   # ein Klick / [Enter] genügt (keine zweite Bestätigung)
 
 
 class MenuScreen(QWidget):
@@ -64,10 +63,6 @@ class MenuScreen(QWidget):
             self._buttons.append(button)
         # Rechts: Tafel mit Vereinslogo, Billard-Grafik und „BK-Scoreboard / Version …“
         self.brand = BrandPanel(settings.app_version, self)
-        self._shutdown_armed = False
-        self._disarm_timer = QTimer(self)
-        self._disarm_timer.setSingleShot(True)
-        self._disarm_timer.timeout.connect(self.disarm_shutdown)
         self.set_club_logo(settings.club_logo_path)
         self.reset_selection()
 
@@ -126,15 +121,7 @@ class MenuScreen(QWidget):
         self._index = self._modes.index(SETTINGS)
         self._update_selection()
 
-    def disarm_shutdown(self) -> None:
-        self._disarm_timer.stop()
-        if self._shutdown_armed:
-            self._shutdown_armed = False
-            self._buttons[self._modes.index(SHUTDOWN)].set_text(SHUTDOWN_TEXT)
-
     def _update_selection(self) -> None:
-        if self._shutdown_armed and self._modes[self._index] != SHUTDOWN:
-            self.disarm_shutdown()
         for i, button in enumerate(self._buttons):
             button.set_selected(i == self._index)
 
@@ -152,13 +139,7 @@ class MenuScreen(QWidget):
         if mode == QUIT:
             self.quit_requested.emit()
         elif mode == SHUTDOWN:
-            if self._shutdown_armed:              # zweiter Druck innerhalb der Frist
-                self.disarm_shutdown()
-                self.shutdown_requested.emit()
-            else:                                 # erster Druck: nur scharf schalten
-                self._shutdown_armed = True
-                self._buttons[self._index].set_text(f"Zum Herunterfahren nochmal [{keymap.label('enter')}]")
-                self._disarm_timer.start(int(SHUTDOWN_ARM_SECONDS * 1000))
+            self.shutdown_requested.emit()
         elif mode == ARCHIVE:
             self.archive_requested.emit()
         elif mode == SETTINGS:

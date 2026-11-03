@@ -25,6 +25,10 @@ INPUT_LOCK_SECONDS = 3
 # nicht zwei Wertungen auf einmal zurücknimmt.
 UNDO_LOCK_SECONDS = 1.0
 
+# Im Korrekturfenster geht jedes weitere [/] einen Stoß zurück. So lange wird ein
+# erneutes [/] danach ignoriert (Schutz vor Prellen). 0 = keine Sperre.
+CORRECTION_STEP_LOCK_SECONDS = 0.3
+
 # So lange wartet die Abbruch-Frage ([*] und dann [-]) auf Bestätigung.
 ABORT_CONFIRM_SECONDS = 5
 
@@ -111,6 +115,14 @@ HALFTIME_SOUND = "halbzeit.wav"
 END_SOUND = ""               # Ton am Partie-Ende
 CELEBRATION_SOUND = ""       # Ton bei +6 / +7 (Datei im Ordner sounds), "" = kein Ton
 SOUND_VOLUME = 80            # Lautstärke 0 … 100 %
+
+# Sound-Tasten („Sonstiges“): freie Tasten/Tastenkombinationen spielen überall im Programm einen Ton.
+# Am einfachsten im Menü belegen (Einstellungen → Töne → Sonstiges). Format: (("Ctrl+F1", "tusch.wav"), …)
+SOUND_KEYS = ()
+
+# Wochentage Montag … Sonntag: An = an diesem Tag kommen die Bilder/GIFs und die Sound-Tasten.
+# Halbzeit-Ton, Ende-Ton und der Ton bei +6 / +7 kommen IMMER.
+EXTRAS_WEEKDAYS = (True, True, True, True, True, True, True)
 
 # Bilder/GIFs: ALLE Bilder in "bilder\\plus" erscheinen bei CELEBRATION_VALUES,
 # alle in "bilder\\minus" bei CELEBRATION_MINUS_VALUES (Ordner leer -> Plus-Bilder).

@@ -239,7 +239,7 @@ class MainWindow(QWidget):
         return False  # Tab wechselt keinen Fokus
 
     def quit_and_shutdown(self) -> None:
-        """„Beenden & Herunterfahren“: alles sichern, Windows sofort herunterfahren, Programm schließen.
+        """„PC ausschalten“: alles sichern, Windows sofort herunterfahren, Programm schließen.
         Schlägt das Herunterfahren fehl, bleibt das Programm offen und zeigt einen Hinweis.
         Außerhalb von Windows wird nur beendet."""
         if self.game_screen.has_live_game:
@@ -285,6 +285,8 @@ class MainWindow(QWidget):
             super().keyPressEvent(event)
 
     def _dispatch_key(self, event: QKeyEvent) -> bool:
+        if self._play_sound_key(event):
+            return True
         if self.overlay.interactive:
             return self.overlay.handle_key(event)
         screen = self.stack.currentWidget()
@@ -294,6 +296,23 @@ class MainWindow(QWidget):
             log.exception("Fehler bei der Tastenverarbeitung")
             self._flash("Interner Fehler bei der Eingabe – siehe logs/application.log", True)
             return True
+
+    def _play_sound_key(self, event: QKeyEvent) -> bool:
+        """Sound-Tasten („Sonstiges“): gelten überall – außer während eine Taste aufgenommen wird
+        und an Wochentagen, an denen sie ausgeschaltet sind."""
+        entries = self._settings.sound_keys
+        if not entries or self.settings_screen.capturing:
+            return False
+        combo = keymap.combo_name(event)
+        sound = next((v for k, v in entries if k == combo), None) if combo else None
+        if sound is None:
+            return False
+        if not event.isAutoRepeat() and self._settings.extras_today():
+            try:
+                self.game_screen.play_sound(sound)
+            except Exception:
+                log.exception("Sound-Taste %s fehlgeschlagen", combo)
+        return True
 
     # ========================================================== Bildschirme
     def _show_screen(self, screen: QWidget) -> None:
@@ -626,8 +645,7 @@ class MainWindow(QWidget):
             self._storage.save_active(game.state)   # Zustand "beendet" sichern, bevor das PDF entsteht
         except StorageError:
             log.error("Beendeter Zustand konnte nicht gesichert werden")
-        self._complete_finished_state(game.state, recovered=False)
-        self.game_screen.play_sound(self._settings.end_sound)
+        self._complete_finished_state(game.state, recovered=False)   # Ende-Ton kam schon mit dem letzten Stoß
 
     def _complete_finished_state(self, state: GameState, recovered: bool) -> None:
         """Ergebnis-JSON, PDF, Archivierung und Abschlussanzeige."""
@@ -704,7 +722,8 @@ class MainWindow(QWidget):
             [f"Bestätigen = [{keymap.label('enter')}]      Abbrechen = [{keymap.label('abort')}]"],
             top_lines=[f"Alte Punktzahl:   {format_points(old)}"],
             big=f"Neue Punktzahl:   {new_text}",
-            hint=f"Minus: erst [{keymap.label('minus')}], dann [0] bis [7]. Nur der letzte Stoß ist änderbar.",
+            hint=f"Nochmal [{keymap.label('undo')}] = einen Stoß zurück.   "
+                 f"Minus: erst [{keymap.label('minus')}], dann [0] bis [7].",
             highlight=True, interactive=False))
 
     def _abort_game(self) -> None:

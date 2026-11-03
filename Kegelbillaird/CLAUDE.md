@@ -39,9 +39,9 @@ bk/settings.py       AppSettings aus config.py (neue Einträge per getattr mit D
 bk/logging_setup.py  logs/application.log (täglich neu), crash.log (faulthandler)
 bk/ui/main_window.py Bildschirmwechsel, Startprüfung, Abschluss, Archiv-Aktionen, NumLockGuard, Cleanup-Timer
 bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, Billiard vs Fußball (25 Stoß), Archiv, Einstellungen,
-                     Beenden, Beenden & Herunterfahren (ROTER Knopf, `danger=True`; 2× Enter innerhalb 5 s)
-                     Rechts `BrandPanel` (widgets): Vereinslogo im weißen Kasten, gezeichneter grüner Billardtisch
-                     mit Mini-Zähltafel/Kegeln/3 Kugeln, „BK-Scoreboard / Version {APP_VERSION}“ (3.0) und darunter „powered by Kimi&AP“ (Nutzerwunsch).
+                     Beenden, PC ausschalten (ROTER Knopf, `danger=True`; EIN Klick/Enter genügt, Nutzerwunsch)
+                     Rechts `BrandPanel` (widgets): Vereinslogo im weißen Kasten, gezeichneter Billardtisch (Holzbande,
+                     Mini-Zähltafel, 5 Kegel als Kreuz mit rotem König, 3 Kugeln), „BK-Scoreboard / Version {APP_VERSION}“ (3.0) und darunter „powered by Kimi&AP“ (Nutzerwunsch).
                      Vereinslogo zusätzlich klein rechts in der Titelleiste (`TitleBar.set_logo`).
 bk/ui/game_screen.py Zählansicht + Wiedergabe-Modus
 bk/ui/archive_screen.py  Archivliste
@@ -68,16 +68,20 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 - **Keine Bestätigungstaste, kein Backspace.** Nur Nummernblock-Tasten (`NUMPAD_ONLY`), Autorepeat ignoriert.
 - **Sperre** `INPUT_LOCK_SECONDS = 3` (oben in config.py) nach jeder Wertung, nicht blockierend (Timer/monotone Uhr).
   Ziffern gesperrt; `-`/`+` (Modusvorwahl) und `/` während der Sperre erlaubt.
-- `/` = Korrekturfeld (Nutzerwunsch): NUR der letzte Stoß ist änderbar. Kästchen im Raster kräftig gelb, Overlay
+- `/` = Korrekturfeld (Nutzerwunsch): öffnet den letzten Stoß, **jedes weitere `/` = einen Stoß zurück**
+  (`correction_offset`, begrenzt über `set_correction_count`; eigene Sperre `correction_step_lock_seconds`,
+  Einstellungen → Eingabe „Sperre beim Zurückblättern“, 0 = aus). Kästchen im Raster kräftig gelb, Overlay
   „Korrektur Stoß N“ mit „Alte Punktzahl“ / „Neue Punktzahl“; neue Zahl eintippen (`-`/`+` Vorzeichen, Ziffer
-  überschreibt), `Enter` übernimmt (`Game.replace_last`, Speicherung, Sperre aufgehoben), `*`/`Esc` bricht ab,
-  kein Zeitlimit. Controller: `correction_input=True`, Aktionen CORRECTION_*; Signal `correction_prompt`.
+  überschreibt), `Enter` übernimmt (`Game.replace_stroke`, Speicherung, Sperre aufgehoben), `*`/`Esc` bricht ab,
+  kein Zeitlimit. Geänderter Wert → `_celebrate(neu)` (Bild/Ton wie normaler Stoß), Halbzeit-/Ende-Ton nie erneut.
+  Controller: `correction_input=True`, Aktionen CORRECTION_* (mit `offset`); Signal `correction_prompt`.
 - `Enter` in der Partie (GameKey.ENTER über map_menu_key): während GESPERRT → sofort BEREIT (`enter_skips_lock`,
   Einstellungen → Eingabe); nach dem letzten Stoß → Partie abschließen + Auswertung.
 - **Abbruch: `*` dann `-`** (statt Vorlage „[Num]&[-]“, weil NumLock-Taste mit Auto-NumLock kollidiert);
   jede andere Taste / 5 s Timeout = weiterspielen. Abbruch → Archiv, kein PDF.
 - **Kein Spielername**, kein Spielerdaten-Fenster: Menüauswahl + Enter startet sofort.
   PDF-Name: `BK50_2026-09-29_15-42.pdf`. Alte Spielstände mit `player_name` laden weiterhin.
+- Mit dem letzten Stoß: Spieldauer bleibt stehen (`_stop_clock`) und der Ende-Ton kommt sofort (`_end_alert`).
 - Nach letztem Stoß bleibt die Zählansicht stehen („ENDE“, Korrektur weiter möglich); ERST `Enter` (Nutzerwunsch,
   nicht automatisch): Ergebnis-JSON + PDF in `results/`, Archiv „beendet“, **Auswertung** im Hauptfenster.
 - Speichern nach JEDER Wertung/Rücknahme. Start: „Unterbrochene Partie gefunden“ →
@@ -93,7 +97,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   (nur Minus mit Vorzeichen). Logo: „Version 3.0“, APP_VERSION 3.0.
 
 ## Einstellungsmenü (mit dem Nutzer abgestimmt)
-- Hauptmenü: … Archiv, **Einstellungen**, Beenden, Beenden & Herunterfahren. Nur außerhalb einer Partie erreichbar.
+- Hauptmenü: … Archiv, **Einstellungen**, Beenden, PC ausschalten. Nur außerhalb einer Partie erreichbar.
 - Jede Änderung: `store.set()` prüft (AppSettings.validate) → speichert sofort → `MainWindow.apply_settings()`
   übernimmt live (keymap, theme.apply_colors, Titelleiste, GameScreen.set_settings, Fenster, NumLock-Guard).
 - Bereiche: Anzeige (Vollbild, Fenstergröße-Presets, Schriftgröße 80–130 % (`theme.FONT_SCALE` wirkt in
@@ -121,9 +125,15 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 
 ## Ton & Bilder (reine Zugabe, stören die Partie nie)
 - Halbzeit (nach `halftime_after`): Ton `halftime_sound`; Halbzeit-Feld bleibt ab dann gelb (auch ohne Tonausgabe).
-  Partie-Ende: `end_sound`. +6/+7 (`CELEBRATION_VALUES`): `celebration_sound` (auch wenn Bilder aus). Fehlende Datei/kein Audiogerät → nur Logeintrag.
+  Partie-Ende: `end_sound` (sofort mit dem letzten Stoß). +6/+7 (`CELEBRATION_VALUES`): `celebration_sound` (auch wenn Bilder aus). Fehlende Datei/kein Audiogerät → nur Logeintrag.
 - +6/+7 (`CELEBRATION_VALUES`) → alle Bilder in `bilder/plus`; −6/−7 (`CELEBRATION_MINUS_VALUES`) → `bilder/minus`
   (leer = Plus-Bilder). Eine Datei = immer diese, mehrere = zufällig. Bestätigte Korrektur blendet es sofort aus.
+- **Sound-Tasten** (`sound_keys`, Einstellungen → Töne → Sonstiges): (Kombination wie „Ctrl+F1“, Ton). Aufnahme
+  wartet auf die eigentliche Taste (Strg/Alt/Umschalt allein zählen nicht, `keymap.combo_name`); vom Programm
+  belegte Tasten ohne Modifier werden abgelehnt (`keymap.is_reserved`). Wirken ÜBERALL (`MainWindow._play_sound_key`,
+  vor jeder anderen Tastenverarbeitung), nicht während einer Tastenaufnahme.
+- **Wochentage** (`extras_weekdays`, Mo … So, Einstellungen → Wochentage, `AppSettings.extras_today`): schalten NUR
+  Bilder/GIFs und Sound-Tasten. Halbzeit-, Ende- und +6/+7-Ton kommen immer (Nutzerwunsch).
 - Hauptmenü-Lesbarkeit: Knopfschrift fett, dunkel `BUTTON_TEXT #333333`, größer; „Version …“ fett schwarz.
 
 ## Auswertung & Archiv
@@ -133,7 +143,7 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   Knöpfe Partie speichern / Partie drucken / Neue Partie (nur nach Partie, gleiche Spielart) / Hauptmenü
   (Archiv: Zurück) + **Tabelle ansehen** (Raster statt Kennzahlen, `*` zurück zur Auswertung). „Partie bearbeiten“ bewusst weggelassen.
 - **Sperre nach Partie-Ende** `result_lock_seconds` (Standard 5, Einstellungen → Eingabe): Enter/Back/Klick wirkungslos.
-- **Korrekturen** werden in `GameState.corrections` gezählt (`Game.undo` / `Game.replace_last`, nur bei geändertem Wert); alte Spielstände ohne Feld → None → „–“.
+- **Korrekturen** werden in `GameState.corrections` gezählt (`Game.undo` / `Game.replace_stroke`, nur bei geändertem Wert); alte Spielstände ohne Feld → None → „–“.
 - **Das PDF bleibt unverändert** (Nutzer: „so wie es jetzt ist“) – Formatierung nur auf ausdrücklichen Wunsch ändern.
   Einzige gewünschte Änderung bisher: Logo oben rechts = Vereinslogo statt BK-Scoreboard-Bild.
 - PDF enthält „**Anzahl je Wertung**“ (wie oft −7…+7 gestoßen) und gleich dicke Tabellenlinien
@@ -169,37 +179,3 @@ Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lese
 - NumLock-Automatik, Drucken auf echtem Drucker, Ton (MCI), Druckerauswahl und die .exe wurden nur unter
   Linux/simuliert getestet –
   Rückmeldung vom Windows-PC des Nutzers steht aus.
-
-## Vorgemerkte Wünsche (29.10.2026 – NOCH NICHT BAUEN, erst mit dem Nutzer besprechen)
-1. **Sound-Tasten („Sonstiges“)**: In den Einstellungen unter „Töne“ einen Bereich „Sonstiges“. Dort beliebig
-   viele freie Tasten mit einem Ton belegen: Eintrag anklicken → Programm wartet auf einen Tastendruck → übernimmt
-   ihn sofort. Beliebig viele Einträge, auch Tastenkombinationen (z. B. Strg+F1). Ton je Taste aus `sounds`.
-2. **Ton am Partie-Ende**: kommt bisher erst mit [Enter] zur Auswertung (`main_window`, nach `_complete_finished_state`).
-   Soll stattdessen SOFORT mit der Eingabe des letzten Stoßes (z. B. 100.) kommen.
-   Bei einer späteren Korrektur des letzten Stoßes NICHT noch einmal abspielen (Nutzer bestätigt).
-3. **Bilder/Ton nach Korrektur**: Nach übernommener Korrektur (CORRECTION_CONFIRMED in `game_screen._apply`) den
-   NEUEN Wert wie einen normalen Stoß behandeln → `_celebrate(neuer Wert)`: z. B. +5 → +6/+7 = Plus-Bild (+ Ton),
-   −5 → −6/−7 = Minus-Bild. Neuer Wert „normal“ → nichts. Halbzeit- und Ende-Ton dabei NICHT wiederholen.
-   Plan wurde dem Nutzer schon gezeigt; er will alles zusammen besprechen.
-4. **Spieldauer stoppt beim letzten Stoß**: Bisher läuft die Zeit weiter, bis [Enter] zur Auswertung gedrückt
-   wird. Soll mit der Eingabe des letzten Stoßes (z. B. 100.) sofort stehen bleiben (wie der Ende-Ton).
-5. **Mehrere Stöße korrigierbar (wieder)**: Nicht mehr nur der letzte Stoß. Vorschlag an den Nutzer: im
-   Korrekturfenster mit erneutem [/] einen Stoß weiter zurück (Stoß 100 → 99 → 98 …), gewählter Stoß im Raster
-   markiert; Fenster zeigt Stoß-Nr., alte Punktzahl, neue Eingabe; Ziffer + [Enter] übernimmt, [*] bricht ab.
-   (Undo-Sperre für schnelles zweites [/] muss im Korrekturfenster dann entfallen.) Bilder nach Korrektur (Punkt 3)
-   gelten für jeden korrigierten Stoß; Halbzeit-/Ende-Ton nie wiederholen.
-6. **„PC ausschalten“**: Menüeintrag „Beenden & Herunterfahren“ heißt nur noch „PC ausschalten“; EIN Klick/[Enter]
-   genügt, keine 2. Bestätigung mehr (SHUTDOWN_ARM in `menu_screen.py` entfällt).
-7. **Bilder je Wochentag**: In den Einstellungen Felder Montag … Sonntag; je Tag einstellbar, ob GIFs/Bilder
-   (Plus/Minus-Feier) kommen oder nicht.
-8. **Startbild im Hauptmenü** (`widgets.py` `_draw_table`): aktuell 7 Kegel (6 weiß + 1 rot) → nur 5 Kegel
-   (Kreuz: 4 weiß + roter König in der Mitte); Bild insgesamt etwas schöner gestalten.
-- **Antworten des Nutzers (03.11.2026)**:
-  - Vorschlag Mehrfach-Korrektur (erneutes [/] = einen Stoß zurück) passt.
-  - Die Sperre für [/] im Korrekturfenster soll in den Einstellungen EINSTELLBAR sein (eigener Wert, 0 = aus;
-    zusätzlich zur bestehenden „Sperre nach Korrektur“ / `undo_lock_seconds`).
-  - Sound-Tasten: in den Einstellungen belegbar, gelten ÜBERALL (auch Menü, Einstellungen, Archiv).
-  - „Beenden“ (nur Programm schließen) bleibt zusätzlich zu „PC ausschalten“.
-  - Wochentage schalten nur: Plus/Minus-Bilder (GIFs) und die Sound-Tasten aus „Sonstiges“. Halbzeit-Ton,
-    Ende-Ton und der Ton bei +6/+7 kommen IMMER, unabhängig vom Wochentag.
-  - Liste noch nicht freigegeben – vor dem Bauen Gesamtplan zeigen und auf „ja“ warten.

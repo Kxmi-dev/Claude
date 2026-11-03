@@ -1,5 +1,5 @@
 """
-Computer herunterfahren (Hauptmenü → „Beenden & Herunterfahren“).
+Computer herunterfahren (Hauptmenü → „PC ausschalten“).
 
 Windows: ``shutdown /s /t 0 /f`` – sofort, ohne Countdown, ohne Windows-Meldung und
 ohne Konsolenfenster. ``/f`` schließt andere noch offene Programme zwangsweise, damit

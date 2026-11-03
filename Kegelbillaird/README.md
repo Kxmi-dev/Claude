@@ -58,8 +58,8 @@ python -m pip install -r requirements.txt
 Beenden: im Hauptmenü **„Beenden“**. Wird das Programm während einer Partie geschlossen
 (z. B. Alt+F4), wird der Spielstand gesichert und beim nächsten Start angeboten.
 
-**„Beenden & Herunterfahren“** (Hauptmenü): zweimal `Enter` drücken (der erste Druck gilt 5 Sekunden, der
-Knopf zeigt dann „Zum Herunterfahren nochmal [Enter]“). Das Programm sichert alles, schließt sich und Windows
+**„PC ausschalten“** (Hauptmenü, roter Knopf): ein Klick bzw. einmal `Enter` genügt – keine zweite Bestätigung.
+Das Programm sichert alles, schließt sich und Windows
 fährt sofort herunter – ohne Countdown und ohne Windows-Meldung. Andere noch offene Programme werden dabei
 zwangsweise geschlossen. Klappt das Herunterfahren nicht (z. B. fehlende Berechtigung), bleibt das Programm
 offen und zeigt unten einen Hinweis.
@@ -97,7 +97,7 @@ Datum und Uhrzeit werden automatisch erfasst und stehen im PDF.
 | `0`–`7`            | Plus-Wertung +0 … +7 (z. B. `5` → **+5**) – Plus ist immer voreingestellt |
 | `-` dann `0`–`7`   | Minus-Wertung −0 … −7 (z. B. `-` `3` → **−3**; −0 zählt als 0) |
 | `+`                | hebt einen versehentlich gewählten Minus-Modus wieder auf  |
-| `/` → Zahl → `Enter` | Korrektur des **letzten** Stoßes: `/` hinterlegt ihn im Raster **gelb** und öffnet das Korrekturfeld („Alte Punktzahl“ / „Neue Punktzahl“). Neue Punktzahl eintippen (`-` davor für Minus, eine andere Ziffer überschreibt), `Enter` übernimmt, `*` oder `Esc` bricht ab. Kein Zeitlimit. Frühere Stöße stehen fest. |
+| `/` → Zahl → `Enter` | **Korrektur**: `/` öffnet das gelbe Korrekturfeld für den letzten Stoß („Stoß N“, „Alte Punktzahl“ / „Neue Punktzahl“), der Stoß wird im Raster **gelb** hinterlegt. **Jedes weitere `/` geht einen Stoß zurück** (99, 98 …; eigene Sperre gegen Prellen, einstellbar). Neue Punktzahl eintippen (`-` davor für Minus, eine andere Ziffer überschreibt), `Enter` übernimmt, `*` oder `Esc` bricht ab. Kein Zeitlimit. Wird daraus +6/+7 bzw. −6/−7, kommen Bild und Ton wie bei einem normalen Stoß; Halbzeit- und Ende-Ton kommen nicht noch einmal. |
 | `Enter`            | während „GESPERRT“: Sperre sofort beenden → BEREIT (abschaltbar); nach dem letzten Stoß: Auswertung |
 | `*` dann `-`       | Partie abbrechen (jede andere Taste = weiterspielen)       |
 
@@ -110,6 +110,8 @@ Datum und Uhrzeit werden automatisch erfasst und stehen im PDF.
   „Aktueller Stoß“ und an „MINUS“ im Feld „Eingabe“.
 * `-` darf schon während der Sperrzeit gedrückt werden und gilt dann für den nächsten Stoß.
   Ziffern bleiben während der Sperrzeit wirkungslos.
+* **Mit dem letzten Stoß** (z. B. dem 100.) bleibt die **Spieldauer stehen** und der **Ende-Ton** kommt sofort –
+  nicht erst mit `Enter` zur Auswertung.
 * `8` und `9` werden abgelehnt. Gedrückt gehaltene Tasten (Tastenwiederholung) werden nie
   mehrfach gezählt.
 * Hinweise und Fehlermeldungen erscheinen kurz in der Fußleiste.
@@ -186,10 +188,11 @@ Taste aufnehmen / Ton probehören · `*`/`Esc` zurück (bzw. die eingestellten T
 |---------|---------------|
 | Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Immer im Vordergrund**, **Mauszeiger ausblenden nach** (Aus / 3 / 5 / 10 / 30 s), **Schriftgröße** (80–130 %), Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`), **Raster zeigt** Gesamtpunkte / Einzelstoß, Anzahl „Letzte Stöße“, Felder **„Letzte Stöße“** und **„Eingabe“** ein-/ausblenden (der Nachbar wird dann breiter), **Beim Windows-Start öffnen** (Autostart) |
 | Design | Farbschema **Klassisch** (Vorlage) oder **Eigene Farben**: Primärfarbe (Leisten, Hintergrund, gewählter Knopf) und Sekundärfarbe (Rahmen, Beschriftungen, Knöpfe, Linien) als R/G/B 0–255. Rot/Grün der Wertung bleiben immer gleich; auf dunklen Leisten wird die Schrift automatisch weiß |
-| Eingabe | Sperrzeit nach Wertung, **Sperre mit `Enter` überspringen**, Sperre nach Korrektur, Sperre nach Partie-Ende, Wartezeit der Abbruch-Frage, Nur Nummernblock, NumLock automatisch |
+| Eingabe | Sperrzeit nach Wertung, **Sperre mit `Enter` überspringen**, Sperre nach Korrektur, **Sperre beim Zurückblättern** (Korrekturfenster, 0 = aus), Sperre nach Partie-Ende, Wartezeit der Abbruch-Frage, Nur Nummernblock, NumLock automatisch |
 | Tasten | jede Aktion: `Enter`, dann die neue Taste drücken (doppelt belegte Tasten werden abgelehnt); `4`/`6` = Standard. Legende passt sich sofort an |
-| Töne | Töne an/aus, Lautstärke 0–100 %, Ton zur Halbzeit, Ton am Partie-Ende, Ton bei +6 / +7 – Auswahl aus allen `.wav`/`.mp3` im Ordner `sounds` |
+| Töne | Töne an/aus, Lautstärke 0–100 %, Ton zur Halbzeit, Ton am Partie-Ende, Ton bei +6 / +7 – Auswahl aus allen `.wav`/`.mp3` im Ordner `sounds`. **Sonstiges (Sound-Tasten)**: „+ Neue Sound-Taste“ anklicken/`Enter`, dann die gewünschte Taste oder Tastenkombination drücken (z. B. `F5`, `Strg`+`1`) – sie wird sofort übernommen. Beliebig viele, Ton je Taste mit `4`/`6`; `Enter` auf einem Eintrag = Taste ändern, probehören, löschen. Sound-Tasten gelten **überall** im Programm. Tasten, die das Programm schon benutzt (Ziffern, `/`, `*`, `Enter` …), werden abgelehnt |
 | Bilder | Bilder an/aus, Anzeigedauer, Übersicht „Bilder bei +6/+7“ und „−6/−7“ mit An/Aus je Bild |
+| Wochentage | Montag … Sonntag je An/Aus: an diesem Tag kommen die **Bilder/GIFs** und die **Sound-Tasten**. Halbzeit-Ton, Ende-Ton und der Ton bei +6 / +7 kommen **immer** |
 | Drucken & PDF | Drucker (Windows-Standarddrucker oder ein installierter Drucker), PDF-Speicherort für „Als PDF speichern“ (ohne Nachfrage; Standard: Dokumente), Auswertung nach der Partie, PDF automatisch öffnen |
 | Archiv & Aufräumen | Wiedergabe-Tempo, Aufbewahrung von Archiv, Protokollen und PDFs |
 | Alle Einstellungen zurücksetzen | zweimal `Enter` – danach gelten wieder die Werte aus `config.py` |
@@ -234,6 +237,9 @@ Werte aus dem Einstellungsmenü haben Vorrang. Nach einer Änderung hier das Pro
 | `CELEBRATION_ENABLED`, `CELEBRATION_VALUES`, `CELEBRATION_MINUS_VALUES` | `True`, `(6, 7)`, `(-6, -7)` | bei diesen Wertungen erscheint ein Bild aus `bilder\plus` bzw. `bilder\minus`; `()` = aus |
 | `END_SOUND`, `SOUND_VOLUME`, `WINDOW_SIZE` | `""`, `80`, `(1280, 800)` | Ende-Ton, Lautstärke, Fenstergröße (alles auch im Menü) |
 | `CELEBRATION_SOUND` | `""` | Ton bei +6 / +7 (Datei im Ordner `sounds`, auch im Menü) |
+| `SOUND_KEYS` | `()` | Sound-Tasten, z. B. `(("Ctrl+F1", "tusch.wav"),)` – einfacher im Menü (Töne → Sonstiges) |
+| `EXTRAS_WEEKDAYS` | 7 × `True` | Montag … Sonntag: Bilder und Sound-Tasten an diesem Tag (auch im Menü „Wochentage“) |
+| `CORRECTION_STEP_LOCK_SECONDS` | `0.3` | Korrekturfenster: Sperre nach `/` (einen Stoß zurück), 0 = aus |
 | `CLUB_LOGO`, `FONT_SCALE` | `""`, `100` | Vereinslogo (Dateiname im Ordner `vereinslogo`), Schriftgröße in % (auch im Menü) |
 | `CELEBRATION_SECONDS` | `3` | Anzeigedauer des Bildes; verschwindet auch bei `/` und der nächsten Wertung |
 | `AUTO_ENABLE_NUMLOCK` | `True` | NumLock prüfen und automatisch einschalten (`False` = nur warnen) |

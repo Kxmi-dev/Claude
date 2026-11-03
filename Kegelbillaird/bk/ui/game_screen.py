@@ -21,13 +21,17 @@ Ablauf einer Wertung (ohne Bestätigungstaste)::
     [Enter] während der Sperre → sofort BEREIT (abschaltbar: ENTER_SKIPS_LOCK)
 
 Korrektur: [/] markiert den letzten Stoß im Raster gelb und öffnet das
-Korrekturfeld (alte Punktzahl / neue Punktzahl). Die neue Punktzahl wird wie
-eine Wertung eingetippt ([−] davor für Minus, eine andere Ziffer überschreibt),
-[Enter] übernimmt sie, [*]/[Esc] bricht ab. Nur der letzte Stoß ist änderbar.
+Korrekturfeld (Stoß-Nr., alte Punktzahl / neue Punktzahl). Jedes weitere [/]
+geht einen Stoß zurück (eigene, einstellbare Sperre gegen Prellen). Die neue
+Punktzahl wird wie eine Wertung eingetippt ([−] davor für Minus, eine andere
+Ziffer überschreibt), [Enter] übernimmt sie, [*]/[Esc] bricht ab. Wird daraus
+ein Feier-Wert (z. B. +5 → +6), kommen Bild und Ton wie bei einem normalen Stoß;
+Halbzeit- und Ende-Ton kommen nie ein zweites Mal.
 
-Nach dem letzten Stoß bleibt die Zählansicht stehen („ENDE“, Korrektur mit [/]
-weiter möglich). Erst [Enter] meldet ``completed`` – dann schließt das
-Hauptfenster die Partie ab und zeigt die Auswertung.
+Mit dem letzten Stoß bleibt die Spieldauer stehen und der Ende-Ton kommt sofort.
+Die Zählansicht bleibt stehen („ENDE“, Korrektur mit [/] weiter möglich). Erst
+[Enter] meldet ``completed`` – dann schließt das Hauptfenster die Partie ab und
+zeigt die Auswertung.
 
 Wiedergabe (aus dem Archiv): Dieselbe Ansicht spielt eine gespeicherte
 Partie Stoß für Stoß ab. Dabei wird eine KOPIE angezeigt – es wird nichts
@@ -109,7 +113,8 @@ class GameScreen(QWidget):
         return ScoreInputController(settings.input_lock_seconds, settings.undo_lock_seconds,
                                     settings.abort_confirm_seconds, self._clock,
                                     correction_input=True,
-                                    enter_skips_lock=settings.enter_skips_lock)
+                                    enter_skips_lock=settings.enter_skips_lock,
+                                    correction_step_lock_seconds=settings.correction_step_lock_seconds)
 
     # ================================================================ Aufbau
     def _spacer(self, w: float, h: float) -> QSpacerItem:
@@ -241,10 +246,10 @@ class GameScreen(QWidget):
                     f"Beenden mit  [{keymap.label_all('back')}]"]
         if self._game is not None and self._game.is_complete and self._game.is_running:
             return ["Partie beendet", f"Auswertung mit  [{keymap.label('enter')}]",
-                    f"Korrektur letzter Stoß mit  [{keymap.label('undo')}]"]
+                    f"Korrektur mit  [{keymap.label('undo')}]"]
         return ["Plus:  [0] bis [7]",
                 f"Minus:  [{keymap.label('minus')}]  und dann  [0] bis [7]",
-                f"Korrektur letzter Stoß mit  [{keymap.label('undo')}]",
+                f"Korrektur mit  [{keymap.label('undo')}]",
                 f"Partie-Abbruch mit  [{keymap.label('abort')}]  &  [{keymap.label('minus')}]"]
 
     def start_game(self, game: Game) -> None:
@@ -256,7 +261,8 @@ class GameScreen(QWidget):
         self._completion_sent = False
         self._was_complete = game.is_complete
         self._elapsed_base = float(game.state.elapsed_seconds)
-        self._session_start = self._clock()
+        # Spieldauer läuft nur bis zum letzten Stoß (fortgesetzte, fertige Partie: steht schon)
+        self._session_start = None if game.is_complete else self._clock()
         mode = game.state.mode
         self.grid.configure(mode.strokes, mode.grid_columns, mode.halftime_after, mode.highlight_last)
         self.refresh()
@@ -406,11 +412,14 @@ class GameScreen(QWidget):
                 self.refresh()
                 return
             log.info("Stoß %s: %s (Gesamt %s)", entry.number, entry.value, entry.running_total)
+            if game.is_complete:
+                self._stop_clock()             # Spieldauer bleibt mit dem letzten Stoß stehen
             self._persist(reason="wertung")
             self._celebrate(entry.value)
             if game.played == game.state.mode.halftime_after:
                 self._halftime_alert()
             if game.is_complete:
+                self._end_alert()
                 self.message.emit(f"Letzter Stoß gewertet – Auswertung mit [{keymap.label('enter')}], "
                                   f"Korrektur mit [{keymap.label('undo')}].", False)
         elif action is Action.CORRECTION_STARTED:
@@ -418,27 +427,32 @@ class GameScreen(QWidget):
                 self._controller.cancel_correction()
                 self.message.emit("Noch kein Stoß zum Korrigieren vorhanden.", True)
             else:
+                self._controller.set_correction_count(game.played)
                 self._celebration.dismiss()
                 self._show_correction()
-        elif action is Action.CORRECTION_CHANGED:
+        elif action in (Action.CORRECTION_CHANGED, Action.IGNORED_UNDO_LOCKED) \
+                and self._controller.correction_pending():
             self._show_correction()
         elif action is Action.CORRECTION_CANCELLED:
             self._close_correction()
             self.message.emit("Keine Korrektur – die Wertung bleibt stehen.", False)
         elif action is Action.CORRECTION_CONFIRMED:
             self._close_correction()
+            number = game.played - (result.offset or 0)
             try:
-                changed = game.replace_last(result.value)  # type: ignore[arg-type]
+                changed = game.replace_stroke(number, result.value)  # type: ignore[arg-type]
             except (GameError, ValueError) as exc:
                 self.message.emit(str(exc), True)
                 changed = None
             if changed is not None:
                 old, entry = changed
                 log.info("Stoß %s korrigiert: %s -> %s (Gesamt %s)", entry.number, old, entry.value,
-                         entry.running_total)
+                         game.total)
                 self._persist(reason="korrektur")
                 self.message.emit(f"Stoß {entry.number}: {format_points(old)} \u2192 "
                                   f"{format_points(entry.value)} korrigiert.", False)
+                if entry.value != old:
+                    self._celebrate(entry.value)   # neuer Wert wie ein normaler Stoß (ohne Halbzeit/Ende)
         elif action in (Action.LOCK_SKIPPED, Action.CONFIRM):
             if game.is_complete:
                 log.info("Partie-Ende mit Enter bestätigt")
@@ -455,6 +469,8 @@ class GameScreen(QWidget):
             else:
                 log.info("Stoß %s (%s) zurückgenommen", removed.number, removed.value)
                 self._celebration.dismiss()
+                if self._session_start is None and not game.is_complete:
+                    self._session_start = self._clock()   # Spieldauer läuft wieder
                 self._persist(reason="ruecknahme")
                 self.message.emit(f"Stoß {removed.number} ({format_points(removed.value)}) zurückgenommen.", False)
         elif action is Action.ABORT_REQUESTED:
@@ -474,12 +490,18 @@ class GameScreen(QWidget):
             self.message.emit("Nur die Zahlen 0 bis 7 sind erlaubt.", True)
         self.refresh()
 
+    def _correction_number(self) -> int:
+        """Stoß-Nr., die im Korrekturfeld gewählt ist."""
+        game = self._game
+        return 0 if game is None else max(1, game.played - self._controller.correction_offset)
+
     def _show_correction(self) -> None:
         game = self._game
         if game is None or not game.state.strokes:
             return
         ctrl = self._controller
-        self.correction_prompt.emit((game.played, game.state.strokes[-1],
+        number = self._correction_number()
+        self.correction_prompt.emit((number, game.state.strokes[number - 1],
                                      ctrl.correction_value, ctrl.correction_minus))
 
     def _close_correction(self) -> None:
@@ -490,8 +512,8 @@ class GameScreen(QWidget):
         self._celebration.dismiss()
 
     def _celebrate(self, value: int) -> None:
-        """Ton bei +6/+7, Bild/GIF bei +6/+7 bzw. −6/−7 (automatisch aus bilder/plus und bilder/minus).
-        Fehler stören nie."""
+        """Ton bei +6/+7 (immer), Bild/GIF bei +6/+7 bzw. −6/−7 (automatisch aus bilder/plus und
+        bilder/minus; nur an den in „Wochentage“ eingeschalteten Tagen). Fehler stören nie."""
         self._celebration.dismiss()
         cfg = self._settings
         if value in cfg.celebration_values:
@@ -499,7 +521,7 @@ class GameScreen(QWidget):
                 self.play_sound(cfg.celebration_sound)
             except Exception:
                 log.exception("Ton bei %s fehlgeschlagen", value)
-        if not cfg.celebration_enabled:
+        if not cfg.celebration_enabled or not cfg.extras_today():
             return
         try:
             if value in cfg.celebration_minus_values:
@@ -515,6 +537,18 @@ class GameScreen(QWidget):
                 self._last_image = image
         except Exception:
             log.exception("Bildeinblendung fehlgeschlagen")
+
+    def _stop_clock(self) -> None:
+        """Spieldauer anhalten (letzter Stoß gewertet)."""
+        self._elapsed_base = self.current_elapsed()
+        self._session_start = None
+
+    def _end_alert(self) -> None:
+        """Ende-Ton sofort mit dem letzten Stoß (nur einmal – eine Korrektur spielt ihn nicht erneut)."""
+        try:
+            self.play_sound(self._settings.end_sound)
+        except Exception:
+            log.exception("Ende-Ton fehlgeschlagen")
 
     def _halftime_alert(self) -> None:
         """Halbzeit: Ton (falls möglich); das Halbzeit-Feld wird in ``refresh`` dauerhaft gelb."""
@@ -648,7 +682,7 @@ class GameScreen(QWidget):
         self.grid.set_running_total(self._settings.grid_running_total)
         self.grid.set_values(state.strokes, show_current=show_current)
         pending = self._controller.correction_pending() and game.played > 0 and not self.is_replay
-        self.grid.set_pending(game.played - 1 if pending else None)
+        self.grid.set_pending(self._correction_number() - 1 if pending else None)
         complete = game.is_complete and game.is_running
         if complete != self._was_complete:
             self._was_complete = complete

@@ -12,9 +12,10 @@ Ziffer 0–7           ergibt +0 … +7   (Plus ist immer voreingestellt)
 ``-`` → Ziffer 0–7   ergibt -0 … -7   (-0 wird als 0 gewertet);
                      danach steht der Modus automatisch wieder auf Plus
 ``+``                hebt einen gewählten Minus-Modus wieder auf
-``/``                letzten Stoß korrigieren (mit ``correction_input``: Korrekturfeld,
-                     neue Punktzahl [−] 0–7 eintippen, ``Enter`` übernimmt, ``*`` bricht ab;
-                     ohne ``correction_input`` wird die letzte Wertung direkt zurückgenommen)
+``/``                Stoß korrigieren (mit ``correction_input``: Korrekturfeld für den letzten
+                     Stoß, jedes weitere ``/`` geht einen Stoß zurück; neue Punktzahl [−] 0–7
+                     eintippen, ``Enter`` übernimmt, ``*`` bricht ab; ohne ``correction_input``
+                     wird die letzte Wertung direkt zurückgenommen)
 ``*`` → ``-``        Partie abbrechen (jede andere Taste = nicht abbrechen)
 ``Enter``            beendet eine laufende Sperre sofort (``enter_skips_lock``);
                      sonst ``CONFIRM`` (z. B. Partie-Ende → Auswertung)
@@ -27,8 +28,9 @@ BEREIT (PLUS)   Ziffer wird als Plus gewertet
 MINUS           ``-`` gewählt, die nächste Ziffer wird als Minus gewertet
 GESPERRT        nach einer Wertung für ``lock_seconds``
 ABBRUCH-FRAGE   nach ``*``; ``-`` bestätigt, alles andere verwirft
-KORREKTUR       nach ``/``; Ziffer (ggf. mit ``-``) = neue Punktzahl des letzten
-                Stoßes, ``Enter`` übernimmt, ``*`` bricht ab (kein Zeitlimit)
+KORREKTUR       nach ``/``; weiteres ``/`` = einen Stoß zurück; Ziffer (ggf. mit ``-``)
+                = neue Punktzahl des gewählten Stoßes, ``Enter`` übernimmt, ``*`` bricht ab
+                (kein Zeitlimit)
 
 Regeln gegen Doppeleingaben
 ---------------------------
@@ -41,7 +43,9 @@ Regeln gegen Doppeleingaben
   (``undo_lock_seconds``), damit ein prellender Tastendruck nicht zwei
   Wertungen auf einmal zurücknimmt. Nach einer Korrektur ist die Wertungssperre
   aufgehoben, damit der nächste Stoß sofort eingegeben werden kann.
-* Korrigiert wird immer nur der letzte Stoß; alle früheren Stöße stehen fest.
+* Im Korrekturfeld hat ``/`` (einen Stoß zurück) eine eigene, einstellbare Sperre
+  (``correction_step_lock_seconds``, 0 = aus), damit ein Prellen nicht zwei Stöße springt.
+  Die Zahl der vorhandenen Stöße meldet der Aufrufer mit ``set_correction_count``.
 """
 
 from __future__ import annotations
@@ -86,6 +90,7 @@ class Action(Enum):
 class InputResult:
     action: Action
     value: int | None = None   # bei SCORE und den Korrektur-Aktionen
+    offset: int | None = None  # Korrektur: 0 = letzter Stoß, 1 = vorletzter …
 
 
 class ScoreInputController:
@@ -99,8 +104,10 @@ class ScoreInputController:
         clock: Callable[[], float] = time.monotonic,
         correction_input: bool = False,
         enter_skips_lock: bool = False,
+        correction_step_lock_seconds: float = 0.0,
     ) -> None:
-        if lock_seconds < 0 or undo_lock_seconds < 0 or abort_confirm_seconds <= 0:
+        if (lock_seconds < 0 or undo_lock_seconds < 0 or abort_confirm_seconds <= 0
+                or correction_step_lock_seconds < 0):
             raise ValueError("Ungültige Zeitwerte für die Eingabelogik.")
         self._lock_seconds = float(lock_seconds)
         self._undo_lock_seconds = float(undo_lock_seconds)
@@ -108,6 +115,7 @@ class ScoreInputController:
         self._clock = clock
         self._correction_input = bool(correction_input)
         self._enter_skips_lock = bool(enter_skips_lock)
+        self._step_lock_seconds = float(correction_step_lock_seconds)
         self.reset()
 
     # --------------------------------------------------------------- Status
@@ -120,6 +128,9 @@ class ScoreInputController:
         self._correcting = False
         self._corr_minus = False
         self._corr_value: int | None = None
+        self._corr_offset = 0
+        self._corr_count = 1
+        self._step_lock_until = 0.0
 
     @property
     def lock_seconds(self) -> float:
@@ -163,6 +174,16 @@ class ScoreInputController:
     def correction_minus(self) -> bool:
         return self._corr_minus
 
+    @property
+    def correction_offset(self) -> int:
+        """Gewählter Stoß im Korrekturfeld: 0 = letzter, 1 = vorletzter …"""
+        return self._corr_offset
+
+    def set_correction_count(self, count: int) -> None:
+        """Zahl der vorhandenen Stöße (begrenzt das Zurückblättern mit ``/``)."""
+        self._corr_count = max(1, int(count))
+        self._corr_offset = min(self._corr_offset, self._corr_count - 1)
+
     def check_timeouts(self) -> InputResult | None:
         """Regelmäßig aufrufen: verwirft eine abgelaufene Abbruch-Frage (die Korrektur hat kein Zeitlimit)."""
         if self._abort_until is not None and self._clock() >= self._abort_until:
@@ -177,6 +198,7 @@ class ScoreInputController:
         self._correcting = False
         self._corr_minus = False
         self._corr_value = None
+        self._corr_offset = 0
 
     def _undo(self, now: float) -> InputResult:
         self._minus = False
@@ -223,7 +245,8 @@ class ScoreInputController:
                 self._minus = False
                 self._correcting = True
                 self._undo_lock_until = now + self._undo_lock_seconds
-                return InputResult(Action.CORRECTION_STARTED)
+                self._step_lock_until = now + self._step_lock_seconds
+                return InputResult(Action.CORRECTION_STARTED, offset=0)
             return self._undo(now)
 
         # 4) Modus wählen (auch während der Sperre erlaubt, siehe Moduldoku)
@@ -249,19 +272,28 @@ class ScoreInputController:
 
     def _press_correction(self, key: GameKey, digit: int | None, now: float) -> InputResult:
         """Korrekturfeld: [−]/[+] Vorzeichen, Ziffer = neue Punktzahl (überschreibbar),
-        Enter übernimmt, * bricht ab, / (Prellen) bleibt wirkungslos."""
+        Enter übernimmt, * bricht ab, / = einen Stoß zurück (mit eigener Sperre)."""
         if key is GameKey.ABORT:
             self.cancel_correction()
             return InputResult(Action.CORRECTION_CANCELLED)
         if key is GameKey.ENTER:
             if self._corr_value is None:   # noch keine neue Punktzahl -> Feld bleibt offen
                 return InputResult(Action.CORRECTION_CHANGED)
-            value = self._corr_value
+            value, offset = self._corr_value, self._corr_offset
             self.cancel_correction()
             self._minus = False
             self._lock_until = 0.0         # nächster Stoß sofort möglich
             self._undo_lock_until = now + self._undo_lock_seconds
-            return InputResult(Action.CORRECTION_CONFIRMED, value=value)
+            return InputResult(Action.CORRECTION_CONFIRMED, value=value, offset=offset)
+        if key is GameKey.UNDO:
+            if now < self._step_lock_until:
+                return InputResult(Action.IGNORED_UNDO_LOCKED, offset=self._corr_offset)
+            if self._corr_offset + 1 < self._corr_count:   # ein Stoß weiter zurück
+                self._corr_offset += 1
+                self._corr_minus = False
+                self._corr_value = None
+                self._step_lock_until = now + self._step_lock_seconds
+            return InputResult(Action.CORRECTION_CHANGED, value=self._corr_value, offset=self._corr_offset)
         if key is GameKey.MINUS:
             self._corr_minus = True
             if self._corr_value is not None:
@@ -274,6 +306,6 @@ class ScoreInputController:
             if isinstance(digit, bool) or not isinstance(digit, int) or not 0 <= digit <= MAX_STROKE_POINTS:
                 return InputResult(Action.IGNORED_INVALID)
             self._corr_value = -digit if (self._corr_minus and digit) else digit
-        elif key is not GameKey.UNDO:
+        else:
             raise ValueError(f"Unbekannte Taste: {key!r}")
-        return InputResult(Action.CORRECTION_CHANGED, value=self._corr_value)
+        return InputResult(Action.CORRECTION_CHANGED, value=self._corr_value, offset=self._corr_offset)

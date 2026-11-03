@@ -1,4 +1,4 @@
-"""Beenden & Herunterfahren: Befehl, Fehlerfälle, doppelte Bestätigung im Hauptmenü."""
+"""PC ausschalten: Befehl, Fehlerfälle, ein Druck im Hauptmenü genügt."""
 
 import os
 import subprocess
@@ -92,38 +92,22 @@ class ShutdownMenuTests(unittest.TestCase):
     def test_two_entries(self):
         texts = [b.text() for b in self.menu._buttons]
         self.assertIn("Beenden", texts)
-        self.assertIn("Beenden & Herunterfahren", texts)
+        self.assertIn("PC ausschalten", texts)
 
-    def test_needs_second_enter(self):
-        button = self.select_shutdown()
-        self.key(Qt.Key.Key_Enter)
-        self.assertEqual(self.calls, [])
-        self.assertIn("nochmal", button.text())
-        self.assertTrue(self.window.isVisible())
-        self.key(Qt.Key.Key_Enter)
+    def test_single_enter_shuts_down(self):
+        self.select_shutdown()
+        self.key(Qt.Key.Key_Enter)                                # ein Druck genügt
         self.assertEqual(self.calls, [1])
         self.assertFalse(self.window.isVisible())
 
-    def test_moving_away_or_timeout_disarms(self):
-        from bk.ui import menu_screen
+    def test_single_click_shuts_down(self):
         button = self.select_shutdown()
-        self.key(Qt.Key.Key_Enter)
-        self.key(Qt.Key.Key_8)
-        self.key(Qt.Key.Key_2)
-        self.assertEqual(button.text(), "Beenden & Herunterfahren")
-        self.key(Qt.Key.Key_Enter)                                # wieder nur der erste Druck
-        self.assertEqual(self.calls, [])
-        self.menu._disarm_timer.setInterval(10)
-        self.menu._disarm_timer.start()
-        QTest.qWait(60)
-        self.assertEqual(button.text(), menu_screen.SHUTDOWN_TEXT)
-        self.key(Qt.Key.Key_Enter)
-        self.assertEqual(self.calls, [])
+        button.clicked.emit()
+        self.assertEqual(self.calls, [1])
 
     def test_failure_keeps_program_open_with_notice(self):
         self.result = (False, "Herunterfahren nicht möglich (Code 5).")
         self.select_shutdown()
-        self.key(Qt.Key.Key_Enter)
         self.key(Qt.Key.Key_Enter)
         self.assertEqual(self.calls, [1])
         self.assertTrue(self.window.isVisible())

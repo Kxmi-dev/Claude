@@ -274,7 +274,7 @@ class SettingsMenuTests(unittest.TestCase):
         self.assertEqual(self.window._settings.key_bindings.keys("abort"), ("*",))
         self.key(Qt.Key.Key_6)                                     # [4]/[6] = Standard
         self.window.game_screen.start_game(Game(GameState.new(BK50)))
-        self.assertIn("Korrektur letzter Stoß mit  [U]", " ".join(self.window.game_screen.footer_segments()))
+        self.assertIn("Korrektur mit  [U]", " ".join(self.window.game_screen.footer_segments()))
         self.window.game_screen.clear()
 
     def test_colors(self):
@@ -312,6 +312,73 @@ class SettingsMenuTests(unittest.TestCase):
         self.select("Lautstärke")
         self.key(Qt.Key.Key_4)
         self.assertEqual(self.window._settings.sound_volume, self.base.sound_volume - 10)
+
+    def combo(self, key, mods=Qt.KeyboardModifier.NoModifier):
+        QApplication.sendEvent(self.window, QKeyEvent(QEvent.Type.KeyPress, key, mods, "", False))
+
+    def test_sound_keys_capture_play_everywhere_and_delete(self):
+        import datetime
+        played = []
+        self.window.game_screen.play_sound = lambda name: played.append(name) or True
+        self.open_section("Töne")
+        self.select("Sonstiges (Sound-Tasten)")
+        self.key(Qt.Key.Key_Enter)
+        self.assertEqual(self.screen._plate._text, "Sonstiges (Sound-Tasten)")
+        self.key(Qt.Key.Key_Enter)                                       # + Neue Sound-Taste
+        self.assertTrue(self.screen.capturing)
+        self.combo(Qt.Key.Key_Control, Qt.KeyboardModifier.ControlModifier)   # Strg allein: wartet weiter
+        self.assertTrue(self.screen.capturing)
+        self.combo(Qt.Key.Key_F1, Qt.KeyboardModifier.ControlModifier)
+        self.assertFalse(self.screen.capturing)
+        self.assertEqual(self.window._settings.sound_keys, (("Ctrl+F1", "a.wav"),))
+        self.assertEqual(self.saved()["sound_keys"], [["Ctrl+F1", "a.wav"]])
+        self.assertEqual(self.screen._list.current().label, "[Strg+F1]")
+        self.key(Qt.Key.Key_6)                                           # Ton wählen
+        self.assertEqual(self.window._settings.sound_keys, (("Ctrl+F1", "b.mp3"),))
+        self.select("+ Neue Sound-Taste")
+        self.key(Qt.Key.Key_Enter)
+        self.key(Qt.Key.Key_Slash)                                       # vom Programm belegt
+        self.assertEqual(len(self.window._settings.sound_keys), 1)
+        self.key(Qt.Key.Key_Enter)
+        self.combo(Qt.Key.Key_F1, Qt.KeyboardModifier.ControlModifier)   # schon vergeben
+        self.assertEqual(len(self.window._settings.sound_keys), 1)
+        self.combo(Qt.Key.Key_F1, Qt.KeyboardModifier.ControlModifier)   # in den Einstellungen: spielt
+        self.assertEqual(played, ["b.mp3"])
+        self.window.show_menu()
+        self.combo(Qt.Key.Key_F1, Qt.KeyboardModifier.ControlModifier)   # im Hauptmenü
+        self.combo(Qt.Key.Key_F1)                                        # ohne Strg: nichts
+        self.assertEqual(played, ["b.mp3", "b.mp3"])
+        days = [True] * 7
+        days[datetime.date.today().weekday()] = False
+        self.window.apply_settings(self.store.set("extras_weekdays", tuple(days)))
+        self.combo(Qt.Key.Key_F1, Qt.KeyboardModifier.ControlModifier)   # heute ausgeschaltet
+        self.assertEqual(len(played), 2)
+        self.open_section("Töne")
+        self.select("Sonstiges (Sound-Tasten)")
+        self.key(Qt.Key.Key_Enter)
+        self.select("[Strg+F1]")
+        self.key(Qt.Key.Key_Enter)
+        self.select("Sound-Taste löschen")
+        self.key(Qt.Key.Key_Enter)
+        self.assertEqual(self.window._settings.sound_keys, ())
+        self.assertEqual(self.screen._plate._text, "Sonstiges (Sound-Tasten)")
+
+    def test_weekdays_and_step_lock(self):
+        self.open_section("Wochentage")
+        self.assertEqual([i.label for i in self.screen._list._items][:7],
+                         ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"])
+        self.select("Mittwoch")
+        self.key(Qt.Key.Key_Enter)
+        self.assertEqual(self.window._settings.extras_weekdays, (True, True, False, True, True, True, True))
+        self.assertFalse(self.window._settings.extras_today(2))
+        self.assertEqual(self.saved()["extras_weekdays"], [True, True, False, True, True, True, True])
+        self.open_section("Eingabe")
+        self.select("Sperre beim Zurückblättern")
+        self.key(Qt.Key.Key_6)
+        self.assertAlmostEqual(self.window._settings.correction_step_lock_seconds,
+                               self.base.correction_step_lock_seconds + 0.1)
+        self.assertAlmostEqual(UserSettingsStore(self.base).load().correction_step_lock_seconds,
+                               self.base.correction_step_lock_seconds + 0.1)
 
     def test_images_can_be_switched_off(self):
         from PySide6.QtGui import QImage

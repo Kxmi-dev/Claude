@@ -118,7 +118,7 @@ class KeyBindingUiTests(unittest.TestCase):
         screen = window.game_screen
         self.assertIs(window.stack.currentWidget(), screen)
         legend = " | ".join(screen.footer_segments())
-        self.assertIn("Korrektur letzter Stoß mit  [U]", legend)
+        self.assertIn("Korrektur mit  [U]", legend)
         self.assertIn("Minus:  [M]", legend)
         self.assertIn("Partie-Abbruch mit  [F10]  &  [M]", legend)
         self.assertNotIn("[/]", legend)

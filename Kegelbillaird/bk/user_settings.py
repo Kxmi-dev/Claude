@@ -67,6 +67,25 @@ def _strs(value: Any) -> tuple[str, ...]:
     return tuple(_str(v) for v in value)
 
 
+def _bools(count: int) -> Callable[[Any], tuple[bool, ...]]:
+    def convert(value: Any) -> tuple[bool, ...]:
+        if not isinstance(value, (list, tuple)) or len(value) != count:
+            raise ValueError(f"erwartet {count} Ja/Nein-Werte")
+        return tuple(_bool(v) for v in value)
+    return convert
+
+
+def _sound_keys(value: Any) -> tuple[tuple[str, str], ...]:
+    if not isinstance(value, (list, tuple)):
+        raise ValueError("keine Liste")
+    result = []
+    for entry in value:
+        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+            raise ValueError("Sound-Taste braucht Taste und Ton")
+        result.append((_str(entry[0]), _str(entry[1])))
+    return tuple(result)
+
+
 def _keys(value: Any) -> KeyBindings:
     if not isinstance(value, dict):
         raise ValueError("keine Tastenbelegung")
@@ -100,6 +119,7 @@ FIELDS: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]]] = {
     "hide_cursor_seconds": (_float, float),
     "input_lock_seconds": (_float, float),
     "undo_lock_seconds": (_float, float),
+    "correction_step_lock_seconds": (_float, float),
     "abort_confirm_seconds": (_float, float),
     "result_lock_seconds": (_float, float),
     "enter_skips_lock": (_bool, bool),
@@ -114,6 +134,8 @@ FIELDS: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]]] = {
     "end_sound": (_str, str),
     "celebration_sound": (_str, str),
     "sound_volume": (_int, int),
+    "sound_keys": (_sound_keys, lambda v: [list(e) for e in v]),
+    "extras_weekdays": (_bools(7), list),
     "celebration_enabled": (_bool, bool),
     "celebration_seconds": (_float, float),
     "disabled_images": (_strs, list),

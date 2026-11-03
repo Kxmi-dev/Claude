@@ -414,7 +414,7 @@ class MenuButton(_Painted):
     def __init__(self, text: str, available: bool = True, subtitle: str = "",
                  parent: QWidget | None = None, danger: bool = False) -> None:
         super().__init__(parent)
-        self._danger = danger           # rot (z. B. „Beenden & Herunterfahren“)
+        self._danger = danger           # rot (z. B. „PC ausschalten“)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self._text = text
         self._subtitle = subtitle
@@ -536,21 +536,57 @@ class BrandPanel(_Painted):
         p.end()
 
     def _draw_table(self, p: QPainter, rect: QRectF) -> None:
-        """Gezeichneter Billardtisch mit kleiner Zähltafel, Kegeln und drei Kugeln."""
+        """Gezeichneter Billardtisch: Holzbande, Tuch mit Lichtschein, kleine Zähltafel,
+        fünf Kegel als Kreuz (vier weiße, roter König in der Mitte) und drei Kugeln."""
         from PySide6.QtGui import QLinearGradient, QRadialGradient
-        radius = rect.width() * 0.04
-        cloth = QLinearGradient(rect.topLeft(), rect.bottomLeft())
-        cloth.setColorAt(0, QColor("#2f8a40"))
-        cloth.setColorAt(1, QColor("#1d5e2b"))
-        p.setPen(QPen(self.GREEN_DARK, max(1.0, rect.width() * 0.006)))
-        p.setBrush(cloth)
+        unit_w = rect.width()
+        radius = unit_w * 0.05
+        # Schatten unter dem Tisch
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(0, 0, 0, 45))
+        p.drawRoundedRect(rect.translated(0, rect.height() * 0.035), radius, radius)
+        # Holzbande
+        wood = QLinearGradient(rect.topLeft(), rect.bottomLeft())
+        wood.setColorAt(0, QColor("#8a5a32"))
+        wood.setColorAt(0.5, QColor("#6b4024"))
+        wood.setColorAt(1, QColor("#4e2d17"))
+        p.setPen(QPen(QColor("#3b2110"), max(1.0, unit_w * 0.004)))
+        p.setBrush(wood)
         p.drawRoundedRect(rect, radius, radius)
-        # Zähltafel (4 × 2)
-        card = QRectF(rect.left() + rect.width() * 0.08, rect.top() + rect.height() * 0.1,
-                      rect.width() * 0.45, rect.height() * 0.48)
+        rail = unit_w * 0.055
+        cloth_rect = rect.adjusted(rail, rail, -rail, -rail)
+        # Diamanten (Markierungen) auf der Bande
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor("#f1e4c4"))
+        d = rail * 0.16
+        for i in range(1, 8):
+            x = cloth_rect.left() + cloth_rect.width() * i / 8
+            for y in (rect.top() + rail / 2, rect.bottom() - rail / 2):
+                p.drawEllipse(QPointF(x, y), d, d)
+        for i in range(1, 4):
+            y = cloth_rect.top() + cloth_rect.height() * i / 4
+            for x in (rect.left() + rail / 2, rect.right() - rail / 2):
+                p.drawEllipse(QPointF(x, y), d, d)
+        # Tuch mit Lichtschein von oben
+        cloth = QRadialGradient(cloth_rect.center().x(), cloth_rect.top() + cloth_rect.height() * 0.35,
+                                cloth_rect.width() * 0.7)
+        cloth.setColorAt(0, QColor("#3aa14e"))
+        cloth.setColorAt(0.6, QColor("#2a843c"))
+        cloth.setColorAt(1, QColor("#1b5e2a"))
+        p.setPen(QPen(QColor("#174f24"), max(1.0, unit_w * 0.004)))
+        p.setBrush(cloth)
+        inner_r = radius * 0.45
+        p.drawRoundedRect(cloth_rect, inner_r, inner_r)
+        cw_all, ch_all = cloth_rect.width(), cloth_rect.height()
+        # Zähltafel (4 × 2) mit leichtem Schatten
+        card = QRectF(cloth_rect.left() + cw_all * 0.06, cloth_rect.top() + ch_all * 0.1,
+                      cw_all * 0.46, ch_all * 0.46)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(0, 0, 0, 60))
+        p.drawRoundedRect(card.translated(card.width() * 0.02, card.height() * 0.04), 3, 3)
         p.setPen(QPen(QColor("#b5b5b5"), 1))
         p.setBrush(theme.WHITE)
-        p.drawRect(card)
+        p.drawRoundedRect(card, 3, 3)
         values = ((5, 2, 0, 7), (3, -2, 4, 6))
         cw, ch = card.width() / 4, card.height() / 2
         p.setFont(theme.base_font(min(cw, ch) * 0.62))
@@ -563,30 +599,57 @@ class BrandPanel(_Painted):
         for c in range(1, 4):
             p.drawLine(int(card.left() + c * cw), int(card.top()), int(card.left() + c * cw), int(card.bottom()))
         p.drawLine(int(card.left()), int(card.top() + ch), int(card.right()), int(card.top() + ch))
-        # Kegel-Kreuz
-        cx, cy = rect.left() + rect.width() * 0.76, card.center().y()
-        unit = rect.height() * 0.05
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QColor("#f4f4f4"))
-        for dx, dy in ((0, -2.2), (0, -1.1), (0, 1.1), (0, 2.2), (-1.4, 0), (1.4, 0)):
-            p.drawEllipse(QRectF(cx + dx * unit - unit * 0.32, cy + dy * unit - unit * 0.32, unit * 0.64, unit * 0.64))
-        p.setBrush(QColor("#c62828"))
-        p.drawEllipse(QRectF(cx - unit * 0.38, cy - unit * 0.38, unit * 0.76, unit * 0.76))
+        # Kegel-Kreuz: 4 weiße Kegel um den roten König
+        cx = cloth_rect.left() + cw_all * 0.77
+        cy = card.center().y()
+        gap = min(cw_all * 0.1, ch_all * 0.2)
+        pin = gap * 0.34
+        for dx, dy, color in ((0, -1, "#f7f7f2"), (-1, 0, "#f7f7f2"), (1, 0, "#f7f7f2"), (0, 1, "#f7f7f2"),
+                              (0, 0, "#d32f2f")):
+            self._draw_pin(p, QPointF(cx + dx * gap, cy + dy * gap), pin * (1.12 if color == "#d32f2f" else 1.0),
+                           QColor(color))
         # drei Kugeln
-        ball = rect.height() * 0.17
-        by = rect.top() + rect.height() * 0.72
+        ball = ch_all * 0.2
+        by = cloth_rect.top() + ch_all * 0.66
         for fx, color in ((0.24, "#b3261e"), (0.5, "#f5f5f0"), (0.76, "#e0b21a")):
-            center = QPointF(rect.left() + rect.width() * fx, by + ball / 2)
-            shadow = QColor(0, 0, 0, 70)
-            p.setBrush(shadow)
-            p.drawEllipse(QRectF(center.x() - ball / 2 + ball * 0.08, center.y() - ball / 2 + ball * 0.1, ball, ball))
-            gradient = QRadialGradient(center.x() - ball * 0.18, center.y() - ball * 0.2, ball * 0.7)
-            base = QColor(color)
-            gradient.setColorAt(0, base.lighter(165))
-            gradient.setColorAt(0.45, base)
-            gradient.setColorAt(1, base.darker(150))
-            p.setBrush(gradient)
-            p.drawEllipse(QRectF(center.x() - ball / 2, center.y() - ball / 2, ball, ball))
+            center = QPointF(cloth_rect.left() + cw_all * fx, by + ball / 2)
+            self._draw_ball(p, center, ball, QColor(color))
+
+    @staticmethod
+    def _draw_ball(p: QPainter, center: QPointF, size: float, base: QColor) -> None:
+        from PySide6.QtGui import QRadialGradient
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(0, 0, 0, 80))
+        p.drawEllipse(QRectF(center.x() - size / 2 + size * 0.1, center.y() - size / 2 + size * 0.14, size, size))
+        gradient = QRadialGradient(center.x() - size * 0.18, center.y() - size * 0.2, size * 0.7)
+        gradient.setColorAt(0, base.lighter(170))
+        gradient.setColorAt(0.45, base)
+        gradient.setColorAt(1, base.darker(160))
+        p.setBrush(gradient)
+        p.drawEllipse(QRectF(center.x() - size / 2, center.y() - size / 2, size, size))
+        p.setBrush(QColor(255, 255, 255, 170))
+        p.drawEllipse(QRectF(center.x() - size * 0.24, center.y() - size * 0.3, size * 0.16, size * 0.11))
+
+    @staticmethod
+    def _draw_pin(p: QPainter, center: QPointF, radius: float, base: QColor) -> None:
+        """Kegel von oben: Schatten, Fuß, Körper mit Glanz und Kopf."""
+        from PySide6.QtGui import QRadialGradient
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(0, 0, 0, 85))
+        p.drawEllipse(QPointF(center.x() + radius * 0.35, center.y() + radius * 0.45), radius * 1.05, radius * 1.05)
+        body = QRadialGradient(center.x() - radius * 0.35, center.y() - radius * 0.4, radius * 1.4)
+        body.setColorAt(0, base.lighter(130))
+        body.setColorAt(0.6, base)
+        body.setColorAt(1, base.darker(150))
+        p.setPen(QPen(base.darker(185), max(1.0, radius * 0.08)))
+        p.setBrush(body)
+        p.drawEllipse(center, radius, radius)
+        head = QRadialGradient(center.x() - radius * 0.15, center.y() - radius * 0.2, radius * 0.6)
+        head.setColorAt(0, QColor(255, 255, 255))
+        head.setColorAt(1, base.darker(115))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(head)
+        p.drawEllipse(center, radius * 0.45, radius * 0.45)
 
 
 class LogoWidget(_Painted):

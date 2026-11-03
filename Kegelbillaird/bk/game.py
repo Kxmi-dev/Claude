@@ -161,21 +161,30 @@ class Game:
         return StrokeEntry(number, value, total_before)
 
     def replace_last(self, value: int) -> tuple[int, StrokeEntry] | None:
-        """Ersetzt die Punktzahl des LETZTEN Stoßes (frühere Stöße stehen fest).
+        """Ersetzt die Punktzahl des LETZTEN Stoßes (siehe ``replace_stroke``)."""
+        if not self._state.strokes:
+            validate_points(value)
+            if not self.is_running:
+                raise GameError("Die Partie läuft nicht mehr.")
+            return None
+        return self.replace_stroke(self.played, value)
 
-        Gibt ``(alter Wert, neuer Eintrag)`` zurück oder ``None``, wenn noch
-        kein Stoß gewertet ist.
+    def replace_stroke(self, number: int, value: int) -> tuple[int, StrokeEntry] | None:
+        """Ersetzt die Punktzahl des Stoßes ``number`` (1 … gespielte Stöße).
+
+        Gibt ``(alter Wert, neuer Eintrag mit neuem Zwischenstand)`` zurück oder
+        ``None``, wenn es diesen Stoß (noch) nicht gibt. Die Stoßzahl ändert sich nie.
         """
         points = validate_points(value)
         if not self.is_running:
             raise GameError("Die Partie läuft nicht mehr.")
-        if not self._state.strokes:
+        if isinstance(number, bool) or not isinstance(number, int) or not 1 <= number <= self.played:
             return None
-        old = self._state.strokes[-1]
-        self._state.strokes[-1] = points
+        old = self._state.strokes[number - 1]
+        self._state.strokes[number - 1] = points
         if self._state.corrections is not None and old != points:
             self._state.corrections += 1
-        return old, StrokeEntry(self.played, points, self.total)
+        return old, StrokeEntry(number, points, sum(self._state.strokes[:number]))
 
     def finish(self, finished_at: str | None = None) -> None:
         """Schließt eine vollständige Partie ab."""

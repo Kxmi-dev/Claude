@@ -30,7 +30,7 @@ OUTLINE = QColor("#1a1a1a")        # dünne dunkle Konturen
 WHITE = QColor("#ffffff")
 BUTTON = QColor("#d2d2d2")         # nicht gewählter Menüknopf
 BUTTON_SELECTED = QColor("#fffff5")
-DANGER = QColor("#b3261e")         # roter Knopf „Beenden & Herunterfahren“
+DANGER = QColor("#b3261e")         # roter Knopf „PC ausschalten“
 DANGER_SELECTED = QColor("#e0352b")
 BUTTON_TEXT = QColor("#333333")     # dunkel = auch aus der Entfernung gut lesbar
 SHADOW = QColor("#696969")

@@ -46,6 +46,8 @@ ACTION_TITLES = {
     "right": "Menü: rechts", "enter": "Bestätigen", "back": "Zurück",
 }
 COLOR_PARTS = ("Rot", "Grün", "Blau")
+WEEKDAYS = ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
+SOUND_CAPTURE = "sound:"        # Tastenaufnahme für eine Sound-Taste („sound:neu“ oder „sound:<Nr.>“)
 
 
 @dataclass
@@ -245,7 +247,15 @@ class SettingsScreen(QWidget):
     def title(self) -> str:
         return "Einstellungen"
 
+    @property
+    def capturing(self) -> bool:
+        """True, solange auf eine Taste gewartet wird (dann keine Sound-Tasten auslösen)."""
+        return self._capture_action is not None
+
     def footer_segments(self) -> list[str]:
+        if self._capture_action and self._capture_action.startswith(SOUND_CAPTURE):
+            return ["Gewünschte Taste oder Kombination drücken (auch mit Strg / Alt / Umschalt)",
+                    f"Abbruch: {CAPTURE_SECONDS} s warten"]
         if self._capture_action:
             return ["Gewünschte Taste drücken", f"Abbruch: {CAPTURE_SECONDS} s warten"]
         item = self._list.current()
@@ -327,6 +337,7 @@ class SettingsScreen(QWidget):
             ("Tasten", self._page_keys, "Welche Taste was macht – die Legende passt sich an"),
             ("Töne", self._page_sounds, "Ton zur Halbzeit, am Ende und bei +6 / +7, Lautstärke"),
             ("Bilder", self._page_images, "Bilder/GIFs bei +6/+7 und −6/−7"),
+            ("Wochentage", self._page_weekdays, "An welchen Tagen Bilder/GIFs und Sound-Tasten kommen"),
             ("Drucken & PDF", self._page_print, "Drucker, PDF-Speicherort, Auswertung nach der Partie"),
             ("Archiv & Aufräumen", self._page_archive, "Wiedergabe-Tempo, Aufbewahrungsdauer"),
         ]
@@ -459,6 +470,10 @@ class SettingsScreen(QWidget):
             self._bool_item("Sperre mit [Enter] überspringen", "enter_skips_lock",
                             "An = [Enter] schaltet nach einer Wertung sofort von GESPERRT auf BEREIT."),
             self._number_item("Sperre nach Korrektur", "undo_lock_seconds", 0.5, 0, 5),
+            self._number_item("Sperre beim Zurückblättern", "correction_step_lock_seconds", 0.1, 0, 5,
+                              hint="Im Korrekturfenster geht jedes weitere [/] einen Stoß zurück. So lange "
+                                   "wird ein erneutes [/] danach ignoriert (Schutz vor Prellen). 0 = aus. "
+                                   "Gilt ab der nächsten Partie."),
             self._number_item("Wartezeit der Abbruch-Frage", "abort_confirm_seconds", 1, 1, 30),
             self._number_item("Sperre nach Partie-Ende", "result_lock_seconds", 1, 0, 30,
                               hint="So lange reagiert die Auswertung nicht auf [Enter] – kein versehentlicher "
@@ -510,7 +525,87 @@ class SettingsScreen(QWidget):
             sound_item("Ton zur Halbzeit", "halftime_sound"),
             sound_item("Ton am Partie-Ende", "end_sound"),
             sound_item("Ton bei +6 / +7", "celebration_sound"),
+            Item("Sonstiges (Sound-Tasten)", lambda: f"{len(self.settings.sound_keys)} belegt  ▶", None,
+                 lambda: self.open_page("Sonstiges (Sound-Tasten)", self._page_sound_keys),
+                 "Freie Tasten oder Tastenkombinationen mit einem Ton belegen – sie gelten überall im "
+                 "Programm (an den in „Wochentage“ eingeschalteten Tagen)."),
         ]
+
+    # ----------------------------------------------------- Sound-Tasten
+    def _cycle_sound(self, current: str, delta: int) -> str:
+        return _cycle([""] + list_sounds(self.settings.sounds_dir), current, delta)
+
+    def _set_sound_keys(self, entries: list[tuple[str, str]]) -> bool:
+        return self.set_value("sound_keys", tuple((k, v) for k, v in entries))
+
+    def _page_sound_keys(self) -> list[Item]:
+        items = [Item("+ Neue Sound-Taste", lambda: "", None, lambda: self._start_capture(SOUND_CAPTURE + "neu"),
+                      "[Enter] (oder Doppelklick) und dann die gewünschte Taste bzw. Tastenkombination drücken, "
+                      "z. B. [F5] oder [Strg]+[1]. Sie wird sofort übernommen.")]
+        for index, (combo, _sound) in enumerate(self.settings.sound_keys):
+            def change(delta: int, i=index) -> None:
+                entries = list(self.settings.sound_keys)
+                entries[i] = (entries[i][0], self._cycle_sound(entries[i][1], delta))
+                self._set_sound_keys(entries)
+
+            def value(i=index) -> str:
+                entries = self.settings.sound_keys
+                return (entries[i][1] or "(kein Ton)") if i < len(entries) else ""
+
+            items.append(Item(f"[{keymap.combo_label(combo)}]", value, change,
+                              lambda i=index: self.open_page("Sound-Taste", lambda: self._page_sound_key(i)),
+                              "[4]/[6] = Ton wählen. [Enter] = Taste ändern, probehören oder löschen."))
+        return items
+
+    def _page_sound_key(self, index: int) -> list[Item]:
+        entries = self.settings.sound_keys
+        if index >= len(entries):
+            return [Item("Eintrag gelöscht", lambda: "", None, self.go_back)]
+
+        def sound() -> str:
+            return self.settings.sound_keys[index][1] if index < len(self.settings.sound_keys) else ""
+
+        def change(delta: int) -> None:
+            current = list(self.settings.sound_keys)
+            current[index] = (current[index][0], self._cycle_sound(current[index][1], delta))
+            self._set_sound_keys(current)
+
+        def preview() -> None:
+            if not sound():
+                self.notice.emit("Kein Ton ausgewählt.", True)
+            elif not self.preview_sound(sound()):
+                self.notice.emit("Ton kann nicht abgespielt werden (Töne aus, Datei fehlt oder keine Tonausgabe).",
+                                 True)
+
+        def delete() -> None:
+            current = list(self.settings.sound_keys)
+            combo = current.pop(index)[0]
+            if self._set_sound_keys(current):
+                self.notice.emit(f"Sound-Taste [{keymap.combo_label(combo)}] gelöscht.", False)
+                self.go_back()
+
+        return [
+            Item("Taste", lambda: "[" + keymap.combo_label(self.settings.sound_keys[index][0]) + "]"
+                 if index < len(self.settings.sound_keys) else "", None,
+                 lambda: self._start_capture(f"{SOUND_CAPTURE}{index}"),
+                 "[Enter] und dann die neue Taste bzw. Tastenkombination drücken."),
+            Item("Ton", lambda: sound() or "(kein Ton)", change, preview,
+                 f"Alle .wav/.mp3 im Ordner „{self.settings.sounds_dir.name}“. [Enter] = probehören."),
+            Item("Sound-Taste löschen", lambda: "", None, delete),
+        ]
+
+    def _page_weekdays(self) -> list[Item]:
+        items = []
+        for day, name in enumerate(WEEKDAYS):
+            def toggle(_delta: int = 1, d=day) -> None:
+                days = list(self.settings.extras_weekdays)
+                days[d] = not days[d]
+                self.set_value("extras_weekdays", tuple(days))
+            items.append(Item(name, lambda d=day: _on_off(self.settings.extras_weekdays[d]), toggle,
+                              lambda t=toggle: t(),
+                              "An = an diesem Tag kommen die Bilder/GIFs (+6/+7, −6/−7) und die Sound-Tasten "
+                              "(„Sonstiges“). Halbzeit-Ton, Ende-Ton und der Ton bei +6 / +7 kommen immer."))
+        return items
 
     def _page_images(self) -> list[Item]:
         def folder_item(label: str, prefix: str, folder: Callable[[], Path]) -> Item:
@@ -626,9 +721,38 @@ class SettingsScreen(QWidget):
             self._list.update()
             self.footer_changed.emit()
 
+    def _capture_sound_key(self, target: str, event: QKeyEvent) -> None:
+        combo = keymap.combo_name(event)
+        if combo is None:
+            self.notice.emit("Diese Taste kann nicht belegt werden.", True)
+            return
+        if keymap.is_reserved(event):
+            self.notice.emit(f"[{keymap.combo_label(combo)}] wird schon vom Programm benutzt – bitte eine "
+                             "andere Taste oder eine Kombination mit Strg / Alt wählen.", True)
+            return
+        entries = list(self.settings.sound_keys)
+        index = None if target == "neu" else int(target)
+        if any(k == combo for i, (k, _v) in enumerate(entries) if i != index):
+            self.notice.emit(f"[{keymap.combo_label(combo)}] ist schon eine Sound-Taste.", True)
+            return
+        if index is None:
+            sounds = list_sounds(self.settings.sounds_dir)
+            entries.append((combo, sounds[0] if sounds else ""))
+        else:
+            entries[index] = (combo, entries[index][1])
+        if self._set_sound_keys(entries):
+            self.notice.emit(f"Sound-Taste [{keymap.combo_label(combo)}] übernommen"
+                             + (" – Ton mit [4]/[6] wählen." if index is None else "."), False)
+            if index is None:
+                self._list.set_items(self._stack[-1][1](), len(entries))
+                self.footer_changed.emit()
+
     def _capture(self, event: QKeyEvent) -> None:
         action = self._capture_action
         self._cancel_capture()
+        if action is not None and action.startswith(SOUND_CAPTURE):
+            self._capture_sound_key(action[len(SOUND_CAPTURE):], event)
+            return
         name = keymap.event_name(event)
         if name is None or action is None:
             self.notice.emit("Diese Taste kann nicht belegt werden.", True)
@@ -641,7 +765,7 @@ class SettingsScreen(QWidget):
     # ============================================================ Tastatur
     def handle_key(self, event: QKeyEvent) -> bool:
         if self._capture_action is not None:
-            if not event.isAutoRepeat():
+            if not event.isAutoRepeat() and not keymap.is_modifier_only(event):
                 self._capture(event)
             return True
         key = map_menu_key(event)

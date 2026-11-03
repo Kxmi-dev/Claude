@@ -219,6 +219,36 @@ class UndoConfirmAndEnterTests(unittest.TestCase):
         self.assertFalse(ctrl.is_locked())                                  # nächster Stoß sofort möglich
         self.assertFalse(ctrl.minus_selected)
 
+    def test_slash_steps_back_with_own_lock(self):
+        clock = FakeClock()
+        ctrl = ScoreInputController(3.0, 1.0, 5.0, clock, correction_input=True,
+                                    correction_step_lock_seconds=0.5)
+        self.assertEqual(ctrl.press(U).offset, 0)
+        ctrl.set_correction_count(3)
+        ctrl.press(D, 5)                                                    # Eingabe gilt dem letzten Stoß
+        self.assertEqual(ctrl.press(U).action, Action.IGNORED_UNDO_LOCKED)  # Prellen innerhalb 0,5 s
+        clock.advance(0.6)
+        r = ctrl.press(U)
+        self.assertEqual((r.action, r.offset, r.value), (Action.CORRECTION_CHANGED, 1, None))  # Eingabe neu
+        clock.advance(0.6)
+        self.assertEqual(ctrl.press(U).offset, 2)
+        clock.advance(0.6)
+        self.assertEqual(ctrl.press(U).offset, 2)                           # weiter als Stoß 1 geht es nicht
+        ctrl.press(M)
+        ctrl.press(D, 6)
+        r = ctrl.press(self.E)
+        self.assertEqual((r.action, r.value, r.offset), (Action.CORRECTION_CONFIRMED, -6, 2))
+        self.assertEqual(ctrl.correction_offset, 0)
+
+    def test_step_lock_zero_means_off(self):
+        clock = FakeClock()
+        ctrl = ScoreInputController(3.0, 1.0, 5.0, clock, correction_input=True)
+        ctrl.press(U)
+        ctrl.set_correction_count(5)
+        self.assertEqual([ctrl.press(U).offset for _ in range(3)], [1, 2, 3])
+        with self.assertRaises(ValueError):
+            ScoreInputController(3.0, 1.0, 5.0, clock, correction_step_lock_seconds=-1)
+
     def test_minus_before_digit_and_plus(self):
         ctrl, _ = self.make()
         ctrl.press(U)

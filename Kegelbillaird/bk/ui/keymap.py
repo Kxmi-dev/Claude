@@ -150,3 +150,42 @@ _NAME_OF_KEY = {code: name for name in _all_names() for code in qt_keys(name)}
 def event_name(event: QKeyEvent) -> str | None:
     """Tastenname für die Tastenaufnahme im Einstellungsmenü (None = nicht belegbar)."""
     return _NAME_OF_KEY.get(int(event.key()))
+
+
+# ================================================== Sound-Tasten („Sonstiges“)
+_MODIFIER_KEYS = {int(K.Key_Control), int(K.Key_Shift), int(K.Key_Alt), int(K.Key_Meta), int(K.Key_AltGr),
+                  int(K.Key_CapsLock), int(K.Key_NumLock), int(K.Key_ScrollLock)}
+_COMBO_MODIFIERS = (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+                    | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier)
+
+
+def is_modifier_only(event: QKeyEvent) -> bool:
+    """True für Strg, Umschalt, Alt … allein (die Aufnahme wartet dann auf die eigentliche Taste)."""
+    return int(event.key()) in _MODIFIER_KEYS
+
+
+def combo_name(event: QKeyEvent) -> str | None:
+    """Taste bzw. Tastenkombination als Text, z. B. „Ctrl+F1“ (None = nicht belegbar)."""
+    from PySide6.QtGui import QKeySequence
+    key = int(event.key())
+    if key in _MODIFIER_KEYS or key in (0, int(K.Key_unknown)):
+        return None
+    mods = event.modifiers() & _COMBO_MODIFIERS
+    text = QKeySequence(int(mods.value) | key).toString(QKeySequence.SequenceFormat.PortableText)
+    return text or None
+
+
+def combo_label(combo: str) -> str:
+    """Anzeige einer gespeicherten Kombination (deutsche Namen)."""
+    return combo.replace("Ctrl+", "Strg+").replace("Shift+", "Umschalt+")
+
+
+def is_reserved(event: QKeyEvent) -> bool:
+    """True, wenn die Taste (ohne Strg/Alt/Umschalt) schon eine Aufgabe im Programm hat:
+    Ziffern, Nummernblock, alle Tasten der Tastenbelegung."""
+    if event.modifiers() & _COMBO_MODIFIERS:
+        return False
+    key = int(event.key())
+    if key in _DIGITS or (is_keypad(event) and key in _NUMPAD_NAVIGATION):
+        return True
+    return any(key in keys for keys in _active.by_action.values())

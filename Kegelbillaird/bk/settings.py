@@ -76,6 +76,9 @@ class AppSettings:
     grid_running_total: bool = True                      # Raster zeigt Gesamtpunkte (3, 6, 9) statt Einzelstoß
     stay_on_top: bool = True                             # Fenster immer im Vordergrund
     hide_cursor_seconds: float = 5.0                     # Mauszeiger nach x s ohne Mausbewegung ausblenden (0 = nie)
+    correction_step_lock_seconds: float = 0.3            # Sperre für [/] (einen Stoß zurück) im Korrekturfenster
+    sound_keys: tuple[tuple[str, str], ...] = ()         # Sound-Tasten: (Tastenkombination, Tondatei)
+    extras_weekdays: tuple[bool, ...] = (True,) * 7      # Mo … So: Bilder und Sound-Tasten an diesem Tag
 
     @property
     def logo_path(self) -> Path:
@@ -145,6 +148,9 @@ class AppSettings:
             grid_running_total=bool(getattr(cfg, "GRID_RUNNING_TOTAL", True)),
             stay_on_top=bool(getattr(cfg, "STAY_ON_TOP", True)),
             hide_cursor_seconds=max(0.0, float(getattr(cfg, "HIDE_CURSOR_SECONDS", 5))),
+            correction_step_lock_seconds=float(getattr(cfg, "CORRECTION_STEP_LOCK_SECONDS", 0.3)),
+            sound_keys=tuple((str(k), str(v)) for k, v in getattr(cfg, "SOUND_KEYS", ())),
+            extras_weekdays=tuple(bool(v) for v in getattr(cfg, "EXTRAS_WEEKDAYS", (True,) * 7)),
         )
         settings.validate()
         return settings
@@ -154,6 +160,13 @@ class AppSettings:
             raise ValueError("INPUT_LOCK_SECONDS darf nicht negativ sein.")
         if self.undo_lock_seconds < 0:
             raise ValueError("UNDO_LOCK_SECONDS darf nicht negativ sein.")
+        if not 0 <= self.correction_step_lock_seconds <= 5:
+            raise ValueError("CORRECTION_STEP_LOCK_SECONDS muss zwischen 0 und 5 liegen.")
+        if len(self.extras_weekdays) != 7:
+            raise ValueError("EXTRAS_WEEKDAYS braucht 7 Werte (Montag bis Sonntag).")
+        combos = [combo for combo, _sound in self.sound_keys]
+        if any(not combo for combo in combos) or len(combos) != len(set(combos)):
+            raise ValueError("SOUND_KEYS: jede Taste darf nur einmal vorkommen.")
         if self.abort_confirm_seconds <= 0:
             raise ValueError("ABORT_CONFIRM_SECONDS muss größer als 0 sein.")
         if self.numlock_check_seconds <= 0 or self.autosave_seconds <= 0:
@@ -189,6 +202,13 @@ class AppSettings:
         if self.history_length < 1 or self.history_length > 10:
             raise ValueError("HISTORY_LENGTH muss zwischen 1 und 10 liegen.")
         self.key_bindings.validate()
+
+    def extras_today(self, weekday: int | None = None) -> bool:
+        """True, wenn heute (bzw. am Wochentag 0 = Montag … 6 = Sonntag) Bilder und Sound-Tasten kommen."""
+        if weekday is None:
+            from datetime import date
+            weekday = date.today().weekday()
+        return bool(self.extras_weekdays[weekday % 7])
 
     @property
     def images_plus_dir(self) -> Path:
