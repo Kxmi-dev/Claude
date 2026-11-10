@@ -27,7 +27,7 @@ from PySide6.QtWidgets import QFileDialog, QInputDialog, QWidget
 from ..autostart import Autostart, AutostartError
 from ..keys import ACTIONS, DEFAULT_NAMES, KeyBindings
 from ..media import list_images, list_logos, list_sounds
-from ..settings import FONT_SCALES, SOUND_KEY_MAX_SECONDS, AppSettings
+from ..settings import DEFAULT_FONT_SCALE, FONT_SCALES, SOUND_KEY_MAX_SECONDS, AppSettings
 from ..user_settings import UserSettingsStore
 from . import keymap, theme
 from .keymap import MenuKey, map_menu_key
@@ -331,15 +331,17 @@ class SettingsScreen(QWidget):
     # ============================================================ Seiten
     def _overview(self) -> list[Item]:
         pages = [
-            ("Anzeige", self._page_display, "Vollbild, Fenstergröße, Schriftgröße, Vereinsname und -logo, Autostart"),
+            ("Anzeige", self._page_display, "Vollbild, Fenstergröße, Schriftgröße, Mauszeiger, Autostart"),
+            ("Zählansicht", self._page_counting, "Was in der Partie angezeigt wird: Raster, Letzte Stöße, Eingabe"),
+            ("Verein", self._page_club, "Vereinsname (Titelleiste, PDF) und Vereinslogo"),
             ("Design", self._page_design, "Farbschema: Klassisch oder eigene Primär- und Sekundärfarbe"),
-            ("Eingabe", self._page_input, "Sperrzeiten, Nummernblock, NumLock"),
+            ("Eingabe & Sperren", self._page_input, "Sperrzeiten gegen Doppeleingaben, Abbruch-Frage, Nummernblock, NumLock"),
             ("Tasten", self._page_keys, "Welche Taste was macht – die Legende passt sich an"),
-            ("Töne", self._page_sounds, "Ton zur Halbzeit, am Ende und bei +6 / +7, Lautstärke"),
+            ("Töne", self._page_sounds, "Töne an/aus, Lautstärke, Ton zur Halbzeit / am Ende / bei +6 +7, Sound-Tasten"),
             ("Bilder", self._page_images, "Bilder/GIFs bei +6/+7 und −6/−7"),
-            ("Wochentage", self._page_weekdays, "An welchen Tagen Bilder/GIFs und Sound-Tasten kommen"),
-            ("Drucken & PDF", self._page_print, "Drucker, PDF-Speicherort, Auswertung nach der Partie"),
-            ("Archiv & Aufräumen", self._page_archive, "Wiedergabe-Tempo, Aufbewahrungsdauer"),
+            ("Wochentage", self._page_weekdays, "An welchen Tagen Bilder/GIFs und Sound-Tasten kommen, Nachfrage"),
+            ("Nach der Partie", self._page_print, "Auswertung, Sperre nach dem Ende, PDF, Drucker, Speicherort"),
+            ("Archiv & Aufräumen", self._page_archive, "Wie lange Archiv, Protokolle und PDFs aufbewahrt werden"),
         ]
         items = [Item(title, lambda: "▶", None, (lambda t=title, b=builder: self.open_page(t, b)), hint)
                  for title, builder, hint in pages]
@@ -360,18 +362,6 @@ class SettingsScreen(QWidget):
                 options.sort()
             self.set_value("window_size", _cycle(options, tuple(self.settings.window_size), delta))
 
-        def change_logo(delta: int) -> None:
-            options = [""] + list_logos(self.settings.club_logo_dir)
-            if self.settings.club_logo and self.settings.club_logo not in options:
-                options.append(self.settings.club_logo)
-            self.set_value("club_logo", _cycle(options, self.settings.club_logo, delta))
-
-        def logo_value() -> str:
-            name = self.settings.club_logo
-            if not name:
-                return "(kein Logo)" if list_logos(self.settings.club_logo_dir) else "(kein Bild im Ordner)"
-            return name if (self.settings.club_logo_dir / name).is_file() else f"{name} (fehlt)"
-
         def autostart_value() -> str:
             return _on_off(self.autostart.is_enabled()) if self.autostart.available else "nur unter Windows"
 
@@ -386,10 +376,9 @@ class SettingsScreen(QWidget):
                              else "Autostart ausgeschaltet.", False)
             self._refresh()
 
-        def edit_club() -> None:
-            text = self.ask_text("Vereinsname", "Vereinsname (Titelleiste und PDF):", self.settings.club_name)
-            if text is not None and text.strip():
-                self.set_value("club_name", text.strip())
+        def font_value() -> str:
+            value = self.settings.font_scale
+            return f"{value} %" + ("  (Standard)" if value == DEFAULT_FONT_SCALE else "")
 
         return [
             self._bool_item("Vollbild", "fullscreen", "An = Programm füllt den ganzen Bildschirm. "
@@ -404,14 +393,45 @@ class SettingsScreen(QWidget):
                                           _cycle(list(CURSOR_SECONDS), self.settings.hide_cursor_seconds, d)),
                  None, "Der Mauszeiger verschwindet, wenn die Maus so lange nicht bewegt wurde. "
                        "Aus = Zeiger immer sichtbar."),
-            Item("Schriftgröße", lambda: f"{self.settings.font_scale} %",
+            Item("Schriftgröße", font_value,
                  lambda d: self.set_value("font_scale", _cycle(list(FONT_SCALES), self.settings.font_scale, d)),
-                 None, "Große Zahlen füllen ihr Feld immer aus; Texte werden nie abgeschnitten."),
+                 None, f"Macht alle Texte größer oder kleiner ({FONT_SCALES[0]} … {FONT_SCALES[-1]} %, Standard "
+                       f"{DEFAULT_FONT_SCALE} %). Große Zahlen füllen ihr Feld immer aus; Texte werden nie "
+                       "abgeschnitten – sie wachsen nur, solange Platz ist."),
+            Item("Beim Windows-Start öffnen", autostart_value, toggle_autostart, lambda: toggle_autostart(),
+                 "An = Programm startet automatisch nach der Windows-Anmeldung (Autostart)."),
+        ]
+
+    def _page_club(self) -> list[Item]:
+        def change_logo(delta: int) -> None:
+            options = [""] + list_logos(self.settings.club_logo_dir)
+            if self.settings.club_logo and self.settings.club_logo not in options:
+                options.append(self.settings.club_logo)
+            self.set_value("club_logo", _cycle(options, self.settings.club_logo, delta))
+
+        def logo_value() -> str:
+            name = self.settings.club_logo
+            if not name:
+                return "(kein Logo)" if list_logos(self.settings.club_logo_dir) else "(kein Bild im Ordner)"
+            return name if (self.settings.club_logo_dir / name).is_file() else f"{name} (fehlt)"
+
+        def edit_club() -> None:
+            text = self.ask_text("Vereinsname", "Vereinsname (Titelleiste und PDF):", self.settings.club_name)
+            if text is not None and text.strip():
+                self.set_value("club_name", text.strip())
+
+        return [
             Item("Vereinsname", lambda: self.settings.club_name, None, edit_club,
+                 "Steht oben in der Titelleiste und im Kopf des Spielberichts (PDF). "
                  "Mit [Enter] ändern (normale Tastatur nötig)."),
             Item("Vereinslogo", logo_value, change_logo, None,
-                 f"Bild in den Ordner „{self.settings.club_logo_dir.name}“ ziehen, dann hier auswählen "
-                 "(PNG, JPG, GIF, BMP, WEBP, SVG, ICO …). Erscheint im Hauptmenü unter dem BK-Bild."),
+                 f"Bild in den Ordner „{self.settings.club_logo_dir.name}“ ziehen, dann hier mit [4]/[6] auswählen "
+                 "(PNG, JPG, GIF, BMP, WEBP, SVG, ICO …). Erscheint im Hauptmenü, klein in der Titelleiste "
+                 "und oben rechts im PDF."),
+        ]
+
+    def _page_counting(self) -> list[Item]:
+        return [
             Item("Raster zeigt", lambda: "Gesamtpunkte" if self.settings.grid_running_total else "Einzelstoß",
                  lambda _d: self.set_value("grid_running_total", not self.settings.grid_running_total),
                  lambda: self.set_value("grid_running_total", not self.settings.grid_running_total),
@@ -419,11 +439,10 @@ class SettingsScreen(QWidget):
                  "Einzelstoß = die Punkte des Stoßes. Leerstoß = X."),
             self._bool_item("Feld „Letzte Stöße“ anzeigen", "show_history",
                             "Aus = „Aktueller Stoß“ wird dafür breiter."),
-            self._number_item("Anzahl „Letzte Stöße“", "history_length", 1, 1, 10, str, integer=True),
+            self._number_item("Anzahl „Letzte Stöße“", "history_length", 1, 1, 10, str, integer=True,
+                              hint="So viele der zuletzt gespielten Stöße stehen im Feld „Letzte Stöße“."),
             self._bool_item("Feld „Eingabe“ anzeigen", "show_input_status",
-                            "BEREIT / MINUS / GESPERRT. Aus = „Minus“ wird dafür breiter."),
-            Item("Beim Windows-Start öffnen", autostart_value, toggle_autostart, lambda: toggle_autostart(),
-                 "An = Programm startet automatisch nach der Windows-Anmeldung (Autostart)."),
+                            "Zeigt BEREIT / MINUS / GESPERRT mit Countdown. Aus = „Minus“ wird dafür breiter."),
         ]
 
     def _page_design(self) -> list[Item]:
@@ -469,18 +488,21 @@ class SettingsScreen(QWidget):
                               hint="Schutz vor Doppeleingaben. Gilt ab der nächsten Partie."),
             self._bool_item("Sperre mit [Enter] überspringen", "enter_skips_lock",
                             "An = [Enter] schaltet nach einer Wertung sofort von GESPERRT auf BEREIT."),
-            self._number_item("Sperre nach Korrektur", "undo_lock_seconds", 0.5, 0, 5),
+            self._number_item("Sperre nach Korrektur", "undo_lock_seconds", 0.5, 0, 5,
+                              hint="So lange sind die Ziffern nach einer bestätigten Korrektur gesperrt."),
             self._number_item("Sperre beim Zurückblättern", "correction_step_lock_seconds", 0.1, 0, 5,
                               hint="Im Korrekturfenster geht jedes weitere [/] einen Stoß zurück. So lange "
                                    "wird ein erneutes [/] danach ignoriert (Schutz vor Prellen). 0 = aus. "
                                    "Gilt ab der nächsten Partie."),
-            self._number_item("Wartezeit der Abbruch-Frage", "abort_confirm_seconds", 1, 1, 30),
-            self._number_item("Sperre nach Partie-Ende", "result_lock_seconds", 1, 0, 30,
-                              hint="So lange reagiert die Auswertung nicht auf [Enter] – kein versehentlicher "
-                                   "Sprung ins Hauptmenü. 0 = aus."),
+            self._number_item("Wartezeit der Abbruch-Frage", "abort_confirm_seconds", 1, 1, 30,
+                              hint="Nach [*] so lange auf die Bestätigung mit [-] warten. Danach (oder bei jeder "
+                                   "anderen Taste) geht die Partie einfach weiter."),
             self._bool_item("Nur Nummernblock", "numpad_only",
-                            "An = in der Partie zählen nur Tasten des Nummernblocks."),
-            self._bool_item("NumLock automatisch einschalten", "auto_enable_numlock"),
+                            "An = in der Partie zählen nur Tasten des Nummernblocks, die Ziffern der normalen "
+                            "Tastatur werden ignoriert."),
+            self._bool_item("NumLock automatisch einschalten", "auto_enable_numlock",
+                            "An = ist NumLock aus, schaltet das Programm es selbst wieder ein (nur Windows). "
+                            "Aus = es erscheint nur eine Warnung."),
         ]
 
     def _page_keys(self) -> list[Item]:
@@ -520,15 +542,18 @@ class SettingsScreen(QWidget):
                         "[Enter] = probehören.")
 
         return [
-            self._bool_item("Töne", "sound_enabled"),
-            self._number_item("Lautstärke", "sound_volume", 10, 0, 100, lambda v: f"{v} %", integer=True),
+            self._bool_item("Töne", "sound_enabled", "Aus = das Programm spielt gar keinen Ton (auch keine "
+                            "Sound-Tasten)."),
+            self._number_item("Lautstärke", "sound_volume", 10, 0, 100, lambda v: f"{v} %", integer=True,
+                              hint="Lautstärke aller Töne des Programms. 0 % = stumm."),
             sound_item("Ton zur Halbzeit", "halftime_sound"),
             sound_item("Ton am Partie-Ende", "end_sound"),
             sound_item("Ton bei +6 / +7", "celebration_sound"),
             Item("Sonstiges (Sound-Tasten)", lambda: f"{len(self.settings.sound_keys)} belegt  ▶", None,
                  lambda: self.open_page("Sonstiges (Sound-Tasten)", self._page_sound_keys),
-                 "Freie Tasten oder Tastenkombinationen mit einem Ton belegen – sie gelten überall im "
-                 "Programm (an den in „Wochentage“ eingeschalteten Tagen)."),
+                 "Freie Tasten oder Tastenkombinationen mit einem Ton belegen. Sie spielen nur in der laufenden "
+                 "Partie – an den in „Wochentage“ eingeschalteten Tagen (oder wenn die Nachfrage mit JA "
+                 "beantwortet wurde)."),
         ]
 
     # ----------------------------------------------------- Sound-Tasten
@@ -625,6 +650,11 @@ class SettingsScreen(QWidget):
                               lambda t=toggle: t(),
                               "An = an diesem Tag kommen die Bilder/GIFs (+6/+7, −6/−7) und die Sound-Tasten "
                               "(„Sonstiges“). Halbzeit-Ton, Ende-Ton und der Ton bei +6 / +7 kommen immer."))
+        items.append(self._bool_item(
+            "An ausgeschalteten Tagen nachfragen", "extras_ask",
+            "An = an einem ausgeschalteten Tag fragt das Programm beim Start jeder Partie „Soll ein Spiel mit "
+            "Bildern und Sound gespielt werden?“ (vorgewählt NEIN). Aus = keine Frage, an diesen Tagen gibt es "
+            "dann keine Bilder und Sound-Tasten."))
         return items
 
     def _page_images(self) -> list[Item]:
@@ -640,8 +670,11 @@ class SettingsScreen(QWidget):
                         "[Enter] = einzelne ausschalten.")
 
         return [
-            self._bool_item("Bilder anzeigen", "celebration_enabled"),
-            self._number_item("Anzeigedauer", "celebration_seconds", 0.5, 0.5, 30),
+            self._bool_item("Bilder anzeigen", "celebration_enabled",
+                            "An = bei +6/+7 bzw. −6/−7 erscheint ein Bild/GIF über der Zählansicht "
+                            "(nur an eingeschalteten Wochentagen)."),
+            self._number_item("Anzeigedauer", "celebration_seconds", 0.5, 0.5, 30,
+                              hint="So lange bleibt das Bild stehen. Eine Korrektur blendet es sofort aus."),
             folder_item("Bilder bei +6 / +7", "plus", lambda: self.settings.images_plus_dir),
             folder_item("Bilder bei −6 / −7", "minus", lambda: self.settings.images_minus_dir),
         ]
@@ -683,22 +716,30 @@ class SettingsScreen(QWidget):
                 self.set_value("pdf_save_dir", chosen)
 
         return [
+            self._bool_item("Auswertung nach der Partie anzeigen", "show_report_after_game",
+                            "An = nach dem letzten Stoß und [Enter] erscheint die Auswertung „Endergebnis“."),
+            self._number_item("Sperre nach Partie-Ende", "result_lock_seconds", 1, 0, 30,
+                              hint="So lange reagiert die Auswertung nicht auf [Enter] – kein versehentlicher "
+                                   "Sprung ins Hauptmenü. 0 = aus."),
+            self._bool_item("PDF nach der Partie öffnen", "open_pdf_after_game",
+                            "An = der Spielbericht (PDF) öffnet sich nach der Partie automatisch im PDF-Programm."),
             Item("Drucker", printer_value, change_printer, None,
                  "Gedruckt wird ohne Rückfrage. Fehlt der gewählte Drucker, wird der Standarddrucker genommen."),
             Item("PDF-Speicherort", folder_value, lambda _d: self.set_value("pdf_save_dir", ""), choose_folder,
                  "„Als PDF speichern“ legt die Datei ohne Nachfrage hier ab. [Enter] = Ordner wählen, "
                  "[4]/[6] = zurück auf Dokumente."),
-            self._bool_item("Auswertung nach der Partie anzeigen", "show_report_after_game"),
-            self._bool_item("PDF nach der Partie öffnen", "open_pdf_after_game"),
         ]
 
     def _page_archive(self) -> list[Item]:
         return [
-            self._number_item("Wiedergabe-Tempo (pro Stoß)", "replay_seconds_per_stroke", 0.1, 0.1, 5),
-            self._number_item("Archiv aufbewahren", "archive_retention_days", 5, 0, 3650, _days, integer=True),
-            self._number_item("Protokolle aufbewahren", "log_retention_days", 5, 0, 3650, _days, integer=True),
+            self._number_item("Archiv aufbewahren", "archive_retention_days", 5, 0, 3650, _days, integer=True,
+                              hint="Ältere Partien im Archiv werden danach automatisch gelöscht (beim Start "
+                                   "und alle 6 Stunden)."),
+            self._number_item("Protokolle aufbewahren", "log_retention_days", 5, 0, 3650, _days, integer=True,
+                              hint="Ältere Protokolldateien (logs) werden danach automatisch gelöscht."),
             self._number_item("PDFs/Ergebnisse aufbewahren", "results_retention_days", 30, 0, 3650, _days,
-                              integer=True, hint="Empfohlen: nie löschen."),
+                              integer=True, hint="Ältere Spielberichte (PDF + Ergebnisdatei) werden danach "
+                                                 "gelöscht. Empfohlen: nie löschen."),
         ]
 
     # ========================================================= Zurücksetzen

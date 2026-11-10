@@ -3,7 +3,7 @@ Archiv: oben farbig abgesetzt die letzten drei abgeschlossenen Partien,
 darunter die Liste aller gespeicherten Partien (beendet, abgebrochen, unterbrochen).
 Die Auswahl läuft mit [8] / [2] durch beide Abschnitte.
 
-Bedienung: [8] / [2] wählen, [Enter] öffnen (Auswertung, Wiedergabe, Weiterspielen),
+Bedienung: [8] / [2] wählen, [Enter] öffnen (Auswertung, Partie ansehen, Weiterspielen),
 [*] oder [Esc] zurück zum Hauptmenü. Maus: Zeile anklicken, Doppelklick öffnet, Mausrad blättert.
 """
 

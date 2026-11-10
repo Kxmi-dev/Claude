@@ -33,6 +33,21 @@ class SaveLoadTests(StorageTestCase):
     def test_nothing_saved_means_none(self):
         self.assertEqual(self.storage.load_active().status, LoadStatus.NONE)
 
+    def test_extras_answer_is_saved(self):
+        """Antwort auf „mit Bildern und Sound?“ bleibt beim Fortsetzen erhalten; alte Spielstände -> None."""
+        from bk.models import GameState
+        for value in (True, False, None):
+            state = GameState.new(BK100, extras=value)
+            self.storage.save_active(state)
+            self.assertIs(GameStorage(self.storage.data_dir, self.storage.results_dir).load_active().state.extras,
+                          value)
+        data = GameState.new(BK100).to_dict()
+        del data["extras"]                                        # Spielstand einer älteren Version
+        self.assertIsNone(GameState.from_dict(data).extras)
+        data["extras"] = "ja"
+        with self.assertRaises(ValueError):
+            GameState.from_dict(data)
+
     def test_roundtrip_restores_everything(self):
         state = self.new_state(BK100, [3, -2, 0, 7, -7])
         state.elapsed_seconds = 123.4

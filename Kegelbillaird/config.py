@@ -61,8 +61,8 @@ CLUB_NAME = "SG Grün-Weiß Schlepzig e.V."
 # "" = kein Logo. Bequemer: im Einstellungsmenü unter „Anzeige“ auswählen.
 CLUB_LOGO = ""
 
-# Schriftgröße in Prozent: 80, 90, 100, 110, 120 oder 130
-FONT_SCALE = 100
+# Schriftgröße in Prozent: 80 … 200 in Zehnerschritten, Standard 130
+FONT_SCALE = 130
 
 # Felder in der Zählansicht ein-/ausblenden (auch im Einstellungsmenü unter „Anzeige“)
 SHOW_HISTORY = True          # „Letzte Stöße“
@@ -95,13 +95,13 @@ KEY_MINUS = ["-"]            # Minus wählen; ist auch das „Ja“ bei der Abbr
 KEY_UNDO = ["/"]             # letzte Wertung zurücknehmen
 KEY_ABORT = ["*"]            # Partie beenden/abbrechen (danach mit KEY_MINUS bestätigen)
 
-# --- In Menüs, Archiv, Auswertung und Wiedergabe ---
+# --- In Menüs, Archiv, Auswertung und „Partie ansehen“ ---
 KEY_UP = ["8", "Up"]         # nach oben (im Bericht: hoch blättern)
 KEY_DOWN = ["2", "Down"]     # nach unten (im Bericht: runter blättern)
 KEY_LEFT = ["4", "Left"]     # Auswertung: Knopf links
 KEY_RIGHT = ["6", "Right"]   # Auswertung: Knopf rechts
-KEY_ENTER = ["Enter"]        # bestätigen; in der Wiedergabe Pause/Weiter
-KEY_BACK = ["*", "Esc"]      # zurück / Fenster schließen / Wiedergabe beenden
+KEY_ENTER = ["Enter"]        # bestätigen; bei „Partie ansehen“: Auswertung
+KEY_BACK = ["*", "Esc"]      # zurück / Fenster schließen / angesehene Partie verlassen
 
 # ---------------------------------------------------------------------
 #  TON UND BILDER (reine Zugabe – fehlt etwas, läuft die Partie normal weiter)
@@ -124,6 +124,8 @@ SOUND_KEYS = ()
 # Wochentage Montag … Sonntag: An = an diesem Tag kommen die Bilder/GIFs und die Sound-Tasten.
 # Halbzeit-Ton, Ende-Ton und der Ton bei +6 / +7 kommen IMMER.
 EXTRAS_WEEKDAYS = (True, True, True, True, True, True, True)
+# An ausgeschalteten Tagen beim Start einer Partie fragen: „Soll ein Spiel mit Bildern und Sound gespielt werden?“
+EXTRAS_ASK = True
 
 # Bilder/GIFs: ALLE Bilder in "bilder\\plus" erscheinen bei CELEBRATION_VALUES,
 # alle in "bilder\\minus" bei CELEBRATION_MINUS_VALUES (Ordner leer -> Plus-Bilder).
@@ -193,7 +195,7 @@ OPEN_PDF_AFTER_GAME = False
 #  ARCHIV
 # ---------------------------------------------------------------------
 
-# Tempo der Wiedergabe in Sekunden pro Stoß (während der Wiedergabe mit [+] / [−] änderbar)
+# Wird nicht mehr benutzt: „Partie ansehen“ im Archiv zeigt die Partie sofort komplett.
 REPLAY_SECONDS_PER_STROKE = 0.8
 
 # ---------------------------------------------------------------------

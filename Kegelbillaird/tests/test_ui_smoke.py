@@ -443,7 +443,7 @@ class UiSmokeTests(unittest.TestCase):
         window = self.open_window()
         self.open_archive(window)                                # beendete Partie ist oben vorgewählt
         self.key(window, Qt.Key.Key_Enter)
-        self.assertEqual(window.overlay.content.choices, ["AUSWERTUNG ANZEIGEN", "WIEDERGABE", "ZURÜCK"])
+        self.assertEqual(window.overlay.content.choices, ["AUSWERTUNG ANZEIGEN", "PARTIE ANSEHEN", "ZURÜCK"])
         self.key(window, Qt.Key.Key_Enter)                       # AUSWERTUNG ANZEIGEN
         result = window.result_screen
         self.assertIs(window.stack.currentWidget(), result)      # kein Extra-Fenster
@@ -474,38 +474,34 @@ class UiSmokeTests(unittest.TestCase):
         self.assertIs(window.stack.currentWidget(), window.archive_screen)
 
     def test_replay_shows_game_without_saving(self):
+        """Archiv → PARTIE ANSEHEN: die ganze Partie steht sofort da (kein Ablauf Stoß für Stoß)."""
         finished, _ = self._archive_two_games()
         window = self.open_window()
         self.open_archive(window)
         self.key(window, Qt.Key.Key_Enter)
-        self.key(window, Qt.Key.Key_2)                           # WIEDERGABE
+        self.assertEqual(window.overlay.content.choices[1], "PARTIE ANSEHEN")
+        self.key(window, Qt.Key.Key_2)                           # PARTIE ANSEHEN
         self.key(window, Qt.Key.Key_Enter)
         screen = window.game_screen
         self.assertIs(window.stack.currentWidget(), screen)
         self.assertTrue(screen.is_replay)
-        self.assertIn("Wiedergabe", window.title_bar._title)
-        for _ in range(6):
-            self.key(window, Qt.Key.Key_Plus)                    # schnellstes Tempo
+        self.assertIn("Partie ansehen", window.title_bar._title)
+        self.assertEqual(screen.game.state.strokes, finished.strokes)   # sofort komplett
+        QTest.qWait(300)
+        self.assertEqual(screen.game.state.strokes, finished.strokes)   # bleibt so, kein Ablauf
         self.key(window, Qt.Key.Key_5)                           # Wertungstasten wirken nicht
-        QTest.qWait(700)
-        self.assertGreater(screen.game.played, 1)
-        self.key(window, Qt.Key.Key_Enter)                       # Pause
-        paused_at = screen.game.played
-        QTest.qWait(400)
-        self.assertEqual(screen.game.played, paused_at)
-        self.key(window, Qt.Key.Key_Enter)                       # weiter
-        QTest.qWait(50 * 150 + 500)
+        self.key(window, Qt.Key.Key_Plus)
         self.assertEqual(screen.game.state.strokes, finished.strokes)
         self.assertFalse(self.storage.has_active_files())        # nichts gespeichert
         self.assertFalse(screen.has_live_game)
-        self.key(window, Qt.Key.Key_Enter)                       # am Ende: Statistik
+        self.key(window, Qt.Key.Key_Enter)                       # Auswertung
         self.assertIs(window.stack.currentWidget(), window.result_screen)
-        self.key(window, Qt.Key.Key_Escape)                      # zurück zur Wiedergabe
+        self.key(window, Qt.Key.Key_Escape)                      # zurück zur angesehenen Partie
         self.assertIs(window.stack.currentWidget(), screen)
-        self.key(window, Qt.Key.Key_Escape)                      # Wiedergabe verlassen
+        self.key(window, Qt.Key.Key_Escape)                      # verlassen
         self.assertIs(window.stack.currentWidget(), window.archive_screen)
         window.close()
-        self.assertFalse(self.storage.has_active_files())        # Schließen speichert keine Wiedergabe
+        self.assertFalse(self.storage.has_active_files())        # Schließen speichert nichts
 
     def test_continue_aborted_game_from_archive(self):
         _, aborted = self._archive_two_games()

@@ -150,7 +150,7 @@ Die Auswertung („Endergebnis“) passt komplett auf einen Bildschirm (ohne Bl�
 | **Partie drucken** | druckt sofort auf dem eingestellten Drucker bzw. dem **Windows-Standarddrucker** – ohne Druckdialog |
 | **Tabelle ansehen** | zeigt das fertige Stoß-Raster mit den Punkten je Reihe; „Auswertung“ bzw. `*`/`Esc` führt zurück |
 | **Neue Partie** | startet sofort dieselbe Spielart noch einmal (nur direkt nach einer Partie) |
-| **Hauptmenü** / **Zurück** | nach einer Partie ins Hauptmenü, sonst zurück ins Archiv bzw. zur Wiedergabe |
+| **Hauptmenü** / **Zurück** | nach einer Partie ins Hauptmenü, sonst zurück ins Archiv bzw. zur angesehenen Partie |
 
 **Sperre nach Partie-Ende:** Die ersten **5 Sekunden** reagiert die Auswertung nicht auf `Enter`, `*` oder
 Mausklicks (Fußzeile: „Eingabe gesperrt – noch … s“) – so landet man nicht durch einen doppelten Tastendruck
@@ -166,9 +166,9 @@ Spielart, Status (beendet / abgebrochen / unterbrochen), Stoßzahl und Ergebnis.
 `8` / `2` wählen (durch beide Abschnitte), `Enter` öffnet die Partie, `*` oder `Esc` führt zurück. Zur Auswahl stehen:
 
 * **AUSWERTUNG ANZEIGEN** – das Auswertung (Speichern, Drucken, Schließen)
-* **WIEDERGABE** – die Partie läuft Stoß für Stoß noch einmal auf der Zähltafel ab
-  (`Enter` Pause/Weiter, `+` / `−` schneller/langsamer, `*` oder `Esc` beenden;
-  am Ende öffnet `Enter` die Auswertung). Eine Wiedergabe verändert und speichert nichts.
+* **PARTIE ANSEHEN** – die Partie steht **sofort komplett** auf der Zähltafel (alle Stöße im Raster,
+  Endstand, Halbzeit, Minus, Spieldauer). `Enter` öffnet die Auswertung, `*` oder `Esc` führt zurück
+  ins Archiv. Dabei wird nichts verändert oder gespeichert.
 * **WEITERSPIELEN** – nur bei abgebrochenen oder unterbrochenen Partien: Die Partie wird
   wieder zur laufenden Partie und genau dort fortgesetzt, wo sie aufgehört hat.
 
@@ -184,17 +184,21 @@ Das Menü ist nur aus dem Hauptmenü erreichbar, nie während einer Partie.
 Bedienung: `8`/`2` wählen · `4`/`6` Wert ändern · `Enter` Bereich öffnen / Text oder Zahl eingeben /
 Taste aufnehmen / Ton probehören · `*`/`Esc` zurück (bzw. die eingestellten Tasten). Maus geht zusätzlich.
 
+Zu jedem Eintrag steht unten eine kurze Beschreibung, was genau passiert.
+
 | Bereich | Einstellungen |
 |---------|---------------|
-| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Immer im Vordergrund**, **Mauszeiger ausblenden nach** (Aus / 3 / 5 / 10 / 30 s), **Schriftgröße** (80–130 %), Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`), **Raster zeigt** Gesamtpunkte / Einzelstoß, Anzahl „Letzte Stöße“, Felder **„Letzte Stöße“** und **„Eingabe“** ein-/ausblenden (der Nachbar wird dann breiter), **Beim Windows-Start öffnen** (Autostart) |
+| Anzeige | Vollbild an/aus, Fenstergröße (1024×768 … 1920×1080), **Immer im Vordergrund**, **Mauszeiger ausblenden nach** (Aus / 3 / 5 / 10 / 30 s), **Schriftgröße** (80–200 %, **Standard 130 %**), **Beim Windows-Start öffnen** (Autostart) |
+| Zählansicht | **Raster zeigt** Gesamtpunkte / Einzelstoß, Felder **„Letzte Stöße“** und **„Eingabe“** ein-/ausblenden (der Nachbar wird dann breiter), Anzahl „Letzte Stöße“ |
+| Verein | Vereinsname (normale Tastatur), **Vereinslogo** (aus Ordner `vereinslogo`) |
 | Design | Farbschema **Klassisch** (Vorlage) oder **Eigene Farben**: Primärfarbe (Leisten, Hintergrund, gewählter Knopf) und Sekundärfarbe (Rahmen, Beschriftungen, Knöpfe, Linien) als R/G/B 0–255. Rot/Grün der Wertung bleiben immer gleich; auf dunklen Leisten wird die Schrift automatisch weiß |
-| Eingabe | Sperrzeit nach Wertung, **Sperre mit `Enter` überspringen**, Sperre nach Korrektur, **Sperre beim Zurückblättern** (Korrekturfenster, 0 = aus), Sperre nach Partie-Ende, Wartezeit der Abbruch-Frage, Nur Nummernblock, NumLock automatisch |
+| Eingabe & Sperren | Sperrzeit nach Wertung, **Sperre mit `Enter` überspringen**, Sperre nach Korrektur, **Sperre beim Zurückblättern** (Korrekturfenster, 0 = aus), Wartezeit der Abbruch-Frage, Nur Nummernblock, NumLock automatisch |
 | Tasten | jede Aktion: `Enter`, dann die neue Taste drücken (doppelt belegte Tasten werden abgelehnt); `4`/`6` = Standard. Legende passt sich sofort an |
 | Töne | Töne an/aus, Lautstärke 0–100 %, Ton zur Halbzeit, Ton am Partie-Ende, Ton bei +6 / +7 – Auswahl aus allen `.wav`/`.mp3` im Ordner `sounds`. **Sonstiges (Sound-Tasten)**: „+ Neue Sound-Taste“ anklicken/`Enter`, dann die gewünschte Taste oder Tastenkombination drücken (z. B. `F5`, `Strg`+`1`) – sie wird sofort übernommen. Beliebig viele, Ton je Taste mit `4`/`6`; `Enter` auf einem Eintrag = Taste ändern, Ton, **Spieldauer** („ganz“ oder 1–60 Sekunden, danach wird der Ton gestoppt), probehören, löschen. Sound-Tasten gelten **nur in der laufenden Partie** – in den Menüs behalten die Tasten ihre normale Aufgabe (z. B. `8` = nach oben). Tasten, die in der Partie schon benutzt werden (Ziffern `0`–`7`, `+`, `-`, `/`, `*`, `Enter`, `Esc` …), werden abgelehnt; `8` und `9` sind frei |
 | Bilder | Bilder an/aus, Anzeigedauer, Übersicht „Bilder bei +6/+7“ und „−6/−7“ mit An/Aus je Bild |
-| Wochentage | Montag … Sonntag je An/Aus: an diesem Tag kommen die **Bilder/GIFs** und die **Sound-Tasten**. Halbzeit-Ton, Ende-Ton und der Ton bei +6 / +7 kommen **immer** |
-| Drucken & PDF | Drucker (Windows-Standarddrucker oder ein installierter Drucker), PDF-Speicherort für „Als PDF speichern“ (ohne Nachfrage; Standard: Dokumente), Auswertung nach der Partie, PDF automatisch öffnen |
-| Archiv & Aufräumen | Wiedergabe-Tempo, Aufbewahrung von Archiv, Protokollen und PDFs |
+| Wochentage | Montag … Sonntag je An/Aus: an diesem Tag kommen die **Bilder/GIFs** und die **Sound-Tasten**. Halbzeit-Ton, Ende-Ton und der Ton bei +6 / +7 kommen **immer**. **An ausgeschalteten Tagen nachfragen** (Standard An): an einem ausgeschalteten Tag fragt das Programm beim Start jeder Partie „Soll ein Spiel mit Bildern und Sound gespielt werden?“ – vorgewählt **NEIN**, `8` = JA, `*`/`Esc` = keine Partie starten. Die Antwort gilt für diese Partie, auch nach dem Fortsetzen |
+| Nach der Partie | Auswertung nach der Partie, **Sperre nach Partie-Ende**, PDF automatisch öffnen, Drucker (Windows-Standarddrucker oder ein installierter Drucker), PDF-Speicherort für „Als PDF speichern“ (ohne Nachfrage; Standard: Dokumente) |
+| Archiv & Aufräumen | Aufbewahrung von Archiv, Protokollen und PDFs |
 | Alle Einstellungen zurücksetzen | zweimal `Enter` – danach gelten wieder die Werte aus `config.py` |
 
 Ist `einstellungen.json` beschädigt, startet das Programm trotzdem (Sicherung bzw. Standardwerte) und zeigt einen Hinweis.
@@ -240,7 +244,7 @@ Werte aus dem Einstellungsmenü haben Vorrang. Nach einer Änderung hier das Pro
 | `SOUND_KEYS` | `()` | Sound-Tasten, z. B. `(("Ctrl+F1", "tusch.wav", 5),)` – 3. Wert = Spieldauer in Sekunden (0/weglassen = ganz); einfacher im Menü (Töne → Sonstiges) |
 | `EXTRAS_WEEKDAYS` | 7 × `True` | Montag … Sonntag: Bilder und Sound-Tasten an diesem Tag (auch im Menü „Wochentage“) |
 | `CORRECTION_STEP_LOCK_SECONDS` | `0.3` | Korrekturfenster: Sperre nach `/` (einen Stoß zurück), 0 = aus |
-| `CLUB_LOGO`, `FONT_SCALE` | `""`, `100` | Vereinslogo (Dateiname im Ordner `vereinslogo`), Schriftgröße in % (auch im Menü) |
+| `CLUB_LOGO`, `FONT_SCALE` | `""`, `130` | Vereinslogo (Dateiname im Ordner `vereinslogo`), Schriftgröße in % (80–200, auch im Menü) |
 | `CELEBRATION_SECONDS` | `3` | Anzeigedauer des Bildes; verschwindet auch bei `/` und der nächsten Wertung |
 | `AUTO_ENABLE_NUMLOCK` | `True` | NumLock prüfen und automatisch einschalten (`False` = nur warnen) |
 | `NUMLOCK_CHECK_SECONDS` | `2` | Prüfintervall für NumLock |
@@ -250,7 +254,7 @@ Werte aus dem Einstellungsmenü haben Vorrang. Nach einer Änderung hier das Pro
 | `PDF_ROWS_PER_BLOCK`, `PDF_BLOCKS_PER_ROW` | `25`, `4` | Aufteilung der Stoßliste im PDF (4 × 25 = 100 Stöße auf einer Seite) |
 | `SHOW_REPORT_AFTER_GAME` | `True` | nach jeder Partie das Auswertung öffnen (das PDF wird in jedem Fall gespeichert) |
 | `OPEN_PDF_AFTER_GAME` | `False` | PDF zusätzlich im PDF-Programm von Windows öffnen |
-| `REPLAY_SECONDS_PER_STROKE` | `0.8` | Tempo der Wiedergabe aus dem Archiv (Sekunden pro Stoß) |
+| `REPLAY_SECONDS_PER_STROKE` | `0.8` | wird nicht mehr benutzt („Partie ansehen“ zeigt die Partie sofort komplett) |
 | `ARCHIVE_RETENTION_DAYS` | `30` | Archiv (`data\archive`) und beschädigte Spielstände (`data\corrupt`) nach so vielen Tagen löschen (0 = nie) |
 | `LOG_RETENTION_DAYS` | `30` | Protokolldateien (`logs`) nach so vielen Tagen löschen (0 = nie) |
 | `RESULTS_RETENTION_DAYS` | `0` | PDFs/Ergebnisse (`results`) nach so vielen Tagen löschen – Standard 0 = nie |

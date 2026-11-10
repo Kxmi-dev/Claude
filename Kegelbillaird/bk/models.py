@@ -112,6 +112,13 @@ def _corrections(value: Any) -> int | None:
     return number
 
 
+def _extras(value: Any) -> bool | None:
+    """Antwort auf „mit Bildern und Sound?“ (fehlt bei älteren/nicht gefragten Partien → None)."""
+    if value is None or isinstance(value, bool):
+        return value
+    raise ValueError("Ungültiger Wert für 'extras'.")
+
+
 def _strict_int(value: Any, name: str) -> int:
     """Akzeptiert nur echte Ganzzahlen (kein bool, kein float, kein Text)."""
     if isinstance(value, bool) or not isinstance(value, int):
@@ -137,10 +144,11 @@ class GameState:
     elapsed_seconds: float = 0.0
     revision: int = 0
     corrections: int | None = None   # Anzahl Korrekturen mit [/]; None = alte Partie (nicht gezählt)
+    extras: bool | None = None       # Bilder/Sound-Tasten in dieser Partie (Antwort auf die Nachfrage); None = Wochentag
 
     # ------------------------------------------------------------------ Fabrik
     @classmethod
-    def new(cls, mode: GameMode, started_at: str | None = None) -> "GameState":
+    def new(cls, mode: GameMode, started_at: str | None = None, extras: bool | None = None) -> "GameState":
         if not mode.available:
             raise ValueError(f"Spielart '{mode.title}' ist nicht verfügbar.")
         return cls(
@@ -148,6 +156,7 @@ class GameState:
             mode=mode,
             started_at=started_at or now_iso(),
             corrections=0,
+            extras=extras,
         )
 
     # ------------------------------------------------------ Serialisierung
@@ -162,6 +171,7 @@ class GameState:
             "elapsed_seconds": round(float(self.elapsed_seconds), 1),
             "revision": self.revision,
             "corrections": self.corrections,
+            "extras": self.extras,
         }
 
     @classmethod
@@ -207,6 +217,7 @@ class GameState:
                 elapsed_seconds=float(elapsed),
                 revision=_strict_int(data.get("revision", 0), "revision"),
                 corrections=_corrections(data.get("corrections")),
+                extras=_extras(data.get("extras")),
             )
         except KeyError as exc:
             raise ValueError(f"Pflichtfeld fehlt im Spielstand: {exc}") from exc

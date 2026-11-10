@@ -169,16 +169,18 @@ class SettingsMenuTests(unittest.TestCase):
         self.assertIs(self.window.stack.currentWidget(), menu)
 
     def test_toggle_and_numbers_are_saved_and_applied(self):
-        self.open_section("Anzeige")
+        self.open_section("Zählansicht")
         self.select("Anzahl „Letzte Stöße“")
         self.key(Qt.Key.Key_6)
         self.assertEqual(self.window._settings.history_length, self.base.history_length + 1)
         self.assertEqual(self.window.game_screen.history_box._lines, self.base.history_length + 1)
+        self.key(Qt.Key.Key_Escape)
+        self.open_section("Anzeige")
         self.select("Vollbild")
         self.key(Qt.Key.Key_6)
         self.assertEqual(self.saved()["fullscreen"], not self.base.fullscreen)
         self.key(Qt.Key.Key_Escape)
-        self.open_section("Eingabe")
+        self.open_section("Eingabe & Sperren")
         self.key(Qt.Key.Key_6)                                     # Sperrzeit +0,5 s
         self.assertAlmostEqual(self.window.game_screen._settings.input_lock_seconds, 0.6)
 
@@ -186,7 +188,7 @@ class SettingsMenuTests(unittest.TestCase):
         panels = self.window.game_screen.panels
         self.assertFalse(panels["history"].isHidden())
         self.assertFalse(panels["status"].isHidden())
-        self.open_section("Anzeige")
+        self.open_section("Zählansicht")
         self.select("Feld „Letzte Stöße“ anzeigen")
         self.key(Qt.Key.Key_Enter)
         self.select("Feld „Eingabe“ anzeigen")
@@ -201,7 +203,7 @@ class SettingsMenuTests(unittest.TestCase):
         self.assertFalse(panels["status"].isHidden())
 
     def test_club_name_text_input(self):
-        self.open_section("Anzeige")
+        self.open_section("Verein")
         self.screen.ask_text = lambda title, label, current: "Neuer Verein"
         self.select("Vereinsname")
         self.key(Qt.Key.Key_Enter)
@@ -211,11 +213,14 @@ class SettingsMenuTests(unittest.TestCase):
     def test_font_scale_is_saved_and_applied(self):
         self.open_section("Anzeige")
         self.select("Schriftgröße")
+        self.assertEqual(self.window._settings.font_scale, 130)                  # neuer Standard
+        self.assertEqual(self.screen._list.current().value(), "130 %  (Standard)")
         before = self.theme.fitted_font("Text", 1000, 20).pixelSize()
         self.key(Qt.Key.Key_6)
         self.key(Qt.Key.Key_6)
-        self.assertEqual(self.window._settings.font_scale, 120)
-        self.assertEqual(self.saved()["font_scale"], 120)
+        self.assertEqual(self.window._settings.font_scale, 150)                  # höher als früher möglich
+        self.assertEqual(self.saved()["font_scale"], 150)
+        self.assertEqual(self.screen._list.current().value(), "150 %")
         self.assertGreater(self.theme.fitted_font("Text", 1000, 20).pixelSize(), before)
         # Breite bleibt die Grenze: ein schmales Feld verkleinert die Schrift trotz 120 %
         # (Breite großzügig gewählt – Schriftbreiten unterscheiden sich zwischen Windows und Linux)
@@ -226,11 +231,16 @@ class SettingsMenuTests(unittest.TestCase):
         narrow = self.theme.fitted_font(text, width, 40)
         self.assertLess(narrow.pixelSize(), wide.pixelSize())
         self.assertLessEqual(QFontMetricsF(narrow).horizontalAdvance(text), width + 1)
-        for _ in range(4):
+        for _ in range(5):
+            self.key(Qt.Key.Key_6)
+        self.assertEqual(self.window._settings.font_scale, 200)      # Höchstwert
+        for _ in range(12):
             self.key(Qt.Key.Key_4)
-        self.assertEqual(self.window._settings.font_scale, 80)       # 120 -> 110 -> … -> 80
+        self.assertEqual(self.window._settings.font_scale, 80)       # 200 -> 190 -> … -> 80
         with self.assertRaises(ValueError):
             self.store.set("font_scale", 95)
+        with self.assertRaises(ValueError):
+            self.store.set("font_scale", 210)
 
     def test_club_logo_from_folder(self):
         from PySide6.QtGui import QImage
@@ -240,7 +250,7 @@ class SettingsMenuTests(unittest.TestCase):
         QImage(20, 10, QImage.Format.Format_RGB32).save(str(folder / "verein.png"))
         menu = self.window.menu_screen
         self.assertFalse(menu.brand.has_logo)
-        self.open_section("Anzeige")
+        self.open_section("Verein")
         self.select("Vereinslogo")
         self.assertEqual(self.screen._list.current().value(), "(kein Logo)")
         self.key(Qt.Key.Key_6)
@@ -260,7 +270,7 @@ class SettingsMenuTests(unittest.TestCase):
         self.assertTrue(self.window.title_bar._logo.isNull())
         self.assertIn("Vereinslogo", self.window.footer.current_text())
         self.window.show_settings()
-        self.open_section("Anzeige")
+        self.open_section("Verein")
         self.select("Vereinslogo")
         self.assertEqual(self.screen._list.current().value(), "verein.png (fehlt)")
         self.key(Qt.Key.Key_6)                                     # zurück auf „kein Logo“
@@ -447,6 +457,77 @@ class SettingsMenuTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             dataclasses.replace(self.window._settings, sound_keys=(("F5", "a.wav", 61),)).validate()
 
+    def _extras_window_today_off(self, ask=True):
+        """Heute in den Wochentagen ausschalten (und Nachfrage an/aus)."""
+        import datetime
+        days = [True] * 7
+        days[datetime.date.today().weekday()] = False
+        self.window.apply_settings(self.store.set("extras_weekdays", tuple(days)))
+        self.window.apply_settings(self.store.set("extras_ask", ask))
+        self.window.show_menu()
+
+    def test_extras_question_on_switched_off_day(self):
+        """Ausgeschalteter Tag: Frage beim Start, vorgewählt NEIN; JA = Bilder/Sound-Tasten in dieser Partie."""
+        played = []
+        self.window.game_screen.play_sound = lambda name, seconds=0: played.append(name) or True
+        self.window.apply_settings(self.store.set("sound_keys", (("F5", "a.wav", 0),)))
+        self._extras_window_today_off()
+        self.window.menu_screen.mode_chosen.emit(BK50)
+        self.assertTrue(self.window.overlay.interactive)
+        self.assertEqual(self.window.overlay.content.title, "Soll ein Spiel mit Bildern und Sound gespielt werden?")
+        self.assertEqual(self.window.overlay._selected, 1)                       # NEIN vorgewählt
+        self.key(Qt.Key.Key_Enter)                                               # NEIN
+        screen = self.window.game_screen
+        self.assertIs(self.window.stack.currentWidget(), screen)
+        self.assertIs(screen.game.state.extras, False)
+        self.assertFalse(screen.extras_active())
+        self.combo(Qt.Key.Key_F5)
+        self.assertEqual(played, [])                                             # keine Sound-Taste
+        screen.clear()
+        self.window.show_menu()
+        self.window.menu_screen.mode_chosen.emit(BK50)
+        self.key(Qt.Key.Key_8)                                                   # JA wählen
+        self.key(Qt.Key.Key_Enter)
+        self.assertIs(screen.game.state.extras, True)
+        self.assertTrue(screen.extras_active())
+        self.combo(Qt.Key.Key_F5)
+        self.assertEqual(played, ["a.wav"])                                      # Sound-Taste trotz Aus-Tag
+        screen.clear()
+
+    def test_extras_question_cancel_and_switched_off(self):
+        self._extras_window_today_off()
+        self.window.menu_screen.mode_chosen.emit(BK50)
+        self.key(Qt.Key.Key_Escape)                                              # Abbrechen
+        self.assertFalse(self.window.overlay.isVisible())
+        self.assertIs(self.window.stack.currentWidget(), self.window.menu_screen)
+        self.assertFalse(self.storage.has_active_files())                        # keine Partie gestartet
+        self._extras_window_today_off(ask=False)                                 # Nachfrage aus
+        self.window.menu_screen.mode_chosen.emit(BK50)
+        self.assertIs(self.window.stack.currentWidget(), self.window.game_screen)
+        self.assertIsNone(self.window.game_screen.game.state.extras)
+        self.assertFalse(self.window.game_screen.extras_active())                # Wochentag gilt
+        self.assertEqual(self.saved()["extras_ask"], False)
+        self.window.game_screen.clear()
+
+    def test_no_extras_question_on_switched_on_day(self):
+        self.window.menu_screen.mode_chosen.emit(BK50)                           # alle Tage an
+        self.assertIs(self.window.stack.currentWidget(), self.window.game_screen)
+        self.assertIsNone(self.window.game_screen.game.state.extras)
+        self.assertTrue(self.window.game_screen.extras_active())
+        self.window.game_screen.clear()
+
+    def test_every_setting_has_a_description(self):
+        """Zu jeder Einstellung gibt es eine kurze Beschreibung (Nutzerwunsch)."""
+        missing = []
+        for title, builder in [(i.label, i) for i in self.screen._overview()][:-2]:
+            self.assertTrue(builder.hint, f"Bereich „{title}“ ohne Beschreibung")
+            self.open_section(title)
+            for item in self.screen._list._items:
+                if not item.hint:
+                    missing.append(f"{title} → {item.label}")
+            self.key(Qt.Key.Key_Escape)
+        self.assertEqual(missing, [])
+
     def test_weekdays_and_step_lock(self):
         self.open_section("Wochentage")
         self.assertEqual([i.label for i in self.screen._list._items][:7],
@@ -456,7 +537,7 @@ class SettingsMenuTests(unittest.TestCase):
         self.assertEqual(self.window._settings.extras_weekdays, (True, True, False, True, True, True, True))
         self.assertFalse(self.window._settings.extras_today(2))
         self.assertEqual(self.saved()["extras_weekdays"], [True, True, False, True, True, True, True])
-        self.open_section("Eingabe")
+        self.open_section("Eingabe & Sperren")
         self.select("Sperre beim Zurückblättern")
         self.key(Qt.Key.Key_6)
         self.assertAlmostEqual(self.window._settings.correction_step_lock_seconds,
@@ -480,7 +561,7 @@ class SettingsMenuTests(unittest.TestCase):
     def test_pdf_folder_and_printer(self):
         from bk.ui import report_output
         target = self.tmp.path / "usb"
-        self.open_section("Drucken & PDF")
+        self.open_section("Nach der Partie")
         self.screen.ask_folder = lambda title, start: str(target)
         self.select("PDF-Speicherort")
         self.key(Qt.Key.Key_Enter)

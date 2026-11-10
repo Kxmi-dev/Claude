@@ -22,14 +22,13 @@ ACTIONS: dict[str, tuple[tuple[str, ...], str]] = {
     "down":  (("2", "Down"), "Menü: nach unten / im Bericht nach unten blättern"),
     "left":  (("4", "Left"), "Auswertung: Knopf links"),
     "right": (("6", "Right"), "Auswertung: Knopf rechts"),
-    "enter": (("Enter",), "Bestätigen / Wiedergabe Pause und Weiter"),
-    "back":  (("*", "Esc"), "Zurück / Fenster schließen / Wiedergabe beenden"),
+    "enter": (("Enter",), "Bestätigen / im Archiv: Auswertung der angesehenen Partie"),
+    "back":  (("*", "Esc"), "Zurück / Fenster schließen / angesehene Partie verlassen"),
 }
 
 # Tasten, die sich im selben Zusammenhang nicht doppeln dürfen
 GAME_ACTIONS = ("plus", "minus", "undo", "abort")
 MENU_ACTIONS = ("up", "down", "left", "right", "enter", "back")
-REPLAY_ACTIONS = MENU_ACTIONS + ("plus", "minus")   # Wiedergabe: Menütasten + Tempo
 
 # Zeichen, die als Namen erlaubt sind (zusätzlich Buchstaben, Ziffern, F1–F12)
 SYMBOLS = ("+", "-", "/", "*", ".", ",")
@@ -118,8 +117,7 @@ class KeyBindings:
             for key in self.keys(action):
                 if key.isdigit():
                     raise ValueError(f"KEY_{action.upper()}: Die Ziffern 0–9 sind für die Wertung reserviert.")
-        for group, title in ((GAME_ACTIONS, "in der Partie"), (MENU_ACTIONS, "in Menüs"),
-                             (REPLAY_ACTIONS, "in der Wiedergabe")):
+        for group, title in ((GAME_ACTIONS, "in der Partie"), (MENU_ACTIONS, "in Menüs")):
             seen: dict[str, str] = {}
             for action in group:
                 for key in self.keys(action):

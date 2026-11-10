@@ -59,8 +59,7 @@ class KeyNameTests(unittest.TestCase):
         self.assertIn("doppelt", str(ctx.exception))
         with self.assertRaises(ValueError):
             KeyBindings.from_config(cfg(enter="8"))           # 8 ist schon "up"
-        with self.assertRaises(ValueError):
-            KeyBindings.from_config(cfg(plus="Esc"))          # Wiedergabe: Esc ist "back"
+        KeyBindings.from_config(cfg(plus="Esc"))              # erlaubt: „Partie ansehen“ nutzt kein Plus mehr
 
     def test_digits_and_empty_lists_are_rejected(self):
         with self.assertRaises(ValueError):

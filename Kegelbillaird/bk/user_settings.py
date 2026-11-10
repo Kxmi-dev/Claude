@@ -137,6 +137,7 @@ FIELDS: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]]] = {
     "sound_volume": (_int, int),
     "sound_keys": (_sound_keys, lambda v: [list(e) for e in v]),
     "extras_weekdays": (_bools(7), list),
+    "extras_ask": (_bool, bool),
     "celebration_enabled": (_bool, bool),
     "celebration_seconds": (_float, float),
     "disabled_images": (_strs, list),

@@ -43,7 +43,7 @@ bk/ui/menu_screen.py Hauptmenü: 100 Stoß, 50 Stoß, Billiard vs Fußball (25 S
                      Rechts `BrandPanel` (widgets): Vereinslogo im weißen Kasten, gezeichneter Billardtisch (Holzbande,
                      Mini-Zähltafel, 5 stehende Holzkegel (Ahorn) als Kreuz, König gleiche Holzfarbe, nur etwas größer (Nutzerwunsch), 3 Kugeln), „BK-Scoreboard / Version {APP_VERSION}“ (3.0) und darunter „powered by Kimi&AP“ (Nutzerwunsch).
                      Vereinslogo zusätzlich klein rechts in der Titelleiste (`TitleBar.set_logo`).
-bk/ui/game_screen.py Zählansicht + Wiedergabe-Modus
+bk/ui/game_screen.py Zählansicht + „Partie ansehen“ (Archiv, intern `is_replay`)
 bk/ui/archive_screen.py  Archivliste
 bk/ui/result_screen.py   Auswertung „Endergebnis“ im Hauptfenster (Kennzahlen, Spielanalyse, Statistik, Knöpfe, Sperre)
 bk/ui/report_output.py   PDF speichern (ohne Nachfrage) + drucken (ohne Dialog), gleiche Bytes wie results-PDF
@@ -103,7 +103,13 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 - Hauptmenü: … Archiv, **Einstellungen**, Beenden, PC ausschalten. Nur außerhalb einer Partie erreichbar.
 - Jede Änderung: `store.set()` prüft (AppSettings.validate) → speichert sofort → `MainWindow.apply_settings()`
   übernimmt live (keymap, theme.apply_colors, Titelleiste, GameScreen.set_settings, Fenster, NumLock-Guard).
-- Bereiche: Anzeige (Vollbild, Fenstergröße-Presets, Schriftgröße 80–130 % (`theme.FONT_SCALE` wirkt in
+- **Sortierung (Nutzerwunsch 10.11.2026):** Anzeige · Zählansicht · Verein · Design · Eingabe & Sperren · Tasten · Töne ·
+  Bilder · Wochentage · Nach der Partie · Archiv & Aufräumen. JEDER Eintrag hat eine kurze Beschreibung (`hint`,
+  Test `test_every_setting_has_a_description`). Schriftgröße 80–200 %, **Standard 130 %** (`DEFAULT_FONT_SCALE`, Anzeige „(Standard)“).
+- **Nachfrage an ausgeschalteten Tagen** (`extras_ask`, Wochentage, Standard An): Partiestart an einem Aus-Tag →
+  „Soll ein Spiel mit Bildern und Sound gespielt werden?“ JA/NEIN (NEIN vorgewählt, [*]/Esc = abbrechen), Antwort in
+  `GameState.extras` (None = Wochentag, alte Spielstände), `GameScreen.extras_active()` für Bilder + Sound-Tasten.
+- Bereiche (alte Beschreibung, Inhalte gelten weiter): Anzeige (Vollbild, Fenstergröße-Presets, Schriftgröße (`theme.FONT_SCALE` wirkt in
   `fitted_font` auf die Höhe, Breite bleibt Grenze; große Zahlen per `base_font` unverändert), Vereinsname per
   QInputDialog, Vereinslogo aus `vereinslogo/` (Hauptmenü rechts groß, unverändert angezeigt – automatisches Freistellen
   wurde auf Wunsch WIEDER ENTFERNT, der Verein passt das Logo selbst an; BK-Scoreboard-Bild im Menü UND im PDF ENTFERNT, ohne Logo Menü mittig; im PDF-Kopf nur das Vereinslogo,
@@ -159,8 +165,9 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
 - PDF enthält „**Anzahl je Wertung**“ (wie oft −7…+7 gestoßen) und gleich dicke Tabellenlinien
   (`LINE_WIDTH`, alle Maße ganze Punkte). Druck mit 4 px/pt. Zählansicht-Raster nutzt kosmetische Stifte.
 - Archiv (Hauptmenü): oben grün „Letzte abgeschlossene Partien“ (3, nur beendet), darunter alle Partien;
-  Auswahl läuft mit 8/2 durch beide Listen (Start oben) → AUSWERTUNG ANZEIGEN / WIEDERGABE (Stoß für Stoß,
-  speichert nie etwas) / WEITERSPIELEN (nur abgebrochene/unterbrochene).
+  Auswahl läuft mit 8/2 durch beide Listen (Start oben) → AUSWERTUNG ANZEIGEN / **PARTIE ANSEHEN** (zeigt die Partie
+  SOFORT komplett, kein Ablauf Stoß für Stoß mehr – Nutzerwunsch 10.11.2026; Enter = Auswertung, */Esc = zurück;
+  speichert nie etwas; „Wiedergabe-Tempo“ und REPLAY_SECONDS_PER_STROKE ungenutzt) / WEITERSPIELEN (nur abgebrochene/unterbrochene).
 - **Aufräumen** beim Start + alle 6 h: `ARCHIVE_RETENTION_DAYS = 30`, `LOG_RETENTION_DAYS = 30`,
   `RESULTS_RETENTION_DAYS = 0` (PDFs nie löschen). Aktive Partie / aktuelles Log nie.
 

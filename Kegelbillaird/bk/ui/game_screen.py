@@ -33,10 +33,10 @@ Die Zählansicht bleibt stehen („ENDE“, Korrektur mit [/] weiter möglich). 
 [Enter] meldet ``completed`` – dann schließt das Hauptfenster die Partie ab und
 zeigt die Auswertung.
 
-Wiedergabe (aus dem Archiv): Dieselbe Ansicht spielt eine gespeicherte
-Partie Stoß für Stoß ab. Dabei wird eine KOPIE angezeigt – es wird nichts
-gespeichert und keine Eingabe als Wertung ausgewertet.
-[Enter] Pause/Weiter (am Ende: Auswertung), [+]/[−] Tempo, [*]/[Esc] beenden.
+„Partie ansehen“ (aus dem Archiv): Dieselbe Ansicht zeigt eine gespeicherte
+Partie SOFORT komplett (kein Ablauf Stoß für Stoß mehr – Nutzerwunsch). Dabei
+wird eine KOPIE angezeigt – es wird nichts gespeichert und keine Eingabe als
+Wertung ausgewertet. [Enter] = Auswertung, [*]/[Esc] = zurück ins Archiv.
 """
 
 from __future__ import annotations
@@ -66,7 +66,6 @@ log = logging.getLogger(__name__)
 TICK_MS = 100
 MINUS_TINT = QColor("#fbe7e7")
 HALFTIME_TINT = QColor("#fff2a8")   # Halbzeit-Feld bleibt gelb, sobald die Halbzeit erreicht ist
-REPLAY_SPEEDS = (2.0, 1.2, 0.8, 0.5, 0.3, 0.15)   # Sekunden pro Stoß
 
 
 class GameScreen(QWidget):
@@ -76,8 +75,8 @@ class GameScreen(QWidget):
     correction_prompt = Signal(object)   # Korrekturfeld: (Stoß-Nr., alt, neu|None, Minus?) oder None = schließen
     message = Signal(str, bool)          # Kurzmeldung (Text, Warnung?)
     warning = Signal(str, object)        # dauerhafte Warnung (Schlüssel, Text oder None)
-    footer_changed = Signal()            # Bedienhinweise haben sich geändert (Wiedergabe)
-    replay_exit = Signal()               # Wiedergabe beendet -> zurück ins Archiv
+    footer_changed = Signal()            # Bedienhinweise haben sich geändert (Partie ansehen)
+    replay_exit = Signal()               # „Partie ansehen“ verlassen -> zurück ins Archiv
     replay_stats = Signal(object)        # Auswertung der wiedergegebenen Partie (GameState)
 
     def __init__(self, settings: AppSettings, storage: GameStorage,
@@ -100,10 +99,6 @@ class GameScreen(QWidget):
         self._autosave.setInterval(int(settings.autosave_seconds * 1000))
         self._autosave.timeout.connect(lambda: self._persist(reason="autosave"))
         self._replay_source: GameState | None = None
-        self._replay_paused = False
-        self._replay_speed = 2
-        self._replay_timer = QTimer(self)
-        self._replay_timer.timeout.connect(self._replay_step)
         self._sound = SoundPlayer()
         self._sound_stop = QTimer(self)               # Spieldauer der Sound-Tasten
         self._sound_stop.setSingleShot(True)
@@ -236,17 +231,13 @@ class GameScreen(QWidget):
             return "Partie"
         if self.is_replay:
             started = datetime.fromisoformat(self._game.state.started_at)
-            return f"Wiedergabe: {self._game.state.mode.title} vom {started:%d.%m.%Y, %H:%M} Uhr"
+            return f"Partie ansehen: {self._game.state.mode.title} vom {started:%d.%m.%Y, %H:%M} Uhr"
         return f"Partie: {self._game.state.mode.title}"
 
     def footer_segments(self) -> list[str]:
         if self.is_replay:
-            if self._replay_done():
-                return ["Wiedergabe beendet", f"Auswertung mit  [{keymap.label('enter')}]",
-                        f"Zurück mit  [{keymap.label_all('back')}]"]
-            return [f"Pause / Weiter mit  [{keymap.label('enter')}]",
-                    f"Tempo mit  [{keymap.label('plus')}]  /  [{keymap.label('minus')}]",
-                    f"Beenden mit  [{keymap.label_all('back')}]"]
+            return ["Partie aus dem Archiv", f"Auswertung mit  [{keymap.label('enter')}]",
+                    f"Zurück mit  [{keymap.label_all('back')}]"]
         if self._game is not None and self._game.is_complete and self._game.is_running:
             return ["Partie beendet", f"Auswertung mit  [{keymap.label('enter')}]",
                     f"Korrektur mit  [{keymap.label('undo')}]"]
@@ -277,7 +268,6 @@ class GameScreen(QWidget):
         """Timer anhalten und Spieldauer in den Zustand übernehmen."""
         self._tick.stop()
         self._autosave.stop()
-        self._replay_timer.stop()
         self._hide_extras()
         if self._game is not None and not self.is_replay:
             self._game.state.elapsed_seconds = self.current_elapsed()
@@ -291,70 +281,38 @@ class GameScreen(QWidget):
         self._end_replay()
         self._game = None
 
-    # ============================================================ Wiedergabe
-    def start_replay(self, state: GameState, seconds_per_stroke: float) -> None:
-        """Gespeicherte Partie Stoß für Stoß abspielen (nur Anzeige, keine Speicherung)."""
+    # ================================================ Partie ansehen (Archiv)
+    def start_replay(self, state: GameState) -> None:
+        """Gespeicherte Partie sofort komplett anzeigen (nur Anzeige, keine Speicherung)."""
         self.stop()
         self._replay_source = state
         copy = GameState(game_id=state.game_id, mode=state.mode, started_at=state.started_at,
-                         strokes=[], status=GameStatus.RUNNING, elapsed_seconds=state.elapsed_seconds)
+                         strokes=list(state.strokes), status=GameStatus.RUNNING,
+                         elapsed_seconds=state.elapsed_seconds, extras=state.extras)
         self._game = Game(copy)
         self._controller.reset()
         self._completion_sent = False
         self._elapsed_base = float(state.elapsed_seconds)   # Spieldauer: Original-Dauer der Partie
         self._session_start = None
-        self._replay_paused = False
-        self._replay_speed = min(range(len(REPLAY_SPEEDS)),
-                                 key=lambda i: abs(REPLAY_SPEEDS[i] - seconds_per_stroke))
         mode = state.mode
         self.grid.configure(mode.strokes, mode.grid_columns, mode.halftime_after, mode.highlight_last)
-        self._replay_timer.start(int(REPLAY_SPEEDS[self._replay_speed] * 1000))
         self.refresh()
+        self.footer_changed.emit()
 
     def _end_replay(self) -> None:
-        self._replay_timer.stop()
         self._replay_source = None
 
-    def _replay_done(self) -> bool:
-        return (self.is_replay and self._game is not None
-                and self._game.played >= len(self._replay_source.strokes))  # type: ignore[union-attr]
-
-    def _replay_step(self) -> None:
-        if not self.is_replay or self._game is None:
-            return
-        if not self._replay_done():
-            self._game.record(self._replay_source.strokes[self._game.played])  # type: ignore[union-attr]
-        if self._replay_done():
-            self._replay_timer.stop()
-            self.footer_changed.emit()
-        self.refresh()
-
     def _handle_replay_key(self, event: QKeyEvent) -> bool:
+        """„Partie ansehen“: [Enter] = Auswertung, [*]/[Esc] = zurück ins Archiv; sonst wirkt nichts."""
         if event.isAutoRepeat():
             return True
         menu_key = map_menu_key(event)
         if menu_key is MenuKey.BACK:
-            self._replay_timer.stop()
             self.replay_exit.emit()
         elif menu_key is MenuKey.ENTER:
-            if self._replay_done():
-                self.replay_stats.emit(self._replay_source)
-            else:
-                self._replay_paused = not self._replay_paused
-                if self._replay_paused:
-                    self._replay_timer.stop()
-                else:
-                    self._replay_timer.start()
-        elif keymap.matches(event, "plus") or keymap.matches(event, "minus"):
-            faster = keymap.matches(event, "plus")
-            self._replay_speed = max(0, min(len(REPLAY_SPEEDS) - 1, self._replay_speed + (1 if faster else -1)))
-            self._replay_timer.setInterval(int(REPLAY_SPEEDS[self._replay_speed] * 1000))
-            self.message.emit(f"Tempo: {REPLAY_SPEEDS[self._replay_speed]:.2f} s pro Stoß".replace(".", ","),
-                              False)
+            self.replay_stats.emit(self._replay_source)
         else:
             return False
-        self.footer_changed.emit()
-        self._update_live()
         return True
 
     def current_elapsed(self) -> float:
@@ -527,7 +485,7 @@ class GameScreen(QWidget):
                 self.play_sound(cfg.celebration_sound)
             except Exception:
                 log.exception("Ton bei %s fehlgeschlagen", value)
-        if not cfg.celebration_enabled or not cfg.extras_today():
+        if not cfg.celebration_enabled or not self.extras_active():
             return
         try:
             if value in cfg.celebration_minus_values:
@@ -563,6 +521,13 @@ class GameScreen(QWidget):
             self.play_sound(cfg.halftime_sound)
         except Exception:
             log.exception("Halbzeit-Hinweis fehlgeschlagen")
+
+    def extras_active(self) -> bool:
+        """Bilder/GIFs und Sound-Tasten in dieser Partie: Antwort auf die Nachfrage beim Start,
+        sonst (nicht gefragt / alte Partie) der heutige Wochentag aus den Einstellungen."""
+        if self._game is not None and self._game.state.extras is not None:
+            return self._game.state.extras
+        return self._settings.extras_today()
 
     def play_sound(self, name: str, seconds: int = 0) -> bool:
         """Ton aus dem Ordner sounds mit eingestellter Lautstärke (leerer Name = kein Ton).
@@ -627,15 +592,8 @@ class GameScreen(QWidget):
         if game is None:
             return
         if self.is_replay:
-            total = max(1, len(self._replay_source.strokes))  # type: ignore[union-attr]
-            speed = f"{REPLAY_SPEEDS[self._replay_speed]:.2f} s".replace(".", ",")
-            if self._replay_done():
-                self.status_box.set_value("ENDE", theme.TEXT, bold=True)
-            elif self._replay_paused:
-                self.status_box.set_value("PAUSE", theme.WARNING, bold=True)
-            else:
-                self.status_box.set_value("WIEDERGABE", theme.CURRENT, bold=True)
-            self.status_box.set_progress(game.played / total, theme.CURRENT, speed)
+            self.status_box.set_value("ARCHIV", theme.TEXT, bold=True)
+            self.status_box.set_progress(None)
             return
         if ctrl.correction_pending():
             self.status_box.set_value("KORREKTUR", theme.WARNING, bold=True,
@@ -690,7 +648,7 @@ class GameScreen(QWidget):
             self.current_box.set_value("", subtext="")
             self.current_box.set_fill(None)
         self.history_box.set_entries([(e.number, e.value) for e in game.history(self._settings.history_length)])
-        show_current = game.is_running and not game.is_complete and not self._replay_done()
+        show_current = game.is_running and not game.is_complete and not self.is_replay
         self.grid.set_running_total(self._settings.grid_running_total)
         self.grid.set_values(state.strokes, show_current=show_current)
         pending = self._controller.correction_pending() and game.played > 0 and not self.is_replay

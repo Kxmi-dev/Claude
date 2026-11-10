@@ -68,7 +68,7 @@ class AppSettings:
     settings_file: Path = Path("einstellungen.json")
     club_logo_dir: Path = Path("vereinslogo")
     club_logo: str = ""                                  # Dateiname im Ordner „vereinslogo“, "" = kein Logo
-    font_scale: int = 100                                # Schriftgröße in % (80 … 130)
+    font_scale: int = 130                                # Schriftgröße in % (80 … 200, Standard 130)
     show_history: bool = True                            # Feld „Letzte Stöße“ anzeigen
     show_input_status: bool = True                       # Feld „Eingabe“ anzeigen
     result_lock_seconds: float = 5.0                     # Sperre der Auswertung nach Partie-Ende
@@ -79,6 +79,7 @@ class AppSettings:
     correction_step_lock_seconds: float = 0.3            # Sperre für [/] (einen Stoß zurück) im Korrekturfenster
     sound_keys: tuple[tuple[str, str, int], ...] = ()    # Sound-Tasten: (Tastenkombination, Tondatei, Sekunden; 0 = ganz)
     extras_weekdays: tuple[bool, ...] = (True,) * 7      # Mo … So: Bilder und Sound-Tasten an diesem Tag
+    extras_ask: bool = True                              # an ausgeschalteten Tagen beim Partiestart nachfragen
 
     @property
     def logo_path(self) -> Path:
@@ -140,7 +141,7 @@ class AppSettings:
             settings_file=Path(getattr(cfg, "SETTINGS_FILE", Path(cfg.DATA_DIR).parent / "einstellungen.json")),
             club_logo_dir=Path(getattr(cfg, "CLUB_LOGO_DIR", Path(cfg.ASSETS_DIR).parent / "vereinslogo")),
             club_logo=str(getattr(cfg, "CLUB_LOGO", "") or ""),
-            font_scale=int(getattr(cfg, "FONT_SCALE", 100)),
+            font_scale=int(getattr(cfg, "FONT_SCALE", 130)),
             show_history=bool(getattr(cfg, "SHOW_HISTORY", True)),
             show_input_status=bool(getattr(cfg, "SHOW_INPUT_STATUS", True)),
             result_lock_seconds=float(getattr(cfg, "RESULT_LOCK_SECONDS", 5)),
@@ -151,6 +152,7 @@ class AppSettings:
             correction_step_lock_seconds=float(getattr(cfg, "CORRECTION_STEP_LOCK_SECONDS", 0.3)),
             sound_keys=tuple(sound_key_entry(e) for e in getattr(cfg, "SOUND_KEYS", ())),
             extras_weekdays=tuple(bool(v) for v in getattr(cfg, "EXTRAS_WEEKDAYS", (True,) * 7)),
+            extras_ask=bool(getattr(cfg, "EXTRAS_ASK", True)),
         )
         settings.validate()
         return settings
@@ -227,7 +229,8 @@ class AppSettings:
 
 
 THEME_MODES = ("klassisch", "eigen")
-FONT_SCALES = (80, 90, 100, 110, 120, 130)
+FONT_SCALES = tuple(range(80, 201, 10))   # 80 … 200 %
+DEFAULT_FONT_SCALE = 130
 SOUND_KEY_MAX_SECONDS = 60      # Spieldauer einer Sound-Taste: 0 = ganz, sonst 1 … 60 Sekunden
 
 

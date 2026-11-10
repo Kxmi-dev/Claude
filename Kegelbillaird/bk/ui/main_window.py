@@ -5,7 +5,7 @@ Bildschirmfolge::
 
     Start ─► (Unterbrochene Partie? ─► FORTSETZEN ─► Zählansicht)
          └─► Hauptmenü ─► Zählansicht ─► Abschluss ─► Auswertung ─► Hauptmenü
-                      └─► Archiv ─► Auswertung | Wiedergabe | Weiterspielen
+                      └─► Archiv ─► Auswertung | Partie ansehen | Weiterspielen
 
 Tastatur: Alle Unterelemente sind fokuslos; Tastendrücke landen genau
 einmal in ``keyPressEvent`` und werden an die sichtbare Karte bzw. den
@@ -309,7 +309,7 @@ class MainWindow(QWidget):
         entry = next((e for e in entries if e[0] == combo), None) if combo else None
         if entry is None:
             return False
-        if not event.isAutoRepeat() and self._settings.extras_today():
+        if not event.isAutoRepeat() and self.game_screen.extras_active():
             try:
                 self.game_screen.play_sound(entry[1], entry[2])
             except Exception:
@@ -447,7 +447,7 @@ class MainWindow(QWidget):
         game = Game(state)
         started = datetime.fromisoformat(state.started_at)
         actions = [("AUSWERTUNG ANZEIGEN", lambda: self._show_archive_report(state)),
-                   ("WIEDERGABE", lambda: self._start_replay(state))]
+                   ("PARTIE ANSEHEN", lambda: self._start_replay(state))]
         if entry.can_continue:
             actions.append(("WEITERSPIELEN", lambda: self._continue_archived(entry)))
         actions.append(("ZURÜCK", None))
@@ -470,8 +470,8 @@ class MainWindow(QWidget):
         self.show_result(state, f"aus dem Archiv – Partie {status}", on_close=back, close_label="Zurück")
 
     def _start_replay(self, state: GameState) -> None:
-        log.info("Wiedergabe: %s vom %s", state.mode.key, state.started_at)
-        self.game_screen.start_replay(state, self._settings.replay_seconds_per_stroke)
+        log.info("Partie ansehen: %s vom %s", state.mode.key, state.started_at)
+        self.game_screen.start_replay(state)
         self._show_screen(self.game_screen)
 
     def _continue_archived(self, entry: ArchiveEntry) -> None:
@@ -603,8 +603,33 @@ class MainWindow(QWidget):
             self._flash("Unterbrochene Partie archiviert (data/archive). Neue Partie wählen.")
 
     # ========================================================= Neue Partie
+    EXTRAS_QUESTION = "Soll ein Spiel mit Bildern und Sound gespielt werden?"
+    _EXTRAS_CANCEL = 2          # [*]/[Esc] bei der Nachfrage: keine Partie starten
+
     def _start_new_game(self, mode: GameMode) -> None:
-        """Im Hauptmenü gewählte Spielart sofort starten (Datum/Uhrzeit automatisch)."""
+        """Im Hauptmenü gewählte Spielart starten (Datum/Uhrzeit automatisch). An einem in den Einstellungen
+        ausgeschalteten Wochentag vorher fragen, ob Bilder/GIFs und Sound-Tasten kommen sollen
+        (Nachfrage abschaltbar: „An ausgeschalteten Tagen nachfragen“). Vorgewählt: NEIN."""
+        cfg = self._settings
+        if cfg.extras_today() or not cfg.extras_ask:
+            self._create_game(mode, None)
+            return
+        lines = [f"Spielart: {mode.title}",
+                 "Heute sind Bilder/GIFs und Sound-Tasten in den Einstellungen ausgeschaltet.",
+                 "Halbzeit-, Ende- und +6/+7-Ton kommen immer."]
+        self._ask(OverlayContent(self.EXTRAS_QUESTION, lines, choices=["JA", "NEIN"],
+                                 hint=f"Wählen mit [{keymap.label('down')}] & [{keymap.label('up')}]   |   "
+                                      f"Bestätigen mit [{keymap.label('enter')}]   |   "
+                                      f"Abbrechen mit [{keymap.label('back')}]",
+                                 back_choice=self._EXTRAS_CANCEL),
+                  lambda choice: self._extras_choice(choice, mode), selected=1)
+
+    def _extras_choice(self, choice: int, mode: GameMode) -> None:
+        if choice == self._EXTRAS_CANCEL:
+            return
+        self._create_game(mode, choice == 0)
+
+    def _create_game(self, mode: GameMode, extras: bool | None) -> None:
         if self._storage.has_active_files():
             # Sollte nie vorkommen – vorsichtshalber nichts überschreiben, sondern sichern
             loaded = self._storage.load_active()
@@ -613,7 +638,7 @@ class MainWindow(QWidget):
             else:
                 self._storage.quarantine_corrupt()
         try:
-            state = GameState.new(mode)
+            state = GameState.new(mode, extras=extras)
         except ValueError as exc:
             self._flash(str(exc), True)
             return
@@ -622,7 +647,8 @@ class MainWindow(QWidget):
             self.footer.set_warning("save", None)
         except StorageError:
             self.footer.set_warning("save", "ACHTUNG: Spielstand konnte nicht gespeichert werden!")
-        log.info("Neue Partie: %s", mode.key)
+        log.info("Neue Partie: %s%s", mode.key, "" if extras is None else
+                 (" – mit Bildern und Sound" if extras else " – ohne Bilder und Sound"))
         self._enter_game(Game(state))
 
     def _enter_game(self, game: Game) -> None:
