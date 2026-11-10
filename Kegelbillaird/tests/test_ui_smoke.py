@@ -41,7 +41,10 @@ class UiSmokeTests(unittest.TestCase):
             data_dir=self.tmp.path / "data", results_dir=self.tmp.path / "results",
             logs_dir=self.tmp.path / "logs", input_lock_seconds=self.LOCK, undo_lock_seconds=0.1,
             abort_confirm_seconds=2.0, auto_enable_numlock=False, fullscreen=False,
-            result_lock_seconds=self.RESULT_LOCK)
+            result_lock_seconds=self.RESULT_LOCK,
+            # Kein echter Ton im Test: auf einem PC mit Lautsprechern dauert das Laden von halbzeit.wav
+            # länger als die kurze Test-Sperre (LOCK) – dann stünde schon „BEREIT“ statt „GESPERRT“.
+            sound_enabled=False)
         self.storage = GameStorage(self.settings.data_dir, self.settings.results_dir)
         self.storage.ensure_directories()
         self.windows = []

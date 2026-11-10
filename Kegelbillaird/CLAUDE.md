@@ -177,8 +177,11 @@ Neue Einstellungen in `settings.py` immer mit `getattr(cfg, NAME, default)` lese
 - **WICHTIG (ausdrücklicher Nutzerwunsch): Bei JEDER Änderung zuerst schreiben, WAS gebaut werden soll
   (kurzer Plan), und erst nach dem „ja“ des Nutzers umsetzen.** Auch bei kleinen Wünschen nie direkt loslegen.
 - **Windows-/GitHub-Build nur auf ausdrücklichen Wunsch** des Nutzers. Normal baut er selbst mit `build_exe.bat`.
-  GitHub: Workflow „Windows-Programm bauen“ (`.github/workflows/build-windows.yml` im Repo Kxmi-dev/Claude, Branch
-  claude/wizardly-feynman-pliv2i), startet NUR von Hand (`gh workflow run`), ZIP als Artefakt (30 Tage), nichts wird ins Repo geschrieben.
+  GitHub: Repo Kxmi-dev/Claude (öffentlich), Ordner `Kegelbillaird` auf dem HAUPTBRANCH `claude/development-ideas-dmqdof`
+  (Nutzerwunsch, dorthin pushen; `claude/wizardly-feynman-pliv2i` = alter Programm-Branch). Workflow „Windows-Programm bauen“
+  (`.github/workflows/build-windows.yml`) startet NUR von Hand (`gh workflow run`), ZIP als Artefakt (30 Tage), nichts wird ins Repo geschrieben.
+- UI-Tests (`test_ui_smoke`) laufen mit `sound_enabled=False`: auf einem PC mit Lautsprechern dauerte das Laden von
+  halbzeit.wav länger als die Test-Sperre (0,25 s) → `build_exe.bat` scheiterte in test_halftime_… (10.11.2026).
 - **Nicht die ganze Testsuite laufen lassen** (Nutzerwunsch) – nur die Tests, die zu den geänderten Stellen gehören (z. B. einzelne Testklassen/-methoden).
 - Tests: `python main.py --selftest` (oder `python -m unittest discover -s tests -t .`);
   UI-Tests laufen mit `QT_QPA_PLATFORM=offscreen`. Vor Auslieferung immer alle Tests grün + `pyflakes`.
