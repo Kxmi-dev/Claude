@@ -264,8 +264,9 @@ class GameScreen(QWidget):
         self._completion_sent = False
         self._was_complete = game.is_complete
         self._elapsed_base = float(game.state.elapsed_seconds)
-        # Spieldauer läuft nur bis zum letzten Stoß (fortgesetzte, fertige Partie: steht schon)
-        self._session_start = None if game.is_complete else self._clock()
+        # Spieldauer läuft erst ab der nächsten Stoßeingabe (neue UND fortgesetzte Partie, Nutzerwunsch)
+        # und nur bis zum letzten Stoß
+        self._session_start = None
         mode = game.state.mode
         self.grid.configure(mode.strokes, mode.grid_columns, mode.halftime_after, mode.highlight_last)
         self.refresh()
@@ -417,6 +418,8 @@ class GameScreen(QWidget):
             log.info("Stoß %s: %s (Gesamt %s)", entry.number, entry.value, entry.running_total)
             if game.is_complete:
                 self._stop_clock()             # Spieldauer bleibt mit dem letzten Stoß stehen
+            elif self._session_start is None:
+                self._session_start = self._clock()   # erster Stoß (nach Start/Fortsetzen): Spieldauer läuft
             self._persist(reason="wertung")
             self._celebrate(entry.value)
             if game.played == game.state.mode.halftime_after:

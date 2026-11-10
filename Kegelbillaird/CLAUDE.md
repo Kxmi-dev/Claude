@@ -81,11 +81,14 @@ Laufzeitordner: `data/` (active_game.json + .bak/.tmp, `archive/`, `corrupt/`), 
   jede andere Taste / 5 s Timeout = weiterspielen. Abbruch → Archiv, kein PDF.
 - **Kein Spielername**, kein Spielerdaten-Fenster: Menüauswahl + Enter startet sofort.
   PDF-Name: `BK50_2026-09-29_15-42.pdf`. Alte Spielstände mit `player_name` laden weiterhin.
+- Spieldauer läuft erst ab der ersten Stoßeingabe (neue Partie) bzw. ab dem nächsten Stoß (fortgesetzte Partie) –
+  Nutzerwunsch 10.11.2026 (`start_game`: `_session_start = None`, Start in `_apply` bei Action.SCORE).
 - Mit dem letzten Stoß: Spieldauer bleibt stehen (`_stop_clock`) und der Ende-Ton kommt sofort (`_end_alert`).
 - Nach letztem Stoß bleibt die Zählansicht stehen („ENDE“, Korrektur weiter möglich); ERST `Enter` (Nutzerwunsch,
   nicht automatisch): Ergebnis-JSON + PDF in `results/`, Archiv „beendet“, **Auswertung** im Hauptfenster.
 - Speichern nach JEDER Wertung/Rücknahme. Start: „Unterbrochene Partie gefunden“ →
-  PARTIE FORTSETZEN / NEUE PARTIE (alte wird archiviert, nie gelöscht).
+  PARTIE FORTSETZEN / NEUE PARTIE (alte wird archiviert, nie gelöscht). **Vorgewählt ist NEUE PARTIE** (Nutzerwunsch
+  10.11.2026, `_ask(..., selected=1)`), fortsetzen mit [8] + Enter.
 - „2x 50 Stoß“ und „Zweikampf“ wurden auf Wunsch des Nutzers entfernt. Dafür gibt es
   **„Billiard vs Fußball“** (Schlüssel BK25): 25 Stoß, keine Halbzeit, Raster 5 × 5.
 - Anzeigen: Stoß-Anzahl (gespielte Stöße, Start 0), Punktestand, Prognose, Halbzeit (nach 50 bzw. 25),

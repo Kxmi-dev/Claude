@@ -127,7 +127,7 @@ Datum und Uhrzeit werden automatisch erfasst und stehen im PDF.
 | Letzte Stöße    | die letzten fünf Wertungen („Stoß 47  +1“) |
 | Minus           | Summe aller Minuspunkte |
 | Eingabe         | BEREIT (Plus) / MINUS / GESPERRT mit Countdown-Balken / KORREKTUR / ENDE |
-| Spieldauer      | Laufzeit der Partie |
+| Spieldauer      | Laufzeit der Partie – läuft erst ab dem ersten Stoß (bei einer fortgesetzten Partie ab dem nächsten Stoß) |
 | Stoß-Raster     | ein Feld pro Stoß mit dem **Gesamtstand nach diesem Stoß** (3, 6, 9 …; umschaltbar auf Einzelstoß), **X** = Leerstoß, rot = Minus-Stoß; **blauer Rahmen** = nächster Stoß, **gelb** = Halbzeit und letzte 5 Stöße, kräftig gelb = Kästchen, das gerade korrigiert wird; rechts daneben, ohne Kästchen direkt auf dem grauen Hintergrund, die **Punkte je Reihe** |
 
 ### Partieende und Auswertung
@@ -296,7 +296,8 @@ Schritt hinterlässt immer mindestens eine vollständige Datei.
 
 **Beim Programmstart:**
 * laufende Partie gefunden → **„Unterbrochene Partie gefunden“** mit
-  **PARTIE FORTSETZEN** / **NEUE PARTIE** (die alte Partie wird dabei archiviert, nie gelöscht)
+  **PARTIE FORTSETZEN** / **NEUE PARTIE** (die alte Partie wird dabei archiviert, nie gelöscht).
+  Vorgewählt ist **NEUE PARTIE** – zum Fortsetzen erst `8`, dann `Enter`
 * Stand stammt aus der Sicherungskopie → deutlicher Hinweis „bitte letzten Stoß prüfen“
 * alle Dateien beschädigt → Meldung, Dateien werden nach `data/corrupt` verschoben
 * Partie war beendet, aber PDF/Archiv fehlten (Absturz beim Abschluss) → Abschluss wird automatisch nachgeholt

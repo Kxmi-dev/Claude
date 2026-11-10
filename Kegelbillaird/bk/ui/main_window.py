@@ -590,7 +590,7 @@ class MainWindow(QWidget):
         self._ask(OverlayContent("Unterbrochene Partie gefunden", lines,
                                  choices=["PARTIE FORTSETZEN", "NEUE PARTIE"],
                                  hint=f"Wählen mit [{keymap.label('down')}] & [{keymap.label('up')}]   |   Bestätigen mit [{keymap.label('enter')}]"),
-                  lambda choice: self._resume_choice(choice, state))
+                  lambda choice: self._resume_choice(choice, state), selected=1)   # vorgewählt: NEUE PARTIE (Nutzerwunsch)
 
     def _resume_choice(self, choice: int, state: GameState) -> None:
         if choice == 0:
@@ -753,10 +753,10 @@ class MainWindow(QWidget):
             log.error("Archivieren fehlgeschlagen: %s", exc)
             self._flash("Spielstand konnte nicht archiviert werden – siehe Log.", True)
 
-    def _ask(self, content: OverlayContent, handler) -> None:
+    def _ask(self, content: OverlayContent, handler, selected: int = 0) -> None:
         self._overlay_handler = handler
         self.footer.clear_flash()
-        self.overlay.show_content(content)
+        self.overlay.show_content(content, selected)
         self.footer.set_segments(
             [f"Wählen mit  [{keymap.label('down')}]  &  [{keymap.label('up')}]",
              f"Bestätigen mit  [{keymap.label('enter')}]"]

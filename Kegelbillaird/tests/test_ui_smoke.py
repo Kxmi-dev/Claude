@@ -209,6 +209,7 @@ class UiSmokeTests(unittest.TestCase):
         state.strokes.extend([1] * 49)
         self.storage.save_active(state)
         window = self.open_window()
+        self.key(window, Qt.Key.Key_8)                           # vorgewählt ist NEUE PARTIE
         self.key(window, Qt.Key.Key_Enter)                       # PARTIE FORTSETZEN
         game = window.game_screen.game
         self.assertEqual(game.played, 49)
@@ -231,6 +232,7 @@ class UiSmokeTests(unittest.TestCase):
         state.corrections = 2
         self.storage.save_active(state)
         window = self.open_window()
+        self.key(window, Qt.Key.Key_8)                           # vorgewählt ist NEUE PARTIE
         self.key(window, Qt.Key.Key_Enter)                       # PARTIE FORTSETZEN
         self.score(window, 5)
         self.key(window, Qt.Key.Key_Enter)                       # Enter: Sperre aus + Auswertung
@@ -276,7 +278,7 @@ class UiSmokeTests(unittest.TestCase):
         window = self.open_window()
         self.assertTrue(window.overlay.interactive)
         self.assertEqual(window.overlay.content.title, "Unterbrochene Partie gefunden")
-        self.key(window, Qt.Key.Key_2)                           # NEUE PARTIE wählen
+        self.assertEqual(window.overlay._selected, 1)            # vorgewählt: NEUE PARTIE (Nutzerwunsch)
         self.key(window, Qt.Key.Key_Enter)
         self.assertIs(window.stack.currentWidget(), window.menu_screen)
         self.assertFalse(self.storage.has_active_files())
@@ -284,6 +286,33 @@ class UiSmokeTests(unittest.TestCase):
         game = self.start_game(window)
         self.assertEqual(game.played, 0)
         self.assertNotEqual(game.state.game_id, state.game_id)
+
+    def test_clock_starts_with_first_stroke(self):
+        """Spieldauer: neue und fortgesetzte Partie warten auf die nächste Stoßeingabe."""
+        window = self.open_window()
+        game = self.start_game(window)
+        screen = window.game_screen
+        QTest.qWait(250)
+        self.assertEqual(screen.current_elapsed(), 0.0)          # noch kein Stoß -> Zeit steht
+        self.score(window, 3)
+        self.assertEqual(game.played, 1)
+        QTest.qWait(250)
+        self.assertGreater(screen.current_elapsed(), 0.15)       # ab dem ersten Stoß läuft sie
+
+    def test_clock_waits_for_next_stroke_after_resume(self):
+        state = GameState.new(BK50)
+        state.strokes.extend([3, 4])
+        state.elapsed_seconds = 100.0
+        self.storage.save_active(state)
+        window = self.open_window()
+        self.key(window, Qt.Key.Key_8)
+        self.key(window, Qt.Key.Key_Enter)                       # PARTIE FORTSETZEN
+        screen = window.game_screen
+        QTest.qWait(250)
+        self.assertEqual(screen.current_elapsed(), 100.0)        # Wartezeit nach Neustart zählt nicht
+        self.score(window, 2)
+        QTest.qWait(250)
+        self.assertGreater(screen.current_elapsed(), 100.15)
 
     def test_corrupt_save_is_reported(self):
         self.storage.active_path.write_text("{kaputt", encoding="utf-8")
@@ -328,6 +357,7 @@ class UiSmokeTests(unittest.TestCase):
         state.strokes.extend([1] * 24)
         self.storage.save_active(state)
         window = self.open_window()
+        self.key(window, Qt.Key.Key_8)                           # vorgewählt ist NEUE PARTIE
         self.key(window, Qt.Key.Key_Enter)                       # PARTIE FORTSETZEN
         screen = window.game_screen
         self.assertNotEqual(screen.halftime_box._fill, HALFTIME_TINT)
