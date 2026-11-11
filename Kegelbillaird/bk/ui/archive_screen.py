@@ -1,0 +1,329 @@
+"""
+Archiv: oben farbig abgesetzt die letzten drei abgeschlossenen Partien,
+darunter die Liste aller gespeicherten Partien (beendet, abgebrochen, unterbrochen).
+Die Auswahl läuft mit [8] / [2] durch beide Abschnitte.
+
+Bedienung: [8] / [2] wählen, [Enter] öffnen (Auswertung, Partie ansehen, Weiterspielen),
+[*] oder [Esc] zurück zum Hauptmenü. Maus: Zeile anklicken, Doppelklick öffnet, Mausrad blättert.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+from PySide6.QtCore import QRect, QRectF, Qt, Signal
+from PySide6.QtGui import QColor, QFontMetricsF, QKeyEvent, QPaintEvent
+from PySide6.QtWidgets import QWidget
+
+from ..game import Game
+from ..models import GameStatus
+from ..settings import AppSettings
+from ..storage import ArchiveEntry, GameStorage
+from . import theme
+from . import keymap
+from .keymap import MenuKey, map_menu_key
+from .widgets import Plate, _Painted, format_number
+
+CONTENT_W, CONTENT_H = 1024, 702
+
+# Spalten: (Überschrift, Anteil an der Breite, Ausrichtung)
+COLUMNS = (
+    ("Datum", 0.17, Qt.AlignmentFlag.AlignLeft),
+    ("Uhrzeit", 0.10, Qt.AlignmentFlag.AlignLeft),
+    ("Spielart", 0.26, Qt.AlignmentFlag.AlignLeft),
+    ("Status", 0.18, Qt.AlignmentFlag.AlignLeft),
+    ("Stöße", 0.14, Qt.AlignmentFlag.AlignRight),
+    ("Ergebnis", 0.15, Qt.AlignmentFlag.AlignRight),
+)
+RECENT_COUNT = 3
+RECENT_TINT = QColor("#e3f1dc")       # Abschnitt „Letzte Partien“ (hellgrün)
+STATUS_COLORS = {"beendet": QColor("#16803a"), "abgebrochen": theme.MINUS, "unterbrochen": QColor("#b86e00")}
+
+
+def entry_cells(entry: ArchiveEntry) -> list[str]:
+    state = entry.state
+    started = datetime.fromisoformat(state.started_at)
+    game = Game(state)
+    return [f"{started:%d.%m.%Y}", f"{started:%H:%M}", state.mode.title, entry.status_label,
+            f"{game.played} / {game.max_strokes}", format_number(game.total)]
+
+
+class ArchiveList(_Painted):
+    """Tabelle der Partien im Stil der Anzeigefelder."""
+
+    activated = Signal(int)
+    selection_changed = Signal(int)
+
+    def __init__(self, parent: QWidget | None = None, fill: QColor | None = None,
+                 empty_text: str = "Noch keine Partien im Archiv.") -> None:
+        super().__init__(parent)
+        self._rows: list[list[str]] = []
+        self._selected = 0
+        self._top = 0
+        self._row_rects: list[tuple[int, QRectF]] = []
+        self._fill = fill or theme.WHITE
+        self._empty_text = empty_text
+        self._active = True               # nur die aktive Liste zeigt die Auswahl
+        self.row_h: float | None = None   # feste Zeilenhöhe (sonst aus der Höhe berechnet)
+        self.fit_rows: list[list[str]] = []   # weitere Zeilen für eine gemeinsame Schriftgröße
+
+    def set_rows(self, rows: list[list[str]], selected: int = 0) -> None:
+        self._rows = rows
+        self._selected = max(0, min(selected, len(rows) - 1))
+        self._top = 0
+        self.update()
+
+    def row_count(self) -> int:
+        return len(self._rows)
+
+    def set_active(self, active: bool) -> None:
+        self._active = active
+        self.update()
+
+    def select(self, index: int) -> None:
+        if self._rows:
+            self._selected = max(0, min(len(self._rows) - 1, index))
+            self.update()
+
+    @property
+    def selected(self) -> int:
+        return self._selected
+
+    def step(self, delta: int) -> None:
+        if not self._rows:
+            return
+        self._selected = max(0, min(len(self._rows) - 1, self._selected + delta))
+        self.selection_changed.emit(self._selected)
+        self.update()
+
+    # ---------------------------------------------------------- Geometrie
+    def _metrics(self) -> tuple[QRectF, float, float, int]:
+        inner = theme.bezel_geometry(QRectF(self.rect()))[2]
+        area = inner.adjusted(inner.width() * 0.025, inner.height() * 0.02, -inner.width() * 0.025,
+                              -inner.height() * 0.02)
+        row_h = self.row_h or max(22.0, min(48.0, self.height() / 13.5))
+        header_h = row_h * 0.9
+        visible = max(1, int((area.height() - header_h) // row_h))
+        return area, row_h, header_h, visible
+
+    # ------------------------------------------------------------- Maus
+    def _row_at(self, pos) -> int | None:
+        for index, rect in self._row_rects:
+            if rect.contains(pos):
+                return index
+        return None
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802
+        index = self._row_at(event.position())
+        if index is not None:
+            self._selected = index
+            self.selection_changed.emit(index)
+            self.update()
+
+    def mouseDoubleClickEvent(self, event) -> None:  # noqa: N802
+        index = self._row_at(event.position())
+        if index is not None:
+            self.activated.emit(index)
+
+    def wheelEvent(self, event) -> None:  # noqa: N802
+        self.step(-1 if event.angleDelta().y() > 0 else 1)
+
+    # ---------------------------------------------------------- Zeichnen
+    def _fit_columns(self, font_px: int, widths: list[float], pad: float) -> int:
+        """Schrift so weit verkleinern, dass in JEDER Spalte der längste Text passt
+        (wichtig bei großer Schriftgröße, z. B. 130 %)."""
+        factor = 1.0
+        for column, ((title, _, _), width) in enumerate(zip(COLUMNS, widths)):
+            avail = (width - 2 * pad) * 0.95          # kleiner Puffer gegen Rundung
+            body = QFontMetricsF(theme.base_font(font_px, bold=(column == 5)))
+            head = QFontMetricsF(theme.base_font(font_px * 0.85, bold=True))
+            needed = max([head.horizontalAdvance(title)]
+                         + [body.horizontalAdvance(row[column]) for row in self._rows + self.fit_rows])
+            if needed > avail > 0:
+                factor = min(factor, avail / needed)
+        return max(6, int(font_px * factor))
+
+    def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802
+        p = self._painter()
+        theme.draw_bezel(p, QRectF(self.rect()), self._fill)
+        area, row_h, header_h, visible = self._metrics()
+        self._row_rects = []
+        if not self._rows:
+            p.setPen(theme.TEXT_MUTED)
+            text = self._empty_text
+            p.setFont(theme.fitted_font(text, area.width() * 0.8, row_h * 0.7))
+            p.drawText(area, Qt.AlignmentFlag.AlignCenter, text)
+            p.end()
+            return
+        # sichtbaren Ausschnitt so verschieben, dass die Auswahl sichtbar bleibt
+        if self._selected < self._top:
+            self._top = self._selected
+        elif self._selected >= self._top + visible:
+            self._top = self._selected - visible + 1
+        self._top = max(0, min(self._top, max(0, len(self._rows) - visible)))
+
+        pad = area.width() * 0.02
+        widths = [area.width() * share for _, share, _ in COLUMNS]
+        font_px = theme.fitted_font("29.09.2026", widths[0] * 0.9, row_h * 0.52).pixelSize()
+        font_px = self._fit_columns(font_px, widths, pad)
+
+        # Kopfzeile
+        x = area.left()
+        p.setFont(theme.base_font(font_px * 0.85, bold=True))
+        p.setPen(theme.TEXT_MUTED)
+        for (title, _, align), width in zip(COLUMNS, widths):
+            p.drawText(QRectF(x + pad, area.top(), width - 2 * pad, header_h),
+                       align | Qt.AlignmentFlag.AlignVCenter, title)
+            x += width
+        p.setPen(theme.GRID_LINE)
+        p.drawLine(int(area.left()), int(area.top() + header_h), int(area.right()), int(area.top() + header_h))
+
+        # Zeilen
+        y = area.top() + header_h + row_h * 0.1
+        for index in range(self._top, min(len(self._rows), self._top + visible)):
+            rect = QRectF(area.left(), y, area.width(), row_h * 0.92)
+            self._row_rects.append((index, rect))
+            selected = index == self._selected and self._active
+            if selected:
+                theme.draw_menu_button(p, rect.adjusted(0, 0, -3, -3), "", True)
+            elif index % 2:
+                p.fillRect(rect, QColor(0, 0, 0, 12))
+            x = area.left()
+            for column, ((_, _, align), width) in enumerate(zip(COLUMNS, widths)):
+                text = self._rows[index][column]
+                color = theme.TEXT if selected else QColor("#333333")
+                if column == 3:
+                    color = STATUS_COLORS.get(text, color)
+                elif column == 5 and text.startswith("\u2212"):
+                    color = theme.MINUS
+                p.setPen(color)
+                p.setFont(theme.base_font(font_px, bold=(column == 5)))
+                p.drawText(QRectF(x + pad, rect.top(), width - 2 * pad, rect.height() - 3),
+                           align | Qt.AlignmentFlag.AlignVCenter, text)
+                x += width
+            y += row_h
+
+        # Hinweis auf weitere Einträge
+        if len(self._rows) > visible:
+            info = f"{self._top + 1}–{min(len(self._rows), self._top + visible)} von {len(self._rows)}"
+            p.setPen(theme.TEXT_MUTED)
+            p.setFont(theme.base_font(font_px * 0.75))
+            p.drawText(QRectF(area.left(), area.bottom() - row_h * 0.6, area.width(), row_h * 0.6),
+                       Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, info)
+        p.end()
+
+
+class ArchiveScreen(QWidget):
+    entry_chosen = Signal(object)    # ArchiveEntry
+    back_requested = Signal()
+
+    def __init__(self, settings: AppSettings, storage: GameStorage, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._storage = storage
+        self._entries: list[ArchiveEntry] = []
+        self._recent: list[ArchiveEntry] = []
+        self._plate = Plate("Archiv – gespeicherte Partien", self)
+        self._recent_plate = Plate("Letzte abgeschlossene Partien", self)
+        self._all_plate = Plate("Alle Partien", self)
+        self._recent_list = ArchiveList(self, RECENT_TINT, "Noch keine abgeschlossene Partie.")
+        self._list = ArchiveList(self)
+        self._in_recent = False
+        for widget, recent in ((self._recent_list, True), (self._list, False)):
+            widget.activated.connect(self._open)
+            widget.selection_changed.connect(lambda _i, r=recent: self._focus(r))
+
+    # ------------------------------------------------------------- Anzeige
+    def title(self) -> str:
+        return "Archiv"
+
+    def footer_segments(self) -> list[str]:
+        return [f"Wählen mit  [{keymap.label('down')}]  &  [{keymap.label('up')}]",
+                f"Öffnen mit  [{keymap.label('enter')}]",
+                f"Zurück mit  [{keymap.label_all('back')}]"]
+
+    def reload(self) -> None:
+        """Archiv neu einlesen; die bisherige Auswahl bleibt nach Möglichkeit erhalten."""
+        previous = self.selected_entry()
+        self._entries = self._storage.list_archive()
+        self._recent = [e for e in self._entries if e.state.status is GameStatus.FINISHED][:RECENT_COUNT]
+        selected = 0
+        in_recent = bool(self._recent) and (previous is None or self._in_recent)
+        if previous is not None:
+            source = self._recent if in_recent else self._entries
+            for index, entry in enumerate(source):
+                if entry.path == previous.path:
+                    selected = index
+                    break
+        all_rows = [entry_cells(e) for e in self._entries]
+        recent_rows = [entry_cells(e) for e in self._recent]
+        self._recent_list.set_rows(recent_rows, selected if in_recent else 0)
+        self._list.set_rows(all_rows, 0 if in_recent else selected)
+        self._recent_list.fit_rows, self._list.fit_rows = all_rows, recent_rows   # gleiche Schrift
+        self._focus(in_recent)
+        count = len(self._entries)
+        self._plate.set_text(f"Archiv – {count} gespeicherte Partie{'n' if count != 1 else ''}")
+
+    def _focus(self, recent: bool) -> None:
+        self._in_recent = recent and bool(self._recent)
+        self._recent_list.set_active(self._in_recent)
+        self._list.set_active(not self._in_recent)
+
+    def _step(self, delta: int) -> None:
+        """Auswahl verschieben – am Rand in den anderen Abschnitt wechseln."""
+        if self._in_recent:
+            if delta > 0 and self._recent_list.selected >= self._recent_list.row_count() - 1:
+                if self._entries:
+                    self._list.select(0)
+                    self._focus(False)
+                return
+            self._recent_list.step(delta)
+        else:
+            if delta < 0 and self._list.selected == 0 and self._recent:
+                self._recent_list.select(len(self._recent) - 1)
+                self._focus(True)
+                return
+            self._list.step(delta)
+
+    def selected_entry(self) -> ArchiveEntry | None:
+        if self._in_recent:
+            return self._recent[self._recent_list.selected] if self._recent else None
+        if not self._entries:
+            return None
+        return self._entries[self._list.selected]
+
+    def _open(self, index: int | None = None) -> None:
+        entry = self.selected_entry()
+        if entry is not None:
+            self.entry_chosen.emit(entry)
+
+    def handle_key(self, event: QKeyEvent) -> bool:
+        key = map_menu_key(event)
+        if key is MenuKey.UP:
+            self._step(-1)
+        elif key is MenuKey.DOWN:
+            self._step(1)
+        elif key is MenuKey.ENTER and not event.isAutoRepeat():
+            self._open()
+        elif key is MenuKey.BACK:
+            self.back_requested.emit()
+        else:
+            return False
+        return True
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        unit = max(0.4, min(self.width() / CONTENT_W, self.height() / CONTENT_H))
+        ox = (self.width() - CONTENT_W * unit) / 2
+        oy = (self.height() - CONTENT_H * unit) / 2
+
+        def place(widget: QWidget, x: float, y: float, w: float, h: float) -> None:
+            widget.setGeometry(QRect(round(ox + x * unit), round(oy + y * unit), round(w * unit), round(h * unit)))
+
+        place(self._plate, 212, 14, 600, 44)
+        row_h = max(22.0, min(48.0, 40 * unit))
+        for widget in (self._recent_list, self._list):
+            widget.row_h = row_h
+        place(self._recent_plate, 40, 70, 380, 32)
+        place(self._recent_list, 40, 106, 944, 186)
+        place(self._all_plate, 40, 304, 380, 32)
+        place(self._list, 40, 340, 944, 350)
+        super().resizeEvent(event)
