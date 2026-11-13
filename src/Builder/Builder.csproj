@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>LKDS-AD-Join-Builder</AssemblyName>
+    <RootNamespace>Lkds.Builder</RootNamespace>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+    <Page Include="..\Shared\Theme.xaml" Link="Theme.xaml" />
+    <!-- Einzige zusätzliche Bibliothek: LDAP-Zugriff auf das Active Directory (offizielles Microsoft-Paket). -->
+    <PackageReference Include="System.DirectoryServices" Version="9.0.0" />
+  </ItemGroup>
+  <!-- Die fertig gebaute Join-EXE (Vorlage) wird in den Builder eingebettet. Siehe build.ps1. -->
+  <ItemGroup Condition="'$(JoinTemplatePath)' != ''">
+    <EmbeddedResource Include="$(JoinTemplatePath)" LogicalName="JoinTemplate.exe" />
+  </ItemGroup>
+</Project>
