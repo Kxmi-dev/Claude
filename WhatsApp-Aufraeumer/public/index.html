@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhatsApp-Aufräumer</title>
+<style>
+  :root {
+    --bg: #f0f2f5; --card: #fff; --text: #111b21; --muted: #667781; --line: #e9edef;
+    --green: #00a884; --green-d: #008069; --red: #d93025; --orange: #e37400; --sel: #e7fce3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b141a; --card: #111b21; --text: #e9edef; --muted: #8696a0; --line: #222d34; --sel: #1d3a2f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--green-d); color: #fff; padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0; flex: 1; }
+  header .me { font-size: 13px; opacity: .9; }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--card); border-radius: 10px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  button { font: inherit; border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; background: var(--line); color: var(--text); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary { background: var(--green); color: #fff; }
+  button.danger { background: var(--red); color: #fff; }
+  button.warn { background: var(--orange); color: #fff; }
+  header button { background: rgba(255,255,255,.18); color: #fff; }
+  input, select { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--text); }
+
+  #login { text-align: center; padding: 32px 16px; }
+  #login img { width: 300px; max-width: 100%; border-radius: 8px; background: #fff; padding: 8px; }
+  #login ol { text-align: left; display: inline-block; color: var(--muted); }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; max-width: 320px; margin: 16px auto; }
+  .bar > div { height: 100%; background: var(--green); transition: width .3s; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tabs button.active { background: var(--green); color: #fff; }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .filters input[type=search] { flex: 1; min-width: 180px; }
+  .stats { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+
+  .actions { position: sticky; top: 0; z-index: 5; background: var(--card); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+  .actions .count { flex: 1; font-weight: 600; min-width: 140px; }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  li.sel { background: var(--sel); }
+  li input { width: 18px; height: 18px; flex: none; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 700; color: #fff; background: #8696a0; }
+  .avatar.g { background: #53bdeb; }
+  .info { flex: 1; min-width: 0; }
+  .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .right { text-align: right; flex: none; font-size: 12px; color: var(--muted); }
+  .age.old { color: var(--red); font-weight: 600; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--line); color: var(--muted); margin-left: 4px; }
+  .tag.left { background: var(--red); color: #fff; }
+  .unread { background: var(--green); color: #fff; border-radius: 10px; padding: 0 6px; font-weight: 700; }
+
+  dialog { border: 0; border-radius: 10px; padding: 20px; max-width: 460px; width: calc(100% - 32px); background: var(--card); color: var(--text); }
+  dialog::backdrop { background: rgba(0,0,0,.5); }
+  dialog .list { max-height: 200px; overflow: auto; color: var(--muted); font-size: 13px; margin: 8px 0 16px; }
+  dialog .btns { display: flex; gap: 8px; justify-content: flex-end; }
+  #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: #323232; color: #fff; padding: 10px 16px; border-radius: 8px; max-width: calc(100% - 32px); display: none; z-index: 20; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧹 WhatsApp-Aufräumer</h1>
+  <span class="me" id="me"></span>
+  <button id="btnReload" class="hidden">↻ Neu laden</button>
+  <button id="btnLogout" class="hidden">Abmelden</button>
+</header>
+
+<main>
+  <!-- Anmeldung -->
+  <section id="login" class="card">
+    <h2 id="loginTitle">WhatsApp wird gestartet …</h2>
+    <p id="loginMsg" style="color:var(--muted)"></p>
+    <img id="qr" class="hidden" alt="QR-Code">
+    <div id="qrHelp" class="hidden">
+      <ol>
+        <li>WhatsApp auf dem Handy öffnen</li>
+        <li>⋮ / Einstellungen → <b>Verknüpfte Geräte</b></li>
+        <li><b>Gerät hinzufügen</b> und diesen Code scannen</li>
+      </ol>
+    </div>
+    <div class="bar" id="bar"><div style="width:0"></div></div>
+    <button id="btnRestart" class="hidden primary">Neu starten</button>
+  </section>
+
+  <!-- Chatliste -->
+  <section id="app" class="card hidden">
+    <div class="tabs">
+      <button data-tab="all" class="active">Alle</button>
+      <button data-tab="chats">Chats</button>
+      <button data-tab="groups">Gruppen</button>
+    </div>
+    <div class="filters">
+      <input type="search" id="search" placeholder="Suchen …">
+      <label>Letzte Aktivität
+        <select id="age">
+          <option value="0">egal</option>
+          <option value="30">älter als 1 Monat</option>
+          <option value="90">älter als 3 Monate</option>
+          <option value="180">älter als 6 Monate</option>
+          <option value="365">älter als 1 Jahr</option>
+          <option value="730">älter als 2 Jahre</option>
+        </select>
+      </label>
+      <label>Sortieren
+        <select id="sort">
+          <option value="old">älteste zuerst</option>
+          <option value="new">neueste zuerst</option>
+          <option value="name">Name A–Z</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="hidePinned" checked> angepinnte ausblenden</label>
+    </div>
+    <div class="stats" id="stats"></div>
+
+    <div class="actions">
+      <label><input type="checkbox" id="selAll"> alle</label>
+      <span class="count" id="selCount">0 ausgewählt</span>
+      <button id="actDelete" class="danger" disabled>🗑 Chats löschen</button>
+      <button id="actLeave" class="warn" disabled>🚪 Gruppen verlassen</button>
+      <button id="actLeaveDelete" class="danger" disabled>🚪🗑 Verlassen &amp; löschen</button>
+    </div>
+    <ul id="list"></ul>
+  </section>
+</main>
+
+<dialog id="confirm">
+  <h3 id="cTitle"></h3>
+  <p id="cText"></p>
+  <div class="list" id="cList"></div>
+  <div class="btns">
+    <button value="no" id="cNo">Abbrechen</button>
+    <button value="yes" id="cYes" class="danger">Ja, ausführen</button>
+  </div>
+</dialog>
+<div id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let chats = [];
+let selected = new Set();
+let tab = 'all';
+let lastStatus = null;
+
+// ---------- Hilfen
+const DAY = 86400;
+const now = () => Date.now() / 1000;
+function ageText(ts) {
+  if (!ts) return 'unbekannt';
+  const d = Math.floor((now() - ts) / DAY);
+  if (d < 1) return 'heute';
+  if (d < 2) return 'gestern';
+  if (d < 30) return `vor ${d} Tagen`;
+  if (d < 365) return `vor ${Math.floor(d / 30)} Mon.`;
+  const y = (d / 365).toFixed(1).replace('.', ',').replace(',0', '');
+  return `vor ${y} J.`;
+}
+const dateText = (ts) => ts ? new Date(ts * 1000).toLocaleDateString('de-DE') : '–';
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function toast(msg, ms = 4000) {
+  const t = $('#toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => (t.style.display = 'none'), ms);
+}
+async function api(url, body) {
+  const r = await fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+
+// ---------- Status / Anmeldung
+async function poll() {
+  try {
+    const s = await api('/api/status');
+    showStatus(s);
+  } catch (_) {
+    showStatus({ status: 'error', message: 'Keine Verbindung zum Programm. Läuft das Fenster noch?' });
+  }
+  setTimeout(poll, 2000);
+}
+
+function showStatus(s) {
+  const ready = s.status === 'ready';
+  $('#login').classList.toggle('hidden', ready);
+  $('#app').classList.toggle('hidden', !ready);
+  $('#btnLogout').classList.toggle('hidden', !ready);
+  $('#btnReload').classList.toggle('hidden', !ready);
+  $('#me').textContent = ready && s.me ? `${s.me.name} (+${s.me.number})` : '';
+
+  const titles = { starting: 'WhatsApp wird gestartet …', qr: 'Mit WhatsApp anmelden', loading: 'Chats werden geladen …', disconnected: 'Verbindung getrennt', error: 'Fehler' };
+  $('#loginTitle').textContent = titles[s.status] || '';
+  $('#loginMsg').textContent = s.message || '';
+  $('#qr').classList.toggle('hidden', s.status !== 'qr');
+  $('#qrHelp').classList.toggle('hidden', s.status !== 'qr');
+  if (s.qr) $('#qr').src = s.qr;
+  $('#bar').classList.toggle('hidden', !['starting', 'loading'].includes(s.status));
+  $('#bar > div').style.width = (s.status === 'loading' ? s.percent || 10 : 5) + '%';
+  $('#btnRestart').classList.toggle('hidden', !['disconnected', 'error'].includes(s.status));
+
+  if (ready && lastStatus !== 'ready') loadChats();
+  lastStatus = s.status;
+}
+
+// ---------- Chats
+async function loadChats() {
+  $('#list').innerHTML = '<li style="cursor:default;color:var(--muted)">Lade Chats …</li>';
+  try {
+    chats = await api('/api/chats');
+    const ids = new Set(chats.map((c) => c.id));
+    selected = new Set([...selected].filter((id) => ids.has(id)));
+    render();
+  } catch (e) {
+    $('#list').innerHTML = `<li style="cursor:default">Fehler: ${esc(e.message)}</li>`;
+  }
+}
+
+function visible() {
+  const q = $('#search').value.trim().toLowerCase();
+  const minAge = Number($('#age').value) * DAY;
+  const hidePinned = $('#hidePinned').checked;
+  let list = chats.filter((c) => {
+    if (tab === 'chats' && c.isGroup) return false;
+    if (tab === 'groups' && !c.isGroup) return false;
+    if (hidePinned && c.pinned) return false;
+    if (q && !c.name.toLowerCase().includes(q)) return false;
+    if (minAge && c.timestamp && now() - c.timestamp < minAge) return false;
+    return true;
+  });
+  const sort = $('#sort').value;
+  list.sort((a, b) =>
+    sort === 'name' ? a.name.localeCompare(b.name, 'de')
+    : sort === 'new' ? (b.timestamp || 0) - (a.timestamp || 0)
+    : (a.timestamp || 0) - (b.timestamp || 0));
+  return list;
+}
+
+function render() {
+  const list = visible();
+  const groups = chats.filter((c) => c.isGroup).length;
+  $('#stats').textContent = `${chats.length} insgesamt · ${chats.length - groups} Chats · ${groups} Gruppen · ${list.length} angezeigt`;
+
+  $('#list').innerHTML = list.map((c) => {
+    const old = c.timestamp && now() - c.timestamp > 365 * DAY;
+    const tags = [
+      c.pinned && '<span class="tag">📌 angepinnt</span>',
+      c.archived && '<span class="tag">archiviert</span>',
+      c.muted && '<span class="tag">stumm</span>',
+      c.left && '<span class="tag left">verlassen</span>',
+      c.iAmAdmin && '<span class="tag">Admin</span>',
+    ].filter(Boolean).join('');
+    const sub = c.isGroup
+      ? `Gruppe${c.participants ? ' · ' + c.participants + ' Mitglieder' : ''}${c.preview ? ' · ' + esc(c.preview) : ''}`
+      : esc(c.preview || '');
+    return `<li data-id="${esc(c.id)}" class="${selected.has(c.id) ? 'sel' : ''}">
+      <input type="checkbox" ${selected.has(c.id) ? 'checked' : ''}>
+      <div class="avatar ${c.isGroup ? 'g' : ''}">${c.isGroup ? '👥' : esc((c.name[0] || '?').toUpperCase())}</div>
+      <div class="info">
+        <div class="name">${esc(c.name)}${tags}</div>
+        <div class="sub">${sub || '&nbsp;'}</div>
+      </div>
+      <div class="right">
+        <div class="age ${old ? 'old' : ''}">${ageText(c.timestamp)}</div>
+        <div>${dateText(c.timestamp)}</div>
+        ${c.unreadCount ? `<span class="unread">${c.unreadCount}</span>` : ''}
+      </div>
+    </li>`;
+  }).join('') || '<li style="cursor:default;color:var(--muted)">Keine Chats für diesen Filter.</li>';
+
+  const visIds = list.map((c) => c.id);
+  $('#selAll').checked = visIds.length > 0 && visIds.every((id) => selected.has(id));
+  updateActions();
+}
+
+function updateActions() {
+  const sel = chats.filter((c) => selected.has(c.id));
+  const n = sel.length;
+  const g = sel.filter((c) => c.isGroup).length;
+  $('#selCount').textContent = `${n} ausgewählt` + (g ? ` (${g} Gruppen)` : '');
+  $('#actDelete').disabled = !sel.some((c) => !c.isGroup || c.left);
+  $('#actLeave').disabled = !sel.some((c) => c.isGroup && !c.left);
+  $('#actLeaveDelete').disabled = g === 0;
+}
+
+$('#list').addEventListener('click', (e) => {
+  const li = e.target.closest('li[data-id]');
+  if (!li) return;
+  const id = li.dataset.id;
+  selected.has(id) ? selected.delete(id) : selected.add(id);
+  li.classList.toggle('sel', selected.has(id));
+  li.querySelector('input').checked = selected.has(id);
+  const visIds = visible().map((c) => c.id);
+  $('#selAll').checked = visIds.every((x) => selected.has(x));
+  updateActions();
+});
+
+$('#selAll').addEventListener('change', (e) => {
+  for (const c of visible()) e.target.checked ? selected.add(c.id) : selected.delete(c.id);
+  render();
+});
+
+document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.tabs button').forEach((x) => x.classList.remove('active'));
+  b.classList.add('active'); tab = b.dataset.tab; render();
+}));
+['#search', '#age', '#sort', '#hidePinned'].forEach((s) => $(s).addEventListener('input', render));
+
+// ---------- Aktionen
+function confirmDialog(title, text, names) {
+  return new Promise((resolve) => {
+    $('#cTitle').textContent = title;
+    $('#cText').textContent = text;
+    $('#cList').innerHTML = names.map(esc).join('<br>');
+    const d = $('#confirm');
+    const done = (v) => { d.close(); resolve(v); };
+    $('#cYes').onclick = () => done(true);
+    $('#cNo').onclick = () => done(false);
+    d.oncancel = () => resolve(false);
+    d.showModal();
+  });
+}
+
+async function run(action) {
+  const sel = chats.filter((c) => selected.has(c.id));
+  let targets, title, text;
+  if (action === 'delete') {
+    targets = sel.filter((c) => !c.isGroup || c.left);
+    const skipped = sel.length - targets.length;
+    title = `${targets.length} Chat(s) löschen?`;
+    text = 'Die Chats werden auf deinem Handy und allen verknüpften Geräten gelöscht. Das kann man nicht rückgängig machen.'
+      + (skipped ? ` (${skipped} Gruppe(n), in denen du noch bist, werden übersprungen – die musst du erst verlassen.)` : '');
+  } else if (action === 'leave') {
+    targets = sel.filter((c) => c.isGroup && !c.left);
+    title = `${targets.length} Gruppe(n) verlassen?`;
+    text = 'Du trittst aus den Gruppen aus. Der Chatverlauf bleibt erstmal erhalten.';
+  } else {
+    targets = sel.filter((c) => c.isGroup);
+    title = `${targets.length} Gruppe(n) verlassen & löschen?`;
+    text = 'Du trittst aus den Gruppen aus und der Chat wird anschließend gelöscht. Das kann man nicht rückgängig machen.';
+  }
+  if (!targets.length) return;
+  if (!(await confirmDialog(title, text, targets.map((c) => c.name)))) return;
+
+  document.querySelectorAll('.actions button').forEach((b) => (b.disabled = true));
+  toast(`Bitte warten … ${targets.length} Einträge werden bearbeitet (ca. ${Math.ceil(targets.length * 1.5)} s).`, 600000);
+  try {
+    const { results } = await api('/api/action', { action, ids: targets.map((c) => c.id) });
+    const ok = results.filter((r) => r.ok);
+    const bad = results.filter((r) => !r.ok);
+    ok.forEach((r) => selected.delete(r.id));
+    let msg = `✅ ${ok.length} erledigt`;
+    if (bad.length) {
+      const names = Object.fromEntries(chats.map((c) => [c.id, c.name]));
+      msg += ` · ❌ ${bad.length} fehlgeschlagen: ` + bad.map((r) => `${names[r.id] || r.id} (${r.msg})`).join(', ');
+    }
+    toast(msg, bad.length ? 12000 : 5000);
+  } catch (e) {
+    toast('Fehler: ' + e.message, 8000);
+  }
+  await loadChats();
+}
+
+$('#actDelete').onclick = () => run('delete');
+$('#actLeave').onclick = () => run('leave');
+$('#actLeaveDelete').onclick = () => run('leaveDelete');
+$('#btnReload').onclick = loadChats;
+$('#btnRestart').onclick = () => api('/api/restart', {}).catch(() => {});
+$('#btnLogout').onclick = async () => {
+  if (!(await confirmDialog('Abmelden?', 'Dieser Computer wird aus deinen verknüpften WhatsApp-Geräten entfernt.', []))) return;
+  await api('/api/logout', {}).catch(() => {});
+  chats = []; selected.clear(); lastStatus = null;
+};
+
+poll();
+</script>
+</body>
+</html>
