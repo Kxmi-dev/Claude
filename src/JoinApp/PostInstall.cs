@@ -245,6 +245,36 @@ public static class PostInstall
     }
 
     /// <summary>
+    /// Direkt nach dem Join: alles unter C:\LDS löschen außer zenworks.exe und dem Ordner bitdef.
+    /// Die Reg-Dateien sind in der EXE und schon importiert, der Nachlauf braucht nur die beiden Programme.
+    /// </summary>
+    public static void CleanLdsNow()
+    {
+        try
+        {
+            if (!Directory.Exists(LdsSteps.LdsDir)) return;
+            foreach (var entry in Directory.GetFileSystemEntries(LdsSteps.LdsDir))
+            {
+                var name = Path.GetFileName(entry);
+                if (LdsSteps.KeepUntilInstalled.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
+                try
+                {
+                    if (Directory.Exists(entry)) Directory.Delete(entry, true);
+                    else { File.SetAttributes(entry, FileAttributes.Normal); File.Delete(entry); }
+                }
+                catch
+                {
+                    // Was sich nicht löschen lässt, entfernt der Aufräum-Task nach der Installation.
+                }
+            }
+        }
+        catch
+        {
+            // Siehe oben.
+        }
+    }
+
+    /// <summary>
     /// Löscht die gestartete EXE schon vor dem Neustart: Ein unsichtbarer Hilfsprozess wartet, bis die EXE beendet ist,
     /// und versucht das Löschen bis zu 30 Sekunden lang. Das läuft im Benutzerkontext und klappt deshalb auch bei
     /// USB-Stick, Netzlaufwerk und zugeordneten Laufwerksbuchstaben, die der SYSTEM-Task später nicht sieht.

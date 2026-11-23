@@ -53,6 +53,9 @@ public static class LdsSteps
         return list.FirstOrDefault(o => string.Equals(o, wanted, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Nur diese beiden Einträge unter C:\LDS werden nach dem Neustart noch gebraucht, alles andere wird sofort nach dem Join gelöscht.</summary>
+    public static readonly string[] KeepUntilInstalled = { "zenworks.exe", "bitdef" };
+
     /// <summary>Dateien unter C:\LDS, die am Ende gelöscht werden.</summary>
     public static IEnumerable<string> CleanupFiles()
     {

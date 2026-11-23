@@ -268,6 +268,8 @@ public class MainForm : Form
             }
         }
 
+        if (_config.RunLdsSteps) await Task.Run(PostInstall.CleanLdsNow);
+
         ShowStatus(message + " Der Computer startet jetzt neu.", details);
         // Selbstlöschung: Die Kopie für den Nachlauf liegt schon lokal, das Original kann sofort verschwinden.
         // Deshalb 5 Sekunden Vorlauf, damit der Hilfsprozess die beendete EXE noch löschen kann.
