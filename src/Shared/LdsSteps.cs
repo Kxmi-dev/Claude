@@ -65,8 +65,8 @@ public static class LdsSteps
     }
 
     /// <summary>Ordner unter C:\LDS, die samt Inhalt gelöscht werden.</summary>
-    public static readonly string[] CleanupFolders = { LdsDir + @"\bitdef", LdsDir + @"\part" };
+    public static readonly string[] CleanupFolders = { LdsDir + @"\bitdef", LdsDir + @"\part", LdsDir + @"\REG" };
 
-    /// <summary>Ordner, die nur gelöscht werden, wenn sie leer sind (zuerst REG, zuletzt C:\LDS).</summary>
-    public static readonly string[] CleanupFoldersIfEmpty = { LdsDir + @"\REG", LdsDir };
+    /// <summary>Ordner, die nur gelöscht werden, wenn sie leer sind (nur noch C:\LDS).</summary>
+    public static readonly string[] CleanupFoldersIfEmpty = { LdsDir };
 }

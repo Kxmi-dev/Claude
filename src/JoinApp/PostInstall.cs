@@ -246,7 +246,7 @@ public static class PostInstall
 
     /// <summary>
     /// Direkt nach dem Join: nur die bekannten Dateien löschen, die zum Join gehören (Registry-Dateien, sysprep.bat,
-    /// unattend.xml, .clg, Ordner part). Fremde Dateien, zenworks.exe, bitdef und C:\LDS selbst bleiben unberührt.
+    /// unattend.xml, .clg, Ordner part und REG). Fremde Dateien, zenworks.exe, bitdef und C:\LDS selbst bleiben unberührt.
     /// </summary>
     public static void CleanLdsNow()
     {
@@ -266,11 +266,8 @@ public static class PostInstall
         }
         try
         {
-            var part = LdsSteps.LdsDir + @"\part";
-            if (Directory.Exists(part)) Directory.Delete(part, true);
-            // Nur löschen, wenn leer.
-            var reg = LdsSteps.LdsDir + @"\REG";
-            if (Directory.Exists(reg) && !Directory.EnumerateFileSystemEntries(reg).Any()) Directory.Delete(reg);
+            foreach (var dir in new[] { LdsSteps.LdsDir + @"\part", LdsSteps.LdsDir + @"\REG" })
+                if (Directory.Exists(dir)) Directory.Delete(dir, true);
         }
         catch
         {
