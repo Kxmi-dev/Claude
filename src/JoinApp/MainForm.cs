@@ -32,7 +32,7 @@ public class MainForm : Form
         // Layout wächst mit Schrift und Windows-Skalierung (kein festes Pixelraster).
         AutoScaleDimensions = new SizeF(96f, 96f);
         AutoScaleMode = AutoScaleMode.Dpi;
-        Text = "LKDS Computer Join";
+        Text = "LKDS Computer Join " + AppVersion;
         Font = new Font("Segoe UI", 9.75f);
         BackColor = Color.White;
         FormBorderStyle = FormBorderStyle.Sizable;
@@ -306,6 +306,16 @@ public class MainForm : Form
             : LdsSteps.DefaultDnsFor(locationName, _config.DnsOptions);
         _dnsBox.SelectedItem = wanted ?? LdsSteps.NoDns;
         if (_dnsBox.SelectedIndex < 0) _dnsBox.SelectedItem = LdsSteps.NoDns;
+    }
+
+    /// <summary>Version aus Directory.Build.props, steht im Fenstertitel.</summary>
+    private static string AppVersion
+    {
+        get
+        {
+            var v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            return v is null ? "" : $"{v.Major}.{v.Minor}.{v.Build}";
+        }
     }
 
     private void ShowStatus(string message, string details)
