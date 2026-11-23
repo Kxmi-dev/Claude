@@ -245,28 +245,32 @@ public static class PostInstall
     }
 
     /// <summary>
-    /// Direkt nach dem Join: alles unter C:\LDS löschen außer zenworks.exe und dem Ordner bitdef.
-    /// Die Reg-Dateien sind in der EXE und schon importiert, der Nachlauf braucht nur die beiden Programme.
+    /// Direkt nach dem Join: nur die bekannten Dateien löschen, die zum Join gehören (Registry-Dateien, sysprep.bat,
+    /// unattend.xml, .clg, Ordner part). Fremde Dateien, zenworks.exe, bitdef und C:\LDS selbst bleiben unberührt.
     /// </summary>
     public static void CleanLdsNow()
     {
+        foreach (var file in LdsSteps.CleanupFiles())
+        {
+            if (string.Equals(file, LdsSteps.LdsDir + @"\zenworks.exe", StringComparison.OrdinalIgnoreCase)) continue;
+            try
+            {
+                if (!File.Exists(file)) continue;
+                File.SetAttributes(file, FileAttributes.Normal);
+                File.Delete(file);
+            }
+            catch
+            {
+                // Was sich nicht löschen lässt, entfernt der Aufräum-Task nach der Installation.
+            }
+        }
         try
         {
-            if (!Directory.Exists(LdsSteps.LdsDir)) return;
-            foreach (var entry in Directory.GetFileSystemEntries(LdsSteps.LdsDir))
-            {
-                var name = Path.GetFileName(entry);
-                if (LdsSteps.KeepUntilInstalled.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
-                try
-                {
-                    if (Directory.Exists(entry)) Directory.Delete(entry, true);
-                    else { File.SetAttributes(entry, FileAttributes.Normal); File.Delete(entry); }
-                }
-                catch
-                {
-                    // Was sich nicht löschen lässt, entfernt der Aufräum-Task nach der Installation.
-                }
-            }
+            var part = LdsSteps.LdsDir + @"\part";
+            if (Directory.Exists(part)) Directory.Delete(part, true);
+            // Nur löschen, wenn leer.
+            var reg = LdsSteps.LdsDir + @"\REG";
+            if (Directory.Exists(reg) && !Directory.EnumerateFileSystemEntries(reg).Any()) Directory.Delete(reg);
         }
         catch
         {

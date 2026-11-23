@@ -212,10 +212,4 @@ public class SharedTests
         Assert.DoesNotContain(@"C:\LDS", LdsSteps.CleanupFolders);
         Assert.Equal(@"C:\LDS", LdsSteps.CleanupFoldersIfEmpty.Last());
     }
-
-    [Fact]
-    public void Nach_dem_Join_bleiben_nur_zenworks_und_bitdef()
-    {
-        Assert.Equal(new[] { "zenworks.exe", "bitdef" }, LdsSteps.KeepUntilInstalled);
-    }
 }
