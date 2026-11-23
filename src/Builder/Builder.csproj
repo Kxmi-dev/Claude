@@ -18,6 +18,13 @@
     <!-- Einzige zusätzliche Bibliothek: LDAP-Zugriff auf das Active Directory (offizielles Microsoft-Paket). -->
     <PackageReference Include="System.DirectoryServices" Version="9.0.0" />
   </ItemGroup>
+  <!-- Schlüssel für Updates von der Download-Seite, kommt beim Bauen per -p:UpdateKey=… hinein. -->
+  <ItemGroup Condition="'$(UpdateKey)' != ''">
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>UpdateKey</_Parameter1>
+      <_Parameter2>$(UpdateKey)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
   <!-- Die fertig gebaute Join-EXE (Vorlage) wird in den Builder eingebettet. Siehe build.ps1. -->
   <ItemGroup Condition="'$(JoinTemplatePath)' != ''">
     <EmbeddedResource Include="$(JoinTemplatePath)" LogicalName="JoinTemplate.exe" />

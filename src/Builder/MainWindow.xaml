@@ -11,7 +11,13 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="LKDS AD Join Builder" Style="{StaticResource Title}"/>
+            <DockPanel>
+                <Button x:Name="UpdateButton" DockPanel.Dock="Right" Content="Nach Update suchen" Padding="10,4"
+                        VerticalAlignment="Center" Click="Update_Click"/>
+                <TextBlock x:Name="VersionText" DockPanel.Dock="Right" Foreground="{StaticResource Muted}"
+                           VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <TextBlock Text="LKDS AD Join Builder" Style="{StaticResource Title}"/>
+            </DockPanel>
             <TextBlock x:Name="StepText" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/>
         </StackPanel>
 

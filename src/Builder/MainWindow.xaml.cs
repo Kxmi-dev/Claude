@@ -34,6 +34,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Updater.CleanupOld();
+        VersionText.Text = "Version " + Updater.CurrentVersion;
+        Title += " " + Updater.CurrentVersion;
         _pages = [Page1, Page2, Page3, Page4];
 
         // Der eigene Windows-Benutzername steht gleich drin, ohne Passwort gilt die aktuelle Anmeldung (SSO).
@@ -44,6 +47,34 @@ public partial class MainWindow : Window
         ProfileBox.ItemsSource = _profiles;
         ProfileBox.SelectedIndex = 0;
         ShowStep(0);
+    }
+
+    // ---------- Update ----------
+
+    private async void Update_Click(object sender, RoutedEventArgs e)
+    {
+        UpdateButton.IsEnabled = false;
+        try
+        {
+            var info = await Updater.CheckAsync();
+            if (info is null)
+            {
+                MessageBox.Show(this, $"Version {Updater.CurrentVersion} ist aktuell.", Title, MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var what = info.Changes.Count > 0 ? "\n\n" + string.Join("\n", info.Changes.Select(c => "• " + c)) : "";
+            if (MessageBox.Show(this, $"Neue Version {info.Version} ({info.Size / 1_000_000.0:0.#} MB) ist verfügbar.{what}\n\nJetzt aktualisieren? Der Builder startet danach neu.",
+                    Title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            await Updater.InstallAsync(info);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "Das Update hat nicht geklappt: " + ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            UpdateButton.IsEnabled = true;
+        }
     }
 
     // ---------- Navigation ----------
