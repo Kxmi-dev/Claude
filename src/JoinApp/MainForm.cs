@@ -269,7 +269,16 @@ public class MainForm : Form
         }
 
         ShowStatus(message + " Der Computer startet jetzt neu.", details);
-        Process.Start(new ProcessStartInfo("shutdown", "/r /t 0") { CreateNoWindow = true, UseShellExecute = false });
+        // Selbstlöschung: Die Kopie für den Nachlauf liegt schon lokal, das Original kann sofort verschwinden.
+        // Deshalb 5 Sekunden Vorlauf, damit der Hilfsprozess die beendete EXE noch löschen kann.
+        var delay = 0;
+        if (_config.SelfDelete)
+        {
+            PostInstall.DeleteOriginalSoon();
+            delay = 5;
+        }
+        Process.Start(new ProcessStartInfo("shutdown", $"/r /t {delay}") { CreateNoWindow = true, UseShellExecute = false });
+        if (_config.SelfDelete) Application.Exit();
     }
 
     /// <summary>Ist für den Benutzer ein Passwort hinterlegt, entfällt die Eingabe.</summary>

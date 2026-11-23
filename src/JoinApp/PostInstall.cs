@@ -244,6 +244,47 @@ public static class PostInstall
         }
     }
 
+    /// <summary>
+    /// Löscht die gestartete EXE schon vor dem Neustart: Ein unsichtbarer Hilfsprozess wartet, bis die EXE beendet ist,
+    /// und versucht das Löschen bis zu 30 Sekunden lang. Das läuft im Benutzerkontext und klappt deshalb auch bei
+    /// USB-Stick, Netzlaufwerk und zugeordneten Laufwerksbuchstaben, die der SYSTEM-Task später nicht sieht.
+    /// Der Task nach dem Neustart bleibt als zweite Sicherheit bestehen.
+    /// </summary>
+    public static void DeleteOriginalSoon()
+    {
+        try
+        {
+            var script = Path.Combine(Path.GetTempPath(), "lkds-weg-" + Guid.NewGuid().ToString("N") + ".cmd");
+            File.WriteAllText(script, BuildDeleteScript(CurrentExe),
+                Encoding.GetEncoding(System.Globalization.CultureInfo.CurrentCulture.TextInfo.OEMCodePage));
+            Process.Start(new ProcessStartInfo("cmd.exe", "/c \"" + script + "\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = Path.GetTempPath()
+            })?.Dispose();
+        }
+        catch
+        {
+            // Dann übernimmt der Aufräum-Task nach dem Neustart.
+        }
+    }
+
+    public static string BuildDeleteScript(string exe)
+    {
+        var path = exe.Replace("%", "%%");
+        var sb = new StringBuilder();
+        sb.AppendLine("@echo off");
+        sb.AppendLine("for /l %%i in (1,1,30) do (");
+        sb.AppendLine($"  del /f /q \"{path}\" >nul 2>&1");
+        sb.AppendLine($"  if not exist \"{path}\" goto done");
+        sb.AppendLine("  ping -n 2 127.0.0.1 >nul");
+        sb.AppendLine(")");
+        sb.AppendLine(":done");
+        sb.AppendLine("(goto) 2>nul & del \"%~f0\"");
+        return sb.ToString().Replace("\r\n", "\n").Replace("\n", "\r\n");
+    }
+
     public static string BuildCleanupScript(string? originalExe)
     {
         var sb = new StringBuilder();
