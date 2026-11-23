@@ -281,12 +281,12 @@ public static class PostInstall
     /// USB-Stick, Netzlaufwerk und zugeordneten Laufwerksbuchstaben, die der SYSTEM-Task später nicht sieht.
     /// Der Task nach dem Neustart bleibt als zweite Sicherheit bestehen.
     /// </summary>
-    public static void DeleteOriginalSoon()
+    public static void DeleteOriginalSoon(bool restartAfter = false)
     {
         try
         {
             var script = Path.Combine(Path.GetTempPath(), "lkds-weg-" + Guid.NewGuid().ToString("N") + ".cmd");
-            File.WriteAllText(script, BuildDeleteScript(CurrentExe),
+            File.WriteAllText(script, BuildDeleteScript(CurrentExe, restartAfter),
                 Encoding.GetEncoding(System.Globalization.CultureInfo.CurrentCulture.TextInfo.OEMCodePage));
             Process.Start(new ProcessStartInfo("cmd.exe", "/c \"" + script + "\"")
             {
@@ -298,10 +298,12 @@ public static class PostInstall
         catch
         {
             // Dann übernimmt der Aufräum-Task nach dem Neustart.
+            if (restartAfter)
+                Process.Start(new ProcessStartInfo("shutdown", "/r /t 0") { CreateNoWindow = true, UseShellExecute = false })?.Dispose();
         }
     }
 
-    public static string BuildDeleteScript(string exe)
+    public static string BuildDeleteScript(string exe, bool restartAfter = false)
     {
         var path = exe.Replace("%", "%%");
         var sb = new StringBuilder();
@@ -312,6 +314,8 @@ public static class PostInstall
         sb.AppendLine("  ping -n 2 127.0.0.1 >nul");
         sb.AppendLine(")");
         sb.AppendLine(":done");
+        // Neustart sofort, ohne Hinweisfenster, erst nachdem die EXE weg ist.
+        if (restartAfter) sb.AppendLine("shutdown /r /t 0");
         sb.AppendLine("(goto) 2>nul & del \"%~f0\"");
         return sb.ToString().Replace("\r\n", "\n").Replace("\n", "\r\n");
     }
