@@ -25,6 +25,10 @@ Eine zusammenhängende 3D-Welt mit Bereichen, die nacheinander freigeschaltet we
 - Freischalten über ein „Immobilien“-Terminal oder ein Schild am verschlossenen Tor („[E] Garage mieten – 10.000 €“). Beim Freischalten öffnet sich das Tor mit Animation, Strom-Limit erhöht sich.
 - Jeder Bereich hat eigenes Strom-Limit und eigene Raumtemperatur.
 
+## Arbeitsweise: Graybox zuerst, Logik getrennt
+- Erst Spielmechanik, dann Optik: alles zunächst als schlichte, farbige Grundformen („Graybox“). Licht, Glow und Details erst, wenn die Mechanik funktioniert.
+- Spiellogik (Geld, Strom, Hitze, Kunden, Incidents) strikt von der Darstellung trennen: eigene Skripte/Autoloads ohne Abhängigkeit von 3D-Nodes, die Darstellung liest nur deren Zustand. So kann die Grafik später ausgetauscht werden, ohne die Logik anzufassen.
+
 ## Umfang der Basis (in dieser Reihenfolge bauen)
 **Schritt 1 – Koop-Grundgerüst (wichtigster Teil, zuerst!)**
 - Hauptmenü (3D-Hintergrund mit Racks erwünscht): Namensfeld, „Spiel hosten“, IP-Feld + „Beitreten“, „Beenden“. Beim Hosten die eigene lokale IP anzeigen.
